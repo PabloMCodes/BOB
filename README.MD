@@ -48,7 +48,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 6 | Live inference + bounding boxes | 🟡 Built + replay/loopback-tested — **live PPE on/off test pending** | Replay determinism, live PPE on/off test, p50/p95 latency | 248/248 pass · offline replay deterministic + identical to the direct pipeline · `server --detect` 1920×1440 @10 Hz, 0 drops: rx→event **p95 85.6 ms** (2 people, landscape_left) / **117.7 ms** (5–6 people, portrait) ≤ 150 ✅ · inference p95 78 / 99 ms |
 | 7 | Pose ↔ detection timestamp association | 🟡 Built + synthetic-tested — **deliberate live occlusion / Reset / background run pending** | Synthetic timeline unit tests, live occlusion + ARKit reset | 21 timeline tests (mutation-checked) · existing live recordings: 3 session switches, each new session invalid only while ARKit `initializing` (1.0–1.3 s), 0 old-session frames after a switch; mid-session re-init (3.9 s) invalid, origin kept (≤ 3 cm, < 1°) |
 | 8 | CV destructive tests + Jetson handoff prep | 🟡 Built + Mac-verified — **on-device Jetson checks (J1–J6) pending** | Scripted failure suite, `.pt` vs `.onnx` parity | 20 destructive tests → **3 bugs found + fixed** · `.pt` vs `.onnx` (SH17 and + footwear): 92 images / 606–669 boxes, max \|Δconf\| 1.7e-6, **verdicts identical** · reproducible ONNX SHA · batched crops identical to sequential, live rx→event **p95 65.3 / 75.8 ms** (was 85.6 / 117.7) |
-| 3c | Scene hazards — *inspection findings only* (backlog, after Step 7) | ⬜ | To define: restricted floor zones, open edges / stairs, blocked walkways / debris | — |
+| 3c | Restricted-zone inspection — no movement authority | 🟡 Image-bound prototype; tape/live stages next | Geometry, evidence validity, then tape/replay failure cases | 17 zone tests pass; physical scene acceptance pending |
 
 ### Step 0 — Environment & repo skeleton ✅
 
@@ -118,7 +118,9 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 
 ### Step 3c — Scene hazards (backlog, after Step 7)
 
-Restricted floor zones, open edges / stairs, blocked walkways / debris. These are **not** person + PPE pairs: they need floor segmentation or geometry, plus the world position from Step 7's pose association. They also need a schema v3 change (findings that aren't tied to a person). They are **inspection findings for humans only**. The rover must never rely on them to avoid an edge or an obstacle; that is the safety supervisor's job, with its own sensors (AGENTS rule 7). Use Step 5 recording to collect footage of these scenes in the meantime.
+**Restricted zones first**, using a fixed-image operator polygon, then the user-confirmed yellow caution-tape convention (closed floor outline, inside restricted), then live/replay integration. Walkway obstruction follows later; open edges/stairs remain deferred. These are inspection findings for humans, with no movement authority. Image-space findings do not establish a hazard world position. The independent scene contract leaves CV schema v2 unchanged; schema v3 is not automatically required.
+
+Feature 1: `tools.inspect_zone` binds a polygon to an exact upright image and runs the shared PPE/person pipeline. A possible person-in-zone finding requires separate visible foot evidence; bounding-box overlap alone is insufficient. Missing or ambiguous evidence remains unverified. Tests and commands: [restricted-zone guide](docs/restricted-zones.md).
 
 ### Step 3b — Gloves, safety boots, and one fine-tune for all 🟡 (data collection pending)
 
