@@ -10,7 +10,8 @@ This file supplies durable product context and Claude's collaboration workflow. 
 
 | Source | Use it for |
 | --- | --- |
-| [README.MD](README.MD) | Current progression, run commands, measured results and outstanding acceptance tests |
+| [README.MD](README.MD) | Overall project, architecture, workstream status and entry points |
+| [README-CV.md](README-CV.md) | Detailed CV progression, run commands, measured results and outstanding acceptance tests |
 | [AGENTS.md](AGENTS.md) | CV architecture, schema discipline, data handling, platform constraints and team workflow |
 | [integration.md](integration.md) | Interface contracts, ownership, branch registry and integration gates |
 | [Dashboard/Twin plan](docs/plans/dashboard-twin-integration-plan.md) | Confirmed product decisions, planned application boundaries and acceptance criteria |

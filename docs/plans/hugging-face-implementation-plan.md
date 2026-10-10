@@ -35,7 +35,7 @@ The supplied challenge description names creativity, technical execution, and me
 | Deployment | Jetson J1–J6 pending; application backend/dashboard planned | Demonstrate the Mac baseline first |
 | Hugging Face | No project integration identified in the review | Every release and hosting step below remains to be built |
 
-Baseline sources: [README progression](../../README.MD#progression), [SH17 card](../../models/sh17.md), [footwear card](../../models/footwear-v1.md), [integration contracts](../../integration.md), [Jetson handoff](../jetson-handoff.md), and [ESP32 status](../../hardware/esp32/README.md).
+Baseline sources: [CV progression](../../README-CV.md#progression), [SH17 card](../../models/sh17.md), [footwear card](../../models/footwear-v1.md), [integration contracts](../../integration.md), [Jetson handoff](../jetson-handoff.md), and [ESP32 status](../../hardware/esp32/README.md).
 
 Architecture constraints:
 

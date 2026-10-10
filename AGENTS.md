@@ -68,7 +68,7 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 
 ## Testing expectations
 
-- Every step has a defined test method in `README.MD` → Progression. A step is done only when its tests pass and the README row is updated with measured results.
+- Every step has a defined test method in `README-CV.md` → Progression. A step is done only when its tests pass and the progression row is updated with measured results. `README.MD` is the overall project overview.
 - Prefer deterministic tests: fixtures and recorded sessions replayed via `tools/replay_client.py` (Step 5+).
 - iOS behavior is verified on a **physical iPhone** (ARKit doesn't run in the Simulator); record what was observed in the README.
 

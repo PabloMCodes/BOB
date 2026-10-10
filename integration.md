@@ -3,7 +3,7 @@
 This file defines **what the computer vision branch exposes to / consumes from other parts of the project**, and the **checks that must pass before merging into `main`** so merges happen without conflicts or broken contracts.
 
 > [!IMPORTANT]
-> **Current state (2026-10-10):** `origin` (`PabloMCodes/BOB`) only has `autoCV`. **`main` does not exist yet**, and no other part branches exist. Everything below applies the moment `main` and sibling branches are created. Branch names marked *(TBD)* must be filled in the [Branch registry](#7-branch-registry) when they exist.
+> **Current state (2026-10-10):** local `main` was initialized at the user's request from committed `autoCV` work after merging `origin/autoCV` hardware documentation. `main` has not been published; no `origin/main` exists in the fetched remote state. This bootstrap is not a claim that all deployment gates passed. Subsequent feature integration follows the PR and pre-merge gates below once the remote baseline exists. Branch names marked *(TBD)* must be filled in the [Branch registry](#7-branch-registry) when they exist.
 
 ---
 
@@ -58,7 +58,7 @@ Conflicts mostly happen on shared files. Rule: **each branch edits only what it 
 | `pyproject.toml` | shared | Only add your own dependencies; never bump another branch's pin without telling its owner. |
 | `uv.lock` | shared | **Never hand-merge.** On conflict: take `main`'s version, then `uv lock` and commit the regenerated file. |
 | `configs/default.yaml` | shared | Each part owns its own top-level keys. Don't edit another part's keys. New parts should namespace (e.g. `safety:`, `alerts:`). |
-| `README.MD` | shared | Each part owns its own section/progression table. Don't reflow or reorder other sections. |
+| `README.MD`, `README-CV.md` | shared | Root README is the overall overview; CV guide retains detailed progression. Each part owns its own section; don't reflow unrelated sections. |
 | `AGENTS.md`, `CLAUDE.md` | shared | Append a part-specific section; global rules change only by agreement. |
 | `.gitignore` | shared | Append-only. |
 | `integration.md` | shared | Update §2 and §7 whenever an interface or branch changes. |
@@ -143,7 +143,7 @@ If the schema changed: regenerate the Swift → Python golden recording (`TEST_R
 
 ### G8 — Docs and PR
 
-- [ ] `README.MD` progression row updated with measured results.
+- [ ] `README-CV.md` progression row updated with measured results; overall `README.MD` status updated where relevant.
 - [ ] `integration.md` §2 / §7 updated if any interface or branch changed.
 - [ ] PR opened against `main` listing: gates passed, interfaces touched, consumers notified.
 
@@ -189,7 +189,7 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 | Branch | Part | Owner | Interfaces provided | Interfaces consumed | Status |
 | ------ | ---- | ----- | ------------------- | ------------------- | ------ |
 | `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6, C7, C8 | — | Active · Step 5 built; Step 3b footwear v1 trained, held-out evaluated and opt-in pipeline wired; live/worksite acceptance pending; Step 3c image/tape and Mac live/replay inspection implemented, physical tape acceptance pending; Step 3d walkway definition + reference/change evidence library built (lane check, CLI pending) |
-| `main` | Integration target | — | — | all | **Not created yet** |
+| `main` | Overall project baseline / integration target | — | C1–C10 | all | Created locally from synchronized `autoCV`; not published; future integration by PR |
 | *(TBD)* | Safety supervisor / navigation | — | motor commands (out of CV scope) | C2, C3 | Not created |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |
 | *(TBD)* | Jetson deploy / hardware | — | — | C4, C5, C6 | Not created |
