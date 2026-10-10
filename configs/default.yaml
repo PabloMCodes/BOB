@@ -127,8 +127,8 @@ training:
 camera:
   # Used when the phone reports face_up / face_down / unknown (e.g. lying flat in a rover mount).
   # Must be one of: portrait, portrait_upside_down, landscape_left, landscape_right
-  # Rover mount: portrait, tilted up ~15°, ~20 cm off the floor.
-  mount_orientation: portrait
+  # Rover mount: landscape_left, tilted up ~15°, ~20 cm off the floor.
+  mount_orientation: landscape_left
 
 render:
   # Class names are normalized (lowercase, '_' and ' ' -> '-') before matching.
