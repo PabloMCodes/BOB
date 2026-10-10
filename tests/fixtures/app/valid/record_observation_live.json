@@ -1,0 +1,197 @@
+{
+  "app_version": 1,
+  "msg_type": "record",
+  "edge_id": "rover-mac",
+  "store_epoch": "3f2b8c1e-7d4a-4e0b-9a51-2c6d8e9f0a11",
+  "lane": "observation",
+  "seq": 7,
+  "run_id": "20261010_120000",
+  "source_mode": "LIVE",
+  "rover": {
+    "wall_ns": 1760100000123456789,
+    "mono_ns": 523456789012,
+    "clock_synced": null
+  },
+  "body": {
+    "kind": "observation",
+    "event": {
+      "schema_version": 2,
+      "msg_type": "detection_event",
+      "event_id": "0b6e1f5e-2c4b-4f7a-9d39-6a1f1d7c8e21",
+      "session_id": "6f9619ff-8b86-4d11-b42d-00c04fc964ff",
+      "seq_id": 42,
+      "iphone_frame_ts_ns": 183456789012345,
+      "jetson_receive_ts_ns": 1760100000123456789,
+      "inference_latency_ms": 18.4,
+      "model_id": "sh17_yolov8s",
+      "image_size": {
+        "width": 480,
+        "height": 640
+      },
+      "tracking_state": "normal",
+      "boxes": [
+        {
+          "source": "model",
+          "cls_id": 0,
+          "cls_name": "person",
+          "conf": 0.91,
+          "xyxy": [
+            100.0,
+            50.0,
+            300.0,
+            600.0
+          ]
+        },
+        {
+          "source": "model",
+          "cls_id": 10,
+          "cls_name": "helmet",
+          "conf": 0.84,
+          "xyxy": [
+            150.0,
+            40.0,
+            250.0,
+            100.0
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_id": null,
+          "cls_name": "no-safety-glasses",
+          "conf": 0.88,
+          "xyxy": [
+            160.0,
+            105.0,
+            240.0,
+            140.0
+          ]
+        }
+      ],
+      "pose": {
+        "x_m": 0.5,
+        "y_m": 0.0,
+        "z_m": -1.2,
+        "yaw_rad": 0.0
+      },
+      "pose_valid": true,
+      "pose_dt_ms": 0.0,
+      "pose_invalid_reason": null
+    },
+    "rules": [
+      {
+        "name": "glasses",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "helmet",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "gloves",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "vest",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "boots",
+        "active": false,
+        "missing_classes": [
+          "safety-boots"
+        ]
+      }
+    ],
+    "verdicts": [
+      {
+        "rule": "glasses",
+        "verdict": "not_wearing",
+        "subject": {
+          "source": "model",
+          "cls_id": 1,
+          "cls_name": "face",
+          "conf": 0.88,
+          "xyxy": [
+            160.0,
+            70.0,
+            240.0,
+            170.0
+          ]
+        },
+        "ppe": null,
+        "violation": {
+          "source": "derived",
+          "cls_id": null,
+          "cls_name": "no-safety-glasses",
+          "conf": 0.88,
+          "xyxy": [
+            160.0,
+            105.0,
+            240.0,
+            140.0
+          ]
+        }
+      }
+    ],
+    "frame_verdicts": {
+      "glasses": "not_wearing",
+      "helmet": "wearing",
+      "gloves": "unverified",
+      "vest": "unverified"
+    },
+    "image_pixels_sha256": "5955a277b0022b16a2cb0b8930b83bfc645894b3c54da1195c2375270b2456fc",
+    "evidence_sha256": "4d35d49f7690e4dd27e8cd315afd0ba41d8f5e89c728b7d519567a2e8ebc77e6",
+    "scene": {
+      "scene_version": 1,
+      "run_id": "r1",
+      "source_mode": "LIVE",
+      "source_event_id": "0b6e1f5e-2c4b-4f7a-9d39-6a1f1d7c8e21",
+      "session_id": "6f9619ff-8b86-4d11-b42d-00c04fc964ff",
+      "seq_id": 42,
+      "assessment": {
+        "region": {
+          "zone_id": "tape-1",
+          "status": "recognized"
+        },
+        "people": []
+      }
+    },
+    "assessment": {
+      "inspection_id": "9a1c7e44-5b2d-4c3e-8f60-1d2e3f4a5b6c",
+      "worksite_id": "site-a",
+      "profile_revision": 3,
+      "no_requirements_selected": false,
+      "requirements": [
+        {
+          "requirement": "eyewear",
+          "status": "not_detected",
+          "reason": null
+        },
+        {
+          "requirement": "helmet",
+          "status": "detected",
+          "reason": null
+        },
+        {
+          "requirement": "gloves",
+          "status": "not_required",
+          "reason": null
+        },
+        {
+          "requirement": "vest",
+          "status": "not_assessed",
+          "reason": "no judged subject"
+        },
+        {
+          "requirement": "boots",
+          "status": "assessment_unavailable",
+          "reason": "rule boots inactive: model lacks safety-boots"
+        }
+      ]
+    }
+  }
+}

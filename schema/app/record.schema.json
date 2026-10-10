@@ -1,0 +1,1368 @@
+{
+  "$defs": {
+    "AssessmentStatus": {
+      "enum": [
+        "not_required",
+        "detected",
+        "not_detected",
+        "not_assessed",
+        "assessment_unavailable"
+      ],
+      "title": "AssessmentStatus",
+      "type": "string"
+    },
+    "Box": {
+      "additionalProperties": false,
+      "description": "One box in pixels of the upright (rotated) image.\n\nsource=\"model\":   a raw YOLO detection; cls_id is the model's class index.\nsource=\"derived\": produced by a PPE rule (e.g. \"no-safety-glasses\" on a face's eye band);\n                  cls_id is null and conf is the confidence of the subject it was derived from.",
+      "properties": {
+        "cls_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cls Id"
+        },
+        "cls_name": {
+          "minLength": 1,
+          "title": "Cls Name",
+          "type": "string"
+        },
+        "conf": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "model",
+            "derived"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "xyxy": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Xyxy",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source",
+        "cls_id",
+        "cls_name",
+        "conf",
+        "xyxy"
+      ],
+      "title": "Box",
+      "type": "object"
+    },
+    "DetectionEvent": {
+      "additionalProperties": false,
+      "description": "C2 \u2014 YOLO result for one source frame, tagged with the pose matched by timestamp.\n\nConsumers MUST check pose_valid before using pose; an invalid event may still carry the\nnearest pose for debugging. Boxes only: hazard decisions belong to the alerts/safety branch.",
+      "properties": {
+        "boxes": {
+          "items": {
+            "$ref": "#/$defs/Box"
+          },
+          "title": "Boxes",
+          "type": "array"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "image_size": {
+          "$ref": "#/$defs/ImageSize"
+        },
+        "inference_latency_ms": {
+          "minimum": 0,
+          "title": "Inference Latency Ms",
+          "type": "number"
+        },
+        "iphone_frame_ts_ns": {
+          "minimum": 0,
+          "title": "Iphone Frame Ts Ns",
+          "type": "integer"
+        },
+        "jetson_receive_ts_ns": {
+          "minimum": 0,
+          "title": "Jetson Receive Ts Ns",
+          "type": "integer"
+        },
+        "model_id": {
+          "minLength": 1,
+          "title": "Model Id",
+          "type": "string"
+        },
+        "msg_type": {
+          "const": "detection_event",
+          "title": "Msg Type",
+          "type": "string"
+        },
+        "pose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose_dt_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pose Dt Ms"
+        },
+        "pose_invalid_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PoseInvalidReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose_valid": {
+          "title": "Pose Valid",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "seq_id": {
+          "minimum": 0,
+          "title": "Seq Id",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "tracking_state": {
+          "$ref": "#/$defs/TrackingState"
+        }
+      },
+      "required": [
+        "schema_version",
+        "msg_type",
+        "event_id",
+        "session_id",
+        "seq_id",
+        "iphone_frame_ts_ns",
+        "jetson_receive_ts_ns",
+        "inference_latency_ms",
+        "model_id",
+        "image_size",
+        "tracking_state",
+        "boxes",
+        "pose_valid"
+      ],
+      "title": "DetectionEvent",
+      "type": "object"
+    },
+    "EvidenceBody": {
+      "additionalProperties": false,
+      "description": "Metadata of one clean upright full-resolution JPEG blob, tied to its exact source frame.",
+      "properties": {
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "image_pixels_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Image Pixels Sha256",
+          "type": "string"
+        },
+        "image_size": {
+          "$ref": "#/$defs/ImageSize"
+        },
+        "iphone_frame_ts_ns": {
+          "minimum": 0,
+          "title": "Iphone Frame Ts Ns",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "evidence",
+          "title": "Kind",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "image/jpeg",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "model_id": {
+          "minLength": 1,
+          "title": "Model Id",
+          "type": "string"
+        },
+        "pose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose_invalid_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PoseInvalidReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose_valid": {
+          "title": "Pose Valid",
+          "type": "boolean"
+        },
+        "reason": {
+          "$ref": "#/$defs/EvidenceReason"
+        },
+        "rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rules",
+          "type": "array"
+        },
+        "seq_id": {
+          "minimum": 0,
+          "title": "Seq Id",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "exclusiveMinimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "sha256",
+        "size_bytes",
+        "media_type",
+        "image_pixels_sha256",
+        "event_id",
+        "session_id",
+        "seq_id",
+        "iphone_frame_ts_ns",
+        "model_id",
+        "image_size",
+        "reason",
+        "rules",
+        "pose_valid"
+      ],
+      "title": "EvidenceBody",
+      "type": "object"
+    },
+    "EvidenceReason": {
+      "enum": [
+        "derived_box",
+        "scene_finding",
+        "incident"
+      ],
+      "title": "EvidenceReason",
+      "type": "string"
+    },
+    "FrameAssessment": {
+      "additionalProperties": false,
+      "description": "One frame under the inspection's bound profile revision (\u00a74).",
+      "properties": {
+        "inspection_id": {
+          "format": "uuid",
+          "title": "Inspection Id",
+          "type": "string"
+        },
+        "no_requirements_selected": {
+          "title": "No Requirements Selected",
+          "type": "boolean"
+        },
+        "profile_revision": {
+          "exclusiveMinimum": 0,
+          "title": "Profile Revision",
+          "type": "integer"
+        },
+        "requirements": {
+          "items": {
+            "$ref": "#/$defs/RequirementAssessment"
+          },
+          "title": "Requirements",
+          "type": "array"
+        },
+        "worksite_id": {
+          "minLength": 1,
+          "title": "Worksite Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "inspection_id",
+        "worksite_id",
+        "profile_revision",
+        "no_requirements_selected",
+        "requirements"
+      ],
+      "title": "FrameAssessment",
+      "type": "object"
+    },
+    "FrameCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "negative": {
+          "minimum": 0,
+          "title": "Negative",
+          "type": "integer"
+        },
+        "neutral": {
+          "minimum": 0,
+          "title": "Neutral",
+          "type": "integer"
+        },
+        "positive": {
+          "minimum": 0,
+          "title": "Positive",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "positive",
+        "negative",
+        "neutral"
+      ],
+      "title": "FrameCounts",
+      "type": "object"
+    },
+    "GapBody": {
+      "additionalProperties": false,
+      "description": "Records first_seq..last_seq of `lane` were removed on the rover before the hub had them.",
+      "properties": {
+        "first_seq": {
+          "exclusiveMinimum": 0,
+          "title": "First Seq",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "gap",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lane": {
+          "$ref": "#/$defs/Lane"
+        },
+        "last_seq": {
+          "exclusiveMinimum": 0,
+          "title": "Last Seq",
+          "type": "integer"
+        },
+        "reason": {
+          "$ref": "#/$defs/GapReason"
+        }
+      },
+      "required": [
+        "kind",
+        "lane",
+        "first_seq",
+        "last_seq",
+        "reason"
+      ],
+      "title": "GapBody",
+      "type": "object"
+    },
+    "GapReason": {
+      "enum": [
+        "pruned_retention",
+        "pruned_disk_pressure"
+      ],
+      "title": "GapReason",
+      "type": "string"
+    },
+    "ImageSize": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "ImageSize",
+      "type": "object"
+    },
+    "IncidentBody": {
+      "additionalProperties": false,
+      "description": "One append-only state transition (\u00a78.3). Records are never edited.",
+      "properties": {
+        "calibrated": {
+          "title": "Calibrated",
+          "type": "boolean"
+        },
+        "counts": {
+          "$ref": "#/$defs/FrameCounts"
+        },
+        "end_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IncidentEndReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Event Ids",
+          "type": "array"
+        },
+        "evidence_sha256": {
+          "default": [],
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Evidence Sha256",
+          "type": "array"
+        },
+        "incident_id": {
+          "format": "uuid",
+          "title": "Incident Id",
+          "type": "string"
+        },
+        "interruption_ns": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interruption Ns"
+        },
+        "key": {
+          "$ref": "#/$defs/IncidentKey"
+        },
+        "kind": {
+          "const": "incident",
+          "title": "Kind",
+          "type": "string"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IncidentLocation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "observed_iphone_ts_ns": {
+          "minimum": 0,
+          "title": "Observed Iphone Ts Ns",
+          "type": "integer"
+        },
+        "policy_params_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Policy Params Sha256",
+          "type": "string"
+        },
+        "policy_version": {
+          "exclusiveMinimum": 0,
+          "title": "Policy Version",
+          "type": "integer"
+        },
+        "transition": {
+          "$ref": "#/$defs/IncidentTransition"
+        }
+      },
+      "required": [
+        "kind",
+        "incident_id",
+        "transition",
+        "key",
+        "policy_version",
+        "policy_params_sha256",
+        "calibrated",
+        "observed_iphone_ts_ns",
+        "counts",
+        "event_ids"
+      ],
+      "title": "IncidentBody",
+      "type": "object"
+    },
+    "IncidentEndReason": {
+      "enum": [
+        "condition_not_observed",
+        "not_assessed",
+        "session_changed",
+        "inspection_ended",
+        "source_stopped"
+      ],
+      "title": "IncidentEndReason",
+      "type": "string"
+    },
+    "IncidentKey": {
+      "additionalProperties": false,
+      "properties": {
+        "inspection_id": {
+          "format": "uuid",
+          "title": "Inspection Id",
+          "type": "string"
+        },
+        "profile_revision": {
+          "exclusiveMinimum": 0,
+          "title": "Profile Revision",
+          "type": "integer"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "zone_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zone Id"
+        },
+        "zone_profile_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zone Profile Sha256"
+        }
+      },
+      "required": [
+        "inspection_id",
+        "profile_revision",
+        "session_id"
+      ],
+      "title": "IncidentKey",
+      "type": "object"
+    },
+    "IncidentLocation": {
+      "additionalProperties": false,
+      "description": "Camera pose of the frame (\"observed from here\"), never the person's position.",
+      "properties": {
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "pose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "unlocalized_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PoseInvalidReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "event_id"
+      ],
+      "title": "IncidentLocation",
+      "type": "object"
+    },
+    "IncidentTransition": {
+      "enum": [
+        "candidate",
+        "confirmed",
+        "discarded",
+        "ended",
+        "reopened"
+      ],
+      "title": "IncidentTransition",
+      "type": "string"
+    },
+    "InspectionEndReason": {
+      "enum": [
+        "operator",
+        "source_stopped"
+      ],
+      "title": "InspectionEndReason",
+      "type": "string"
+    },
+    "InspectionEndedBody": {
+      "additionalProperties": false,
+      "properties": {
+        "inspection_id": {
+          "format": "uuid",
+          "title": "Inspection Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "inspection_ended",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/InspectionEndReason"
+        }
+      },
+      "required": [
+        "kind",
+        "inspection_id",
+        "reason"
+      ],
+      "title": "InspectionEndedBody",
+      "type": "object"
+    },
+    "InspectionStartedBody": {
+      "additionalProperties": false,
+      "properties": {
+        "inspection_id": {
+          "format": "uuid",
+          "title": "Inspection Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "inspection_started",
+          "title": "Kind",
+          "type": "string"
+        },
+        "profile_revision": {
+          "exclusiveMinimum": 0,
+          "title": "Profile Revision",
+          "type": "integer"
+        },
+        "profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Profile Sha256",
+          "type": "string"
+        },
+        "requested_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested By"
+        },
+        "worksite_id": {
+          "minLength": 1,
+          "title": "Worksite Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "inspection_id",
+        "worksite_id",
+        "profile_revision",
+        "profile_sha256"
+      ],
+      "title": "InspectionStartedBody",
+      "type": "object"
+    },
+    "Lane": {
+      "enum": [
+        "control",
+        "track",
+        "observation"
+      ],
+      "title": "Lane",
+      "type": "string"
+    },
+    "NoticeBody": {
+      "additionalProperties": false,
+      "description": "Capability / health notices: 'Required \u2014 assessment unavailable', writer drops, low rate...",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "pattern": "^[a-z_]+$",
+          "title": "Code",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Details",
+          "type": "object"
+        },
+        "kind": {
+          "const": "notice",
+          "title": "Kind",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "code",
+        "message"
+      ],
+      "title": "NoticeBody",
+      "type": "object"
+    },
+    "ObservationBody": {
+      "additionalProperties": false,
+      "properties": {
+        "assessment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FrameAssessment"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event": {
+          "$ref": "#/$defs/DetectionEvent"
+        },
+        "evidence_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Sha256"
+        },
+        "frame_verdicts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Verdict"
+          },
+          "title": "Frame Verdicts",
+          "type": "object"
+        },
+        "image_pixels_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Image Pixels Sha256",
+          "type": "string"
+        },
+        "kind": {
+          "const": "observation",
+          "title": "Kind",
+          "type": "string"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/RuleStatus"
+          },
+          "title": "Rules",
+          "type": "array"
+        },
+        "scene": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene"
+        },
+        "verdicts": {
+          "items": {
+            "$ref": "#/$defs/SubjectVerdict"
+          },
+          "title": "Verdicts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "event",
+        "rules",
+        "verdicts",
+        "frame_verdicts",
+        "image_pixels_sha256"
+      ],
+      "title": "ObservationBody",
+      "type": "object"
+    },
+    "Pose": {
+      "additionalProperties": false,
+      "description": "Camera position in the ARKit world frame (right-handed, +Y up, origin = session start).\n\nyaw_rad: rotation about world +Y; 0 = facing the session's initial -Z, positive = turning left.",
+      "properties": {
+        "x_m": {
+          "title": "X M",
+          "type": "number"
+        },
+        "y_m": {
+          "title": "Y M",
+          "type": "number"
+        },
+        "yaw_rad": {
+          "maximum": 3.141592653589793,
+          "minimum": -3.141592653589793,
+          "title": "Yaw Rad",
+          "type": "number"
+        },
+        "z_m": {
+          "title": "Z M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_m",
+        "y_m",
+        "z_m",
+        "yaw_rad"
+      ],
+      "title": "Pose",
+      "type": "object"
+    },
+    "PoseInvalidReason": {
+      "enum": [
+        "tracking_not_normal",
+        "stale",
+        "session_mismatch",
+        "dt_exceeded",
+        "no_pose"
+      ],
+      "title": "PoseInvalidReason",
+      "type": "string"
+    },
+    "ProfileRevisionBody": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "profile_revision",
+          "title": "Kind",
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/$defs/WorksiteProfile"
+        }
+      },
+      "required": [
+        "kind",
+        "profile"
+      ],
+      "title": "ProfileRevisionBody",
+      "type": "object"
+    },
+    "RequirementAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "requirement": {
+          "enum": [
+            "eyewear",
+            "helmet",
+            "gloves",
+            "vest",
+            "boots"
+          ],
+          "title": "Requirement",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AssessmentStatus"
+        }
+      },
+      "required": [
+        "requirement",
+        "status"
+      ],
+      "title": "RequirementAssessment",
+      "type": "object"
+    },
+    "RoverClock": {
+      "additionalProperties": false,
+      "description": "Rover times of one record. Never subtract them from laptop or iPhone times.",
+      "properties": {
+        "clock_synced": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Clock Synced"
+        },
+        "mono_ns": {
+          "minimum": 0,
+          "title": "Mono Ns",
+          "type": "integer"
+        },
+        "wall_ns": {
+          "minimum": 0,
+          "title": "Wall Ns",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "wall_ns",
+        "mono_ns",
+        "clock_synced"
+      ],
+      "title": "RoverClock",
+      "type": "object"
+    },
+    "RuleStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "title": "Active",
+          "type": "boolean"
+        },
+        "missing_classes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Classes",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "active"
+      ],
+      "title": "RuleStatus",
+      "type": "object"
+    },
+    "SourceMode": {
+      "description": "Declared by the operator at server start: the server cannot tell a replay client from a phone.",
+      "enum": [
+        "LIVE",
+        "REPLAY",
+        "SAMPLE"
+      ],
+      "title": "SourceMode",
+      "type": "string"
+    },
+    "SubjectVerdict": {
+      "additionalProperties": false,
+      "properties": {
+        "ppe": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Box"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rule": {
+          "minLength": 1,
+          "title": "Rule",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/Box"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        },
+        "violation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Box"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "rule",
+        "verdict",
+        "subject"
+      ],
+      "title": "SubjectVerdict",
+      "type": "object"
+    },
+    "TrackPointBody": {
+      "additionalProperties": false,
+      "description": "Valid phone-camera pose (never the rover's or a person's position). A new `segment` starts\nafter any invalid pose; segments are never joined across a gap.",
+      "properties": {
+        "iphone_ts_ns": {
+          "minimum": 0,
+          "title": "Iphone Ts Ns",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "track_point",
+          "title": "Kind",
+          "type": "string"
+        },
+        "packet": {
+          "enum": [
+            "frame",
+            "pose"
+          ],
+          "title": "Packet",
+          "type": "string"
+        },
+        "pose": {
+          "$ref": "#/$defs/Pose"
+        },
+        "segment": {
+          "minimum": 0,
+          "title": "Segment",
+          "type": "integer"
+        },
+        "seq_id": {
+          "minimum": 0,
+          "title": "Seq Id",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "session_id",
+        "segment",
+        "seq_id",
+        "iphone_ts_ns",
+        "packet",
+        "pose"
+      ],
+      "title": "TrackPointBody",
+      "type": "object"
+    },
+    "TrackingState": {
+      "description": "Mirrors ARCamera.TrackingState.",
+      "enum": [
+        "normal",
+        "limited",
+        "not_available"
+      ],
+      "title": "TrackingState",
+      "type": "string"
+    },
+    "Verdict": {
+      "enum": [
+        "wearing",
+        "not_wearing",
+        "unverified"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "WorksiteProfile": {
+      "additionalProperties": false,
+      "description": "Immutable revision of a worksite's PPE requirements. `sha256` covers every other field.",
+      "properties": {
+        "app_version": {
+          "const": 1,
+          "title": "App Version",
+          "type": "integer"
+        },
+        "msg_type": {
+          "const": "worksite_profile",
+          "title": "Msg Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "requirements": {
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "propertyNames": {
+            "enum": [
+              "eyewear",
+              "helmet",
+              "gloves",
+              "vest",
+              "boots"
+            ]
+          },
+          "title": "Requirements",
+          "type": "object"
+        },
+        "revision": {
+          "exclusiveMinimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "worksite_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "title": "Worksite Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "app_version",
+        "msg_type",
+        "worksite_id",
+        "revision",
+        "name",
+        "requirements",
+        "sha256"
+      ],
+      "title": "WorksiteProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One durable lane record. `(edge_id, store_epoch, lane, seq)` is the deduplication key; order by\n`seq`, never by time.",
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "body": {
+      "discriminator": {
+        "mapping": {
+          "evidence": "#/$defs/EvidenceBody",
+          "gap": "#/$defs/GapBody",
+          "incident": "#/$defs/IncidentBody",
+          "inspection_ended": "#/$defs/InspectionEndedBody",
+          "inspection_started": "#/$defs/InspectionStartedBody",
+          "notice": "#/$defs/NoticeBody",
+          "observation": "#/$defs/ObservationBody",
+          "profile_revision": "#/$defs/ProfileRevisionBody",
+          "track_point": "#/$defs/TrackPointBody"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ObservationBody"
+        },
+        {
+          "$ref": "#/$defs/TrackPointBody"
+        },
+        {
+          "$ref": "#/$defs/EvidenceBody"
+        },
+        {
+          "$ref": "#/$defs/ProfileRevisionBody"
+        },
+        {
+          "$ref": "#/$defs/InspectionStartedBody"
+        },
+        {
+          "$ref": "#/$defs/InspectionEndedBody"
+        },
+        {
+          "$ref": "#/$defs/IncidentBody"
+        },
+        {
+          "$ref": "#/$defs/GapBody"
+        },
+        {
+          "$ref": "#/$defs/NoticeBody"
+        }
+      ],
+      "title": "Body"
+    },
+    "edge_id": {
+      "minLength": 1,
+      "title": "Edge Id",
+      "type": "string"
+    },
+    "lane": {
+      "$ref": "#/$defs/Lane"
+    },
+    "msg_type": {
+      "const": "record",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "rover": {
+      "$ref": "#/$defs/RoverClock"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    },
+    "seq": {
+      "exclusiveMinimum": 0,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "source_mode": {
+      "$ref": "#/$defs/SourceMode"
+    },
+    "store_epoch": {
+      "format": "uuid",
+      "title": "Store Epoch",
+      "type": "string"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "edge_id",
+    "store_epoch",
+    "lane",
+    "seq",
+    "source_mode",
+    "rover",
+    "body"
+  ],
+  "title": "Record",
+  "type": "object"
+}

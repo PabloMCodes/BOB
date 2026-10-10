@@ -1,0 +1,32 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "code": {
+      "minLength": 1,
+      "title": "Code",
+      "type": "string"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "msg_type": {
+      "const": "sync_error",
+      "title": "Msg Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "code",
+    "message"
+  ],
+  "title": "SyncError",
+  "type": "object"
+}

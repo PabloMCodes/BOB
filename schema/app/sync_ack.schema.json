@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "Lane": {
+      "enum": [
+        "control",
+        "track",
+        "observation"
+      ],
+      "title": "Lane",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "lane": {
+      "$ref": "#/$defs/Lane"
+    },
+    "msg_type": {
+      "const": "sync_ack",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "seq": {
+      "minimum": 0,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "store_epoch": {
+      "format": "uuid",
+      "title": "Store Epoch",
+      "type": "string"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "store_epoch",
+    "lane",
+    "seq"
+  ],
+  "title": "SyncAck",
+  "type": "object"
+}

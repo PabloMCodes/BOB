@@ -1,0 +1,22 @@
+{
+  "app_version": 1,
+  "msg_type": "record",
+  "edge_id": "rover-mac",
+  "store_epoch": "3f2b8c1e-7d4a-4e0b-9a51-2c6d8e9f0a11",
+  "lane": "control",
+  "seq": 17,
+  "run_id": "20261010_120000",
+  "source_mode": "live",
+  "rover": {
+    "wall_ns": 1760100000123456789,
+    "mono_ns": 523456789012,
+    "clock_synced": null
+  },
+  "body": {
+    "kind": "gap",
+    "lane": "observation",
+    "first_seq": 1,
+    "last_seq": 6,
+    "reason": "pruned_disk_pressure"
+  }
+}

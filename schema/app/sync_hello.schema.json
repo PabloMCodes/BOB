@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "Lane": {
+      "enum": [
+        "control",
+        "track",
+        "observation"
+      ],
+      "title": "Lane",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "cursors": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "propertyNames": {
+        "$ref": "#/$defs/Lane"
+      },
+      "title": "Cursors",
+      "type": "object"
+    },
+    "hub_id": {
+      "minLength": 1,
+      "title": "Hub Id",
+      "type": "string"
+    },
+    "msg_type": {
+      "const": "sync_hello",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "store_epoch": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Store Epoch"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "hub_id",
+    "cursors"
+  ],
+  "title": "SyncHello",
+  "type": "object"
+}

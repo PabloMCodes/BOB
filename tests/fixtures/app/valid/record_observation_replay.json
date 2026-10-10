@@ -1,0 +1,79 @@
+{
+  "app_version": 1,
+  "msg_type": "record",
+  "edge_id": "rover-mac",
+  "store_epoch": "3f2b8c1e-7d4a-4e0b-9a51-2c6d8e9f0a11",
+  "lane": "observation",
+  "seq": 8,
+  "run_id": "20261010_120000",
+  "source_mode": "REPLAY",
+  "rover": {
+    "wall_ns": 1760100000123456789,
+    "mono_ns": 523456789012,
+    "clock_synced": null
+  },
+  "body": {
+    "kind": "observation",
+    "event": {
+      "schema_version": 2,
+      "msg_type": "detection_event",
+      "event_id": "5d0c3a9b-7e2f-4a61-8b0d-3f4e2c1a9b77",
+      "session_id": "6f9619ff-8b86-4d11-b42d-00c04fc964ff",
+      "seq_id": 43,
+      "iphone_frame_ts_ns": 183456855678901,
+      "jetson_receive_ts_ns": 1760100000190000000,
+      "inference_latency_ms": 17.9,
+      "model_id": "ppe_best@v1",
+      "image_size": {
+        "width": 480,
+        "height": 640
+      },
+      "tracking_state": "limited",
+      "boxes": [],
+      "pose": null,
+      "pose_valid": false,
+      "pose_dt_ms": null,
+      "pose_invalid_reason": "tracking_not_normal"
+    },
+    "rules": [
+      {
+        "name": "glasses",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "helmet",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "gloves",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "vest",
+        "active": true,
+        "missing_classes": []
+      },
+      {
+        "name": "boots",
+        "active": false,
+        "missing_classes": [
+          "safety-boots"
+        ]
+      }
+    ],
+    "verdicts": [],
+    "frame_verdicts": {
+      "glasses": "unverified",
+      "helmet": "unverified",
+      "gloves": "unverified",
+      "vest": "unverified"
+    },
+    "image_pixels_sha256": "5955a277b0022b16a2cb0b8930b83bfc645894b3c54da1195c2375270b2456fc",
+    "evidence_sha256": null,
+    "scene": null,
+    "assessment": null
+  }
+}

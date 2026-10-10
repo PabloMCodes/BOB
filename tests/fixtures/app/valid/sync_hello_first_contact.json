@@ -1,0 +1,11 @@
+{
+  "app_version": 1,
+  "msg_type": "sync_hello",
+  "hub_id": "hub-laptop",
+  "store_epoch": null,
+  "cursors": {
+    "control": 0,
+    "track": 0,
+    "observation": 0
+  }
+}

@@ -1,0 +1,668 @@
+{
+  "$defs": {
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "model_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Id"
+        },
+        "producers": {
+          "items": {
+            "$ref": "#/$defs/Producer"
+          },
+          "title": "Producers",
+          "type": "array"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/RuleStatus"
+          },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rules",
+        "producers"
+      ],
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "EdgeStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "disk_free_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disk Free Bytes"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Error"
+        },
+        "store_bytes": {
+          "minimum": 0,
+          "title": "Store Bytes",
+          "type": "integer"
+        },
+        "writer_dropped": {
+          "minimum": 0,
+          "title": "Writer Dropped",
+          "type": "integer"
+        },
+        "writer_errors": {
+          "minimum": 0,
+          "title": "Writer Errors",
+          "type": "integer"
+        },
+        "writer_queued": {
+          "minimum": 0,
+          "title": "Writer Queued",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "store_bytes",
+        "writer_queued",
+        "writer_dropped",
+        "writer_errors"
+      ],
+      "title": "EdgeStatus",
+      "type": "object"
+    },
+    "FeedAge": {
+      "additionalProperties": false,
+      "description": "Rover-clock age of the newest item; null with a reason when there has been none.",
+      "properties": {
+        "age_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Ms"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "title": "FeedAge",
+      "type": "object"
+    },
+    "Freshness": {
+      "additionalProperties": false,
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/FeedAge"
+        },
+        "pose": {
+          "$ref": "#/$defs/FeedAge"
+        },
+        "results": {
+          "$ref": "#/$defs/FeedAge"
+        },
+        "video": {
+          "$ref": "#/$defs/FeedAge"
+        }
+      },
+      "required": [
+        "video",
+        "results",
+        "pose",
+        "health"
+      ],
+      "title": "Freshness",
+      "type": "object"
+    },
+    "ImageSize": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "ImageSize",
+      "type": "object"
+    },
+    "LivePose": {
+      "additionalProperties": false,
+      "properties": {
+        "iphone_ts_ns": {
+          "minimum": 0,
+          "title": "Iphone Ts Ns",
+          "type": "integer"
+        },
+        "pose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose_invalid_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PoseInvalidReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pose_valid": {
+          "title": "Pose Valid",
+          "type": "boolean"
+        },
+        "seq_id": {
+          "minimum": 0,
+          "title": "Seq Id",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "seq_id",
+        "iphone_ts_ns",
+        "pose_valid"
+      ],
+      "title": "LivePose",
+      "type": "object"
+    },
+    "LiveState": {
+      "additionalProperties": false,
+      "properties": {
+        "active_inspection_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Inspection Id"
+        },
+        "app_version": {
+          "const": 1,
+          "title": "App Version",
+          "type": "integer"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "edge": {
+          "$ref": "#/$defs/EdgeStatus"
+        },
+        "edge_id": {
+          "minLength": 1,
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "freshness": {
+          "$ref": "#/$defs/Freshness"
+        },
+        "health": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StreamHealth"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "msg_type": {
+          "const": "live_state",
+          "title": "Msg Type",
+          "type": "string"
+        },
+        "pose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LivePose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "preview": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PreviewRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rover": {
+          "$ref": "#/$defs/RoverClock"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        },
+        "source_mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "store_epoch": {
+          "format": "uuid",
+          "title": "Store Epoch",
+          "type": "string"
+        }
+      },
+      "required": [
+        "app_version",
+        "msg_type",
+        "edge_id",
+        "store_epoch",
+        "rover",
+        "freshness",
+        "capabilities",
+        "edge"
+      ],
+      "title": "LiveState",
+      "type": "object"
+    },
+    "Pose": {
+      "additionalProperties": false,
+      "description": "Camera position in the ARKit world frame (right-handed, +Y up, origin = session start).\n\nyaw_rad: rotation about world +Y; 0 = facing the session's initial -Z, positive = turning left.",
+      "properties": {
+        "x_m": {
+          "title": "X M",
+          "type": "number"
+        },
+        "y_m": {
+          "title": "Y M",
+          "type": "number"
+        },
+        "yaw_rad": {
+          "maximum": 3.141592653589793,
+          "minimum": -3.141592653589793,
+          "title": "Yaw Rad",
+          "type": "number"
+        },
+        "z_m": {
+          "title": "Z M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_m",
+        "y_m",
+        "z_m",
+        "yaw_rad"
+      ],
+      "title": "Pose",
+      "type": "object"
+    },
+    "PoseInvalidReason": {
+      "enum": [
+        "tracking_not_normal",
+        "stale",
+        "session_mismatch",
+        "dt_exceeded",
+        "no_pose"
+      ],
+      "title": "PoseInvalidReason",
+      "type": "string"
+    },
+    "PreviewRef": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "image_size": {
+          "$ref": "#/$defs/ImageSize"
+        },
+        "seq_id": {
+          "minimum": 0,
+          "title": "Seq Id",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "source_image_size": {
+          "$ref": "#/$defs/ImageSize"
+        }
+      },
+      "required": [
+        "event_id",
+        "session_id",
+        "seq_id",
+        "image_size",
+        "source_image_size",
+        "sha256"
+      ],
+      "title": "PreviewRef",
+      "type": "object"
+    },
+    "Producer": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "status": {
+          "$ref": "#/$defs/ProducerStatus"
+        }
+      },
+      "required": [
+        "name",
+        "status"
+      ],
+      "title": "Producer",
+      "type": "object"
+    },
+    "ProducerStatus": {
+      "enum": [
+        "integrated",
+        "prototype",
+        "not_integrated"
+      ],
+      "title": "ProducerStatus",
+      "type": "string"
+    },
+    "RoverClock": {
+      "additionalProperties": false,
+      "description": "Rover times of one record. Never subtract them from laptop or iPhone times.",
+      "properties": {
+        "clock_synced": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Clock Synced"
+        },
+        "mono_ns": {
+          "minimum": 0,
+          "title": "Mono Ns",
+          "type": "integer"
+        },
+        "wall_ns": {
+          "minimum": 0,
+          "title": "Wall Ns",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "wall_ns",
+        "mono_ns",
+        "clock_synced"
+      ],
+      "title": "RoverClock",
+      "type": "object"
+    },
+    "RuleStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "title": "Active",
+          "type": "boolean"
+        },
+        "missing_classes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Classes",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "active"
+      ],
+      "title": "RuleStatus",
+      "type": "object"
+    },
+    "SourceMode": {
+      "description": "Declared by the operator at server start: the server cannot tell a replay client from a phone.",
+      "enum": [
+        "LIVE",
+        "REPLAY",
+        "SAMPLE"
+      ],
+      "title": "SourceMode",
+      "type": "string"
+    },
+    "StreamHealth": {
+      "additionalProperties": false,
+      "description": "C3 \u2014 iPhone stream health as seen by the vision server. Consumers stop on stale=true.",
+      "properties": {
+        "dropped_count": {
+          "minimum": 0,
+          "title": "Dropped Count",
+          "type": "integer"
+        },
+        "emitted_ts_ns": {
+          "minimum": 0,
+          "title": "Emitted Ts Ns",
+          "type": "integer"
+        },
+        "last_rx_ts_ns": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Rx Ts Ns"
+        },
+        "last_seq_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Seq Id"
+        },
+        "msg_type": {
+          "const": "stream_health",
+          "title": "Msg Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "stale": {
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "tracking_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrackingState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "schema_version",
+        "msg_type",
+        "emitted_ts_ns",
+        "stale",
+        "dropped_count"
+      ],
+      "title": "StreamHealth",
+      "type": "object"
+    },
+    "TrackingState": {
+      "description": "Mirrors ARCamera.TrackingState.",
+      "enum": [
+        "normal",
+        "limited",
+        "not_available"
+      ],
+      "title": "TrackingState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "live": {
+      "$ref": "#/$defs/LiveState"
+    },
+    "msg_type": {
+      "const": "sync_live",
+      "title": "Msg Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "live"
+  ],
+  "title": "SyncLive",
+  "type": "object"
+}

@@ -1,0 +1,6 @@
+{
+  "app_version": 1,
+  "msg_type": "sync_error",
+  "code": "unauthorized",
+  "message": "bad token"
+}

@@ -1,0 +1,6 @@
+{
+  "app_version": 1,
+  "msg_type": "blob_status",
+  "sha256": "4d35d49f7690e4dd27e8cd315afd0ba41d8f5e89c728b7d519567a2e8ebc77e6",
+  "status": "pending_sync"
+}

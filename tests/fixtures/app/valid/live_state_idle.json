@@ -1,0 +1,74 @@
+{
+  "app_version": 1,
+  "msg_type": "live_state",
+  "edge_id": "rover-mac",
+  "store_epoch": "3f2b8c1e-7d4a-4e0b-9a51-2c6d8e9f0a11",
+  "run_id": null,
+  "source_mode": null,
+  "rover": {
+    "wall_ns": 1760100000123456789,
+    "mono_ns": 523456789012,
+    "clock_synced": null
+  },
+  "preview": null,
+  "pose": null,
+  "health": null,
+  "freshness": {
+    "video": {
+      "age_ms": null,
+      "reason": "no frame received in this run"
+    },
+    "results": {
+      "age_ms": null,
+      "reason": "no frame received in this run"
+    },
+    "pose": {
+      "age_ms": null,
+      "reason": "no frame received in this run"
+    },
+    "health": {
+      "age_ms": null,
+      "reason": "no frame received in this run"
+    }
+  },
+  "capabilities": {
+    "model_id": null,
+    "rules": [],
+    "producers": [
+      {
+        "name": "ppe",
+        "status": "prototype",
+        "note": null
+      },
+      {
+        "name": "restricted_zone",
+        "status": "prototype",
+        "note": "physical tape acceptance pending"
+      },
+      {
+        "name": "person_in_path",
+        "status": "not_integrated",
+        "note": null
+      },
+      {
+        "name": "walkway",
+        "status": "not_integrated",
+        "note": "C8 library only"
+      },
+      {
+        "name": "controller_telemetry",
+        "status": "not_integrated",
+        "note": null
+      }
+    ]
+  },
+  "active_inspection_id": null,
+  "edge": {
+    "store_bytes": 1048576,
+    "disk_free_bytes": 50000000000,
+    "writer_queued": 0,
+    "writer_dropped": 0,
+    "writer_errors": 0,
+    "last_error": null
+  }
+}

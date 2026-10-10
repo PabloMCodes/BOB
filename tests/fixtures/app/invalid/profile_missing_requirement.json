@@ -1,0 +1,14 @@
+{
+  "app_version": 1,
+  "msg_type": "worksite_profile",
+  "worksite_id": "site-a",
+  "revision": 3,
+  "name": "Site A — level 2",
+  "requirements": {
+    "eyewear": true,
+    "helmet": true,
+    "gloves": false,
+    "vest": true
+  },
+  "sha256": "cf799ca38ea90b37e6c5318dd6e27a620769fdd40cf8cee611fb9c58942a97a4"
+}

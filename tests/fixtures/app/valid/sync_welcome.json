@@ -1,0 +1,27 @@
+{
+  "app_version": 1,
+  "msg_type": "sync_welcome",
+  "edge_id": "rover-mac",
+  "store_epoch": "3f2b8c1e-7d4a-4e0b-9a51-2c6d8e9f0a11",
+  "lanes": {
+    "control": {
+      "oldest_seq": 1,
+      "head_seq": 20
+    },
+    "track": {
+      "oldest_seq": null,
+      "head_seq": 0
+    },
+    "observation": {
+      "oldest_seq": 7,
+      "head_seq": 9
+    }
+  },
+  "rover": {
+    "wall_ns": 1760100000123456789,
+    "mono_ns": 523456789012,
+    "clock_synced": null
+  },
+  "run_id": "20261010_120000",
+  "source_mode": "LIVE"
+}

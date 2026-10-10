@@ -1,0 +1,66 @@
+{
+  "additionalProperties": false,
+  "description": "Immutable revision of a worksite's PPE requirements. `sha256` covers every other field.",
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "msg_type": {
+      "const": "worksite_profile",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "requirements": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "propertyNames": {
+        "enum": [
+          "eyewear",
+          "helmet",
+          "gloves",
+          "vest",
+          "boots"
+        ]
+      },
+      "title": "Requirements",
+      "type": "object"
+    },
+    "revision": {
+      "exclusiveMinimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "worksite_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "title": "Worksite Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "worksite_id",
+    "revision",
+    "name",
+    "requirements",
+    "sha256"
+  ],
+  "title": "WorksiteProfile",
+  "type": "object"
+}

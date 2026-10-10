@@ -1,0 +1,7 @@
+{
+  "app_version": 1,
+  "msg_type": "sync_ack",
+  "store_epoch": "3f2b8c1e-7d4a-4e0b-9a51-2c6d8e9f0a11",
+  "lane": "control",
+  "seq": 14
+}

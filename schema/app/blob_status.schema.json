@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "BlobStatusValue": {
+      "enum": [
+        "available",
+        "pending_sync",
+        "missing",
+        "hash_mismatch"
+      ],
+      "title": "BlobStatusValue",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "msg_type": {
+      "const": "blob_status",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/BlobStatusValue"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "sha256",
+    "status"
+  ],
+  "title": "BlobStatus",
+  "type": "object"
+}

@@ -1,0 +1,154 @@
+{
+  "$defs": {
+    "Lane": {
+      "enum": [
+        "control",
+        "track",
+        "observation"
+      ],
+      "title": "Lane",
+      "type": "string"
+    },
+    "LaneInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "head_seq": {
+          "minimum": 0,
+          "title": "Head Seq",
+          "type": "integer"
+        },
+        "oldest_seq": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Oldest Seq"
+        }
+      },
+      "required": [
+        "head_seq"
+      ],
+      "title": "LaneInfo",
+      "type": "object"
+    },
+    "RoverClock": {
+      "additionalProperties": false,
+      "description": "Rover times of one record. Never subtract them from laptop or iPhone times.",
+      "properties": {
+        "clock_synced": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Clock Synced"
+        },
+        "mono_ns": {
+          "minimum": 0,
+          "title": "Mono Ns",
+          "type": "integer"
+        },
+        "wall_ns": {
+          "minimum": 0,
+          "title": "Wall Ns",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "wall_ns",
+        "mono_ns",
+        "clock_synced"
+      ],
+      "title": "RoverClock",
+      "type": "object"
+    },
+    "SourceMode": {
+      "description": "Declared by the operator at server start: the server cannot tell a replay client from a phone.",
+      "enum": [
+        "LIVE",
+        "REPLAY",
+        "SAMPLE"
+      ],
+      "title": "SourceMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "app_version": {
+      "const": 1,
+      "title": "App Version",
+      "type": "integer"
+    },
+    "edge_id": {
+      "minLength": 1,
+      "title": "Edge Id",
+      "type": "string"
+    },
+    "lanes": {
+      "additionalProperties": {
+        "$ref": "#/$defs/LaneInfo"
+      },
+      "propertyNames": {
+        "$ref": "#/$defs/Lane"
+      },
+      "title": "Lanes",
+      "type": "object"
+    },
+    "msg_type": {
+      "const": "sync_welcome",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "rover": {
+      "$ref": "#/$defs/RoverClock"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    },
+    "source_mode": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceMode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "store_epoch": {
+      "format": "uuid",
+      "title": "Store Epoch",
+      "type": "string"
+    }
+  },
+  "required": [
+    "app_version",
+    "msg_type",
+    "edge_id",
+    "store_epoch",
+    "lanes",
+    "rover"
+  ],
+  "title": "SyncWelcome",
+  "type": "object"
+}
