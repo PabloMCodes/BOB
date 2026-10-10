@@ -44,7 +44,7 @@ An image definition contains zone identity, image hash, dimensions and normalize
 The still-image report contains observation identity, source mode `STILL`, source image hash,
 model identity/class mapping, image dimensions, original boxes and a scene assessment.
 Person/evidence indices refer to that report's original boxes. Evidence and assessment use the
-same decoded image; a separate future live/replay sidecar must correlate to its source C2 event.
+same decoded image. Live/replay sidecars correlate to the exact source C2 event as described below.
 
 ## Feature 2: closed yellow caution-tape recognition
 
@@ -72,7 +72,63 @@ object unrelated to tape can still fool this color/shape method; the operator co
 controlled setup are necessary. Actual floor tape footage and physical acceptance are pending.
 The separate image-bound polygon mode remains available and unchanged.
 
+## Feature 3: Mac live/replay inspection
+
+Run the live server with the opt-in tape profile:
+
+```bash
+uv run python -m vision.server --detect --zones configs/zones-yellow.yaml --record
+```
+
+The existing PPE view remains separate from the **BOB restricted zones** window. The latter
+shows the current image-local boundary, foot evidence and uncertainty. It marks an old
+observation stale using its frame receive time, even if pose packets continue arriving, and
+clears the displayed boundary when the source session changes. Each frame is assessed anew;
+moving the phone does not reuse a static image polygon or establish map registration.
+
+Replay a recording with separate zone evidence images:
+
+```bash
+uv run python -m tools.replay_detect path/to/stream.bobrec \
+  --zones configs/zones-yellow.yaml --save-images --out runs/zones/my-replay
+```
+
+Both paths reuse the existing admitted frame and shared detection result; scene inspection
+does not run another model. Add `--config configs/footwear.yaml` to either command to use the
+existing opt-in footwear specialist. Network-fed sample/replay streams must be labeled using
+the server's `--zones-source-mode SAMPLE` or `REPLAY`; normal phone input defaults to `LIVE`.
+Offline outputs are labeled `REPLAY`; synthetic footage must also be visibly identified as sample data.
+
+Outputs in the run directory:
+
+- `scene_findings.jsonl`: one attempted observation per processed frame, keyed by
+  `source_event_id` into `detections.jsonl`, with session, sequence and iPhone capture timestamp.
+  Person/evidence indices refer to that C2 event's boxes.
+- `zone_profile.json`: effective operator declarations and thresholds. Each observation records
+  the profile hash and the SHA-256 of the upright decoded BGR pixel bytes.
+- `zone_frames/<source_event_id>.jpg`: separately annotated replay evidence when `--save-images`
+  is enabled. Live `--record` preserves the source recording for later replay.
+
+Valid associated pose means **camera observation position**, never the person's or zone's world
+position. Invalid pose leaves the image-local observation unlocalized. A retired-session event
+has an unverified boundary. Frozen C2 schema v2 and existing PPE verdicts are unchanged.
+
+Live scene output uses a bounded queue of eight records and drops new records on overflow.
+Console counters and `summary.json` report written/dropped records, storage errors and pending
+work; shutdown waits at most two seconds. This is an observation log, not durable incident
+storage. Only this scene sink is asynchronous; existing C2/recording storage is unchanged.
+Offline replay writes synchronously. `scene_processing_ms` measures boundary/assessment/hash
+work; server processing latency includes scene analysis/submission but excludes asynchronous
+scene disk writes and the separate zone window. No new live latency claim is made here.
+
 ## Acceptance
+
+Mac verification: **339 full-suite tests pass**, including 35 zone/tape/scene tests and server
+CLI integration with scene output enabled/disabled. Six synthetic JPEG frames through the real
+SH17 replay pipeline produced three recognized complete outlines and three unverified broken
+or absent outlines; all six sidecars matched their C2 event IDs. Portrait/landscape handling,
+session changes, missing foot evidence, queue overflow and storage failure have automated checks.
+Synthetic results do not measure physical tape or person-in-zone accuracy.
 
 Automated geometry tests cover inside/outside/boundary cases, no feet, ambiguous assignment,
 small/low-confidence/cropped evidence, malformed polygons and reference-image mismatch.

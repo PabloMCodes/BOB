@@ -123,12 +123,13 @@ def draw_zone(image: np.ndarray, assessment: ZoneAssessment) -> np.ndarray:
     region = assessment.region
     if region.polygon:
         cv2.polylines(out, [np.asarray(region.polygon, np.int32)], True, (0, 210, 255), 2)
-    lines = [f"ZONE {region.zone_id}: {region.status} ({region.reason})"]
+    lines = [f"Restricted zone: {region.zone_id} | {region.status.title()}",
+             region.reason.replace("_", " ")]
     for finding in assessment.people:
         color = (0, 0, 255) if finding.status == "possible_person_in_zone" else (0, 210, 255)
         for x, y in finding.contact_points:
             cv2.circle(out, (round(x), round(y)), 5, color, -1)
-        lines.append(f"person[{finding.person_box_index}]: {finding.status}")
+        lines.append(f"Person {finding.person_box_index}: {finding.status.replace('_', ' ')}")
     if not assessment.people:
         lines.append("No person assessed - not an all-clear result")
     for n, line in enumerate(lines[:10]):

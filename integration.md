@@ -35,7 +35,7 @@ These are the only ways other parts may depend on `autoCV`. Anything not listed 
 | C4 | Runtime config keys (`device`, `model`, optional `footwear_model` with `enabled/weights/weights_sha256`, `pipeline` incl. `feet_crop` and `crop.batch`, `ppe`, `training`, `server`, `timing`, `camera`, `render`) | `configs/default.yaml`; opt-in `configs/footwear.yaml` | Jetson deploy | `configs/default.yaml` | key names (rename = breaking) |
 | C5 | SHA-256-pinned SH17 + optional trained footwear specialist; derived `no-safety-glasses`, `no-helmet`, `no-gloves`, `no-safety-vest`, `no-safety-boots`. Ensemble retains SH17 IDs except generic shoes (14), suppressed; specialist IDs 17 shoes / 18 safety-boots under ensemble model_id | `configs/default.yaml`, `configs/footwear.yaml` → `models/` | Jetson deploy, alerts (class names) | `models/sh17.md`, `models/footwear-v1.md` | model card |
 | C6 | Python package `vision` (import path, Python 3.10) | `autoCV` | Jetson deploy | `pyproject.toml`, `uv.lock` | package version |
-| C7 | Independent scene inspection output (`scene_version: 1`), image-bound or declared closed yellow floor-tape definitions, frame-linked findings; no movement authority | Zone inspection tools; optional `configs/zones-yellow.yaml` profile | Future dashboard/evidence | `vision/zones.py`, `vision/tape.py`, `docs/restricted-zones.md` | scene contract version |
+| C7 | Independent scene inspection output (`scene_version: 1`), image-bound or declared closed yellow floor-tape definitions, frame-linked findings; no movement authority | Still inspection, opt-in Mac server/replay; `configs/zones-yellow.yaml` profile | Future dashboard/evidence | `vision/zones.py`, `vision/tape.py`, `vision/scene.py`, `docs/restricted-zones.md` | scene contract version |
 
 Wire codec (`encode` / `decode`) lives in `vision/schema/wire.py`. **Non-Python consumers** should validate against `schema/*.schema.json` **and** the fixtures: JSON Schema can't express cross-field rules (rigid transform, box bounds, `pose_valid` consistency, `source`↔`cls_id`), the fixtures do.
 
@@ -185,7 +185,7 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 
 | Branch | Part | Owner | Interfaces provided | Interfaces consumed | Status |
 | ------ | ---- | ----- | ------------------- | ------------------- | ------ |
-| `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6, C7 | — | Active · Step 5 built; Step 3b footwear v1 trained, held-out evaluated and opt-in pipeline wired; live/worksite acceptance pending; server integration owned by parallel session |
+| `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6, C7 | — | Active · Step 5 built; Step 3b footwear v1 trained, held-out evaluated and opt-in pipeline wired; live/worksite acceptance pending; Step 3c image/tape and Mac live/replay inspection implemented, physical tape acceptance pending |
 | `main` | Integration target | — | — | all | **Not created yet** |
 | *(TBD)* | Safety supervisor / navigation | — | motor commands (out of CV scope) | C2, C3 | Not created |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |

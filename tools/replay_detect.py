@@ -148,6 +148,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("recording", type=Path)
     parser.add_argument("--config", type=Path, help="runtime override, e.g. configs/footwear.yaml")
+    parser.add_argument("--zones", type=Path, help="opt-in yellow-tape profile; writes separate scene findings")
     parser.add_argument("--out", type=Path, default=None, help="default: runs/replay_detect/<name>_<time>")
     parser.add_argument("--rule", default="glasses")
     parser.add_argument("--segments", default=None, help='e.g. "wearing:0-10,not_wearing:12-22"')
@@ -176,14 +177,46 @@ def main() -> None:
                          hide=config["render"]["hide"])
             cv2.imwrite(str(out / "frames" / f"{outcome.t_s:08.2f}s_seq{outcome.event.seq_id}.jpg"), image)
 
+    inspector, scene_file, scene_count = None, None, 0
+    if args.zones:
+        from vision.scene import SceneInspector
+        from vision.zones import draw_zone
+        inspector = SceneInspector.from_file(args.zones)
+        (out / "zone_profile.json").write_text(inspector.profile.model_dump_json(indent=2))
+        scene_file = open(out / "scene_findings.jsonl", "w")
+        if args.save_images:
+            (out / "zone_frames").mkdir(exist_ok=True)
+
+    def consume(outcome, detection):
+        nonlocal scene_count
+        if save_frame:
+            save_frame(outcome, detection)
+        if inspector:
+            record, assessment = inspector.inspect(detection, "REPLAY")
+            scene_file.write(json.dumps(record) + "\n")
+            scene_count += 1
+            if args.save_images:
+                image = draw_zone(detection.image, assessment)
+                image = cv2.copyMakeBorder(image, 0, 30, 0, 0, cv2.BORDER_CONSTANT)
+                cv2.putText(image, "REPLAY - inspection observation", (8, image.shape[0]-16),
+                            cv2.FONT_HERSHEY_SIMPLEX, .5, (255,255,255), 1)
+                if not cv2.imwrite(str(out / "zone_frames" / f"{outcome.event.event_id}.jpg"), image):
+                    raise OSError("Could not write zone evidence")
+
     undecodable: list[int] = []
-    outcomes = run(load(args.recording), pipeline, config, on_frame=save_frame,
-                   on_undecodable=lambda f: undecodable.append(f.packet.seq_id))
+    try:
+        outcomes = run(load(args.recording), pipeline, config, on_frame=consume,
+                       on_undecodable=lambda f: undecodable.append(f.packet.seq_id))
+    finally:
+        if scene_file:
+            scene_file.close()
     with open(out / "detections.jsonl", "w") as fh:
         for o in outcomes:
             fh.write(o.event.model_dump_json() + "\n")
     summary = {"recording": str(args.recording), "model_id": pipeline.model_id, **summarize(outcomes),
                "undecodable_seq_ids": undecodable}
+    if inspector:
+        summary["scene_frames"] = scene_count
     if segments:
         scores = score(outcomes, args.rule, segments)
         summary["rule"] = args.rule

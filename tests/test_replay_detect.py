@@ -136,14 +136,16 @@ def test_bad_segments_rejected(text):
         parse_segments(text)
 
 
-def test_server_detect_end_to_end(tmp_path, recording):
+@pytest.mark.parametrize("zones", [False, True])
+def test_server_detect_end_to_end(tmp_path, recording, zones):
     """Replay -> vision.server --detect: one valid C2 event per processed frame + latency summary."""
     from tests.test_server import _free_port, run as run_async
 
     port = _free_port()
     proc = subprocess.Popen(
         [sys.executable, "-m", "vision.server", "--detect", "--no-view", "--host", "127.0.0.1",
-         "--port", str(port), "--run-dir", str(tmp_path)],
+         "--port", str(port), "--run-dir", str(tmp_path),
+         *(["--zones", "configs/zones-yellow.yaml", "--zones-source-mode", "SAMPLE"] if zones else [])],
         cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
     try:
@@ -166,3 +168,10 @@ def test_server_detect_end_to_end(tmp_path, recording):
     summary = json.loads((tmp_path / "summary.json").read_text())
     assert summary["detected_frames"] == 2 and summary["inference_p95_ms"] > 0
     assert summary["process_p95_ms"] >= summary["inference_p50_ms"]  # rx -> event includes inference
+    if zones:
+        scenes=[json.loads(l) for l in (tmp_path/'scene_findings.jsonl').read_text().splitlines()]
+        assert len(scenes)==2 and all(s['source_mode']=='SAMPLE' for s in scenes)
+        assert [s['source_event_id'] for s in scenes]==[str(e.event_id) for e in events]
+        assert summary['zones']['writer']['written']==2
+        assert summary['zones']['writer']['dropped']==0
+        assert summary['zones']['writer']['write_errors']==0

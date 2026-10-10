@@ -30,12 +30,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, help="runtime override, e.g. configs/footwear.yaml")
     parser.add_argument("--detect", action="store_true", help="run shared PPE pipeline, draw boxes and write C2 JSONL")
+    parser.add_argument("--zones", type=Path, help="opt-in yellow-tape profile; requires --detect")
+    parser.add_argument("--zones-source-mode", choices=("LIVE", "REPLAY", "SAMPLE"), default="LIVE",
+                        help="label known replay/sample inputs honestly when feeding the network server")
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--record", action="store_true", help="save every received message to stream.bobrec")
     parser.add_argument("--no-view", action="store_true", help="headless: decode frames, no window")
     parser.add_argument("--run-dir", type=Path, default=None, help="default: server.run_dir/<time>")
     args = parser.parse_args()
+    if args.zones and not args.detect:
+        parser.error("--zones requires --detect")
+    inspector = None
+    if args.zones:
+        from vision.scene import SceneInspector, SceneWriter
+        from vision.zones import draw_zone
+        inspector = SceneInspector.from_file(args.zones)
     config = load_config(args.config)
     args.host = args.host or config["server"]["host"]
     args.port = config["server"]["port"] if args.port is None else args.port
@@ -52,6 +62,9 @@ def main() -> None:
     health_file = open(run_dir / "stream_health.jsonl", "w")
     record = open(run_dir / "stream.bobrec", "wb") if args.record else None
     detections = open(run_dir / "detections.jsonl", "w") if pipeline is not None else None
+    scene_writer = SceneWriter(open(run_dir / "scene_findings.jsonl", "w")) if inspector else None
+    if inspector:
+        (run_dir / "zone_profile.json").write_text(inspector.profile.model_dump_json(indent=2))
     if pipeline is not None:
         (run_dir / "model.json").write_text(json.dumps({
             "model_id": pipeline.model_id, "names": pipeline.names,
@@ -78,6 +91,9 @@ def main() -> None:
 
     mount = config["camera"]["mount_orientation"]
     inference_ms: list[float] = []
+    # Only the latest scene frame is retained for display; refresh its freshness on idle ticks.
+    scene_image, scene_session, scene_rx_ns = None, None, None
+    scene_count, scene_total_ms, scene_max_ms = 0, 0., 0.
     last_print = 0.0
     try:
         if not args.no_view:
@@ -93,6 +109,15 @@ def main() -> None:
                         detections.write(event.model_dump_json() + "\n")
                         detections.flush()
                         inference_ms.append(result.inference_ms)
+                        if inspector:
+                            scene_record, assessment = inspector.inspect(detection, args.zones_source_mode)
+                            scene_writer.submit(scene_record)
+                            scene_count += 1
+                            scene_total_ms += scene_record["scene_processing_ms"]
+                            scene_max_ms = max(scene_max_ms, scene_record["scene_processing_ms"])
+                            if not args.no_view:
+                                scene_image = draw_zone(detection.image, assessment)
+                                scene_session, scene_rx_ns = event.session_id, frame.rx_ts_ns
                         image = draw(detection.image, result.boxes, config["render"]["categories"],
                                      hide=config["render"]["hide"])
                         lines.append(f"CV {result.inference_ms:.0f} ms | {len(result.boxes)} boxes | pose {event.pose_valid}")
@@ -105,11 +130,26 @@ def main() -> None:
                     image = overlay_stats(image, stats_lines(server.monitor.stats()) + lines)
                     cv2.imshow("BOB stream", image)
                 server.monitor.processed(frame)
+            if scene_image is not None and not args.no_view:
+                if scene_session != server.associator.current_session:
+                    shown = np.zeros_like(scene_image)
+                    label = f"{args.zones_source_mode} - session changed; waiting for a current observation"
+                else:
+                    shown = scene_image.copy()
+                    age_ms = (time.time_ns() - scene_rx_ns) / 1e6
+                    label = f"{args.zones_source_mode} - {'STALE last observation' if age_ms > config['timing']['stale_ms'] else 'current observation'} ({age_ms:.0f} ms since receive)"
+                cv2.putText(shown, label, (8, shown.shape[0]-16), cv2.FONT_HERSHEY_SIMPLEX,
+                            .5, (0, 0, 0), 3)
+                cv2.putText(shown, label, (8, shown.shape[0]-16), cv2.FONT_HERSHEY_SIMPLEX,
+                            .5, (255, 255, 255), 1)
+                cv2.imshow("BOB restricted zones", shown)
             if not args.no_view and (cv2.waitKey(1) & 0xFF) == ord("q"):
                 break
             if time.monotonic() - last_print >= 1.0:
                 last_print = time.monotonic()
                 print("[server] " + " | ".join(stats_lines(server.monitor.stats())), flush=True)
+                if scene_writer:
+                    print("[zones] " + json.dumps(scene_writer.stats()), flush=True)
     except KeyboardInterrupt:
         pass
     finally:
@@ -117,10 +157,14 @@ def main() -> None:
         final = server.monitor.stats()
         summary = {k: (str(v) if isinstance(v, UUID) else v) for k, v in final.__dict__.items()}
         if pipeline is not None:
-            # process_* = rx -> DetectionEvent written (the Step 6 latency); inference = model passes only.
+            # process_* includes frame-consumer work (C2, optional scene analysis/submission and
+            # primary view). Async scene storage and the separate zone window are not included.
             summary.update(detected_frames=len(inference_ms),
                            inference_p50_ms=float(np.percentile(inference_ms, 50)) if inference_ms else None,
                            inference_p95_ms=float(np.percentile(inference_ms, 95)) if inference_ms else None)
+        if scene_writer:
+            summary["zones"] = {"frames": scene_count, "scene_mean_ms": scene_total_ms / scene_count if scene_count else None,
+                                "scene_max_ms": scene_max_ms, "writer": scene_writer.close()}
         (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
         health_file.close()
         if detections is not None:

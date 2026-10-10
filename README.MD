@@ -48,7 +48,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 6 | Live inference + bounding boxes | 🟡 Built + replay/loopback-tested — **live PPE on/off test pending** | Replay determinism, live PPE on/off test, p50/p95 latency | 248/248 pass · offline replay deterministic + identical to the direct pipeline · `server --detect` 1920×1440 @10 Hz, 0 drops: rx→event **p95 85.6 ms** (2 people, landscape_left) / **117.7 ms** (5–6 people, portrait) ≤ 150 ✅ · inference p95 78 / 99 ms |
 | 7 | Pose ↔ detection timestamp association | 🟡 Built + synthetic-tested — **deliberate live occlusion / Reset / background run pending** | Synthetic timeline unit tests, live occlusion + ARKit reset | 21 timeline tests (mutation-checked) · existing live recordings: 3 session switches, each new session invalid only while ARKit `initializing` (1.0–1.3 s), 0 old-session frames after a switch; mid-session re-init (3.9 s) invalid, origin kept (≤ 3 cm, < 1°) |
 | 8 | CV destructive tests + Jetson handoff prep | 🟡 Built + Mac-verified — **on-device Jetson checks (J1–J6) pending** | Scripted failure suite, `.pt` vs `.onnx` parity | 20 destructive tests → **3 bugs found + fixed** · `.pt` vs `.onnx` (SH17 and + footwear): 92 images / 606–669 boxes, max \|Δconf\| 1.7e-6, **verdicts identical** · reproducible ONNX SHA · batched crops identical to sequential, live rx→event **p95 65.3 / 75.8 ms** (was 85.6 / 117.7) |
-| 3c | Restricted-zone inspection — no movement authority | 🟡 Image-bound and closed yellow-tape prototypes; live/replay integration next | Geometry, evidence validity, tape failure cases | 29 zone/tape tests pass; physical scene acceptance pending |
+| 3c | Restricted-zone inspection — no movement authority | 🟡 Mac live/replay prototype built; physical tape acceptance pending | Geometry, evidence validity, tape failure cases, correlated scene output | 35 zone/tape/scene tests; full suite 339 pass; 6 synthetic replay frames correlated to C2 |
 
 ### Step 0 — Environment & repo skeleton ✅
 
@@ -116,11 +116,11 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 - **Test:** `uv run pytest` — vest on torso, no vest → torso box, vest at the feet doesn't count, one vest per person, small/uncertain person unverified, active with SH17 / inactive with the fine-tune classes. Real model: `bus.jpg` 4/4 and `zidane.jpg` 2/2 people `not_wearing`, never `wearing`.
 - **Pending (needs the team):** photos in `data/eval/vest/{wearing,not_wearing}/<distance>/` (same capture protocol as Step 3, incl. a few hi-vis jackets in `not_wearing/` to measure that limitation) → `uv run python -m tools.eval_ppe --rule vest`.
 
-### Step 3c — Scene hazards (backlog, after Step 7)
+### Step 3c — Restricted-zone inspection 🟡 (physical acceptance pending)
 
 **Restricted zones first**, using a fixed-image operator polygon, then the user-confirmed yellow caution-tape convention (closed floor outline, inside restricted), then live/replay integration. Walkway obstruction follows later; open edges/stairs remain deferred. These are inspection findings for humans, with no movement authority. Image-space findings do not establish a hazard world position. The independent scene contract leaves CV schema v2 unchanged; schema v3 is not automatically required.
 
-Feature 1: `tools.inspect_zone` binds a polygon to an exact upright image and runs the shared PPE/person pipeline. A possible person-in-zone finding requires separate visible foot evidence; bounding-box overlap alone is insufficient. Missing or ambiguous evidence remains unverified. Tests and commands: [restricted-zone guide](docs/restricted-zones.md).
+Feature 1: `tools.inspect_zone` binds a polygon to an exact upright image and runs the shared PPE/person pipeline. A possible person-in-zone finding requires separate visible foot evidence; bounding-box overlap alone is insufficient. Missing or ambiguous evidence remains unverified. Feature 2 recognizes a complete yellow floor-tape outline under an explicit operator convention. Feature 3 adds a separate Mac zone view and frame-linked replay sidecars. Run `uv run python -m vision.server --detect --zones configs/zones-yellow.yaml --record`. Tape color/shape does not prove floor geometry or recognize CAUTION text; physical testing remains pending. Tests, replay commands and limitations: [restricted-zone guide](docs/restricted-zones.md).
 
 ### Step 3b — Gloves, safety boots, and one fine-tune for all 🟡 (data collection pending)
 
