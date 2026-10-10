@@ -11,6 +11,16 @@ from vision.schema import Pose, PoseInvalidReason
 
 from .common import NonNegInt, PosInt, Sha256, _Model
 
+
+class Hazard(str, Enum):
+    """The three hazard categories (+ walkway). person_in_path and walkway have no producer yet:
+    their incidents exist only as SAMPLE data until a producer and its own policy exist."""
+    PPE = "ppe"
+    RESTRICTED_ZONE = "restricted_zone"
+    PERSON_IN_PATH = "person_in_path"
+    WALKWAY = "walkway"
+
+
 class IncidentTransition(str, Enum):
     CANDIDATE = "candidate"
     CONFIRMED = "confirmed"
@@ -31,16 +41,19 @@ class IncidentKey(_Model):
     inspection_id: UUID
     profile_revision: PosInt
     session_id: UUID
-    rule: Optional[str] = None                 # PPE rule, or
-    zone_id: Optional[str] = None              # restricted zone (C7)
+    hazard: Hazard
+    rule: Optional[str] = None                 # ppe: the PPE rule
+    zone_id: Optional[str] = None              # restricted_zone: C7 zone; walkway: walkway id
     zone_profile_sha256: Optional[Sha256] = None
 
     @model_validator(mode="after")
-    def _one(self) -> IncidentKey:
-        if (self.rule is None) == (self.zone_id is None):
-            raise ValueError("an incident key has exactly one of rule or zone_id")
-        if (self.zone_id is None) != (self.zone_profile_sha256 is None):
-            raise ValueError("zone incidents need zone_profile_sha256 (and only they)")
+    def _shape(self) -> IncidentKey:
+        has_rule, has_zone, has_hash = self.rule is not None, self.zone_id is not None, self.zone_profile_sha256 is not None
+        expected = {Hazard.PPE: (True, False, False), Hazard.RESTRICTED_ZONE: (False, True, True),
+                    Hazard.PERSON_IN_PATH: (False, False, False), Hazard.WALKWAY: (False, True, has_hash)}[self.hazard]
+        if (has_rule, has_zone, has_hash) != expected:
+            raise ValueError("incident key shape: ppe needs only rule; restricted_zone needs zone_id + "
+                             "zone_profile_sha256; person_in_path neither; walkway needs zone_id")
         return self
 
 

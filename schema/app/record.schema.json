@@ -431,6 +431,17 @@
       "title": "GapReason",
       "type": "string"
     },
+    "Hazard": {
+      "description": "The three hazard categories (+ walkway). person_in_path and walkway have no producer yet:\ntheir incidents exist only as SAMPLE data until a producer and its own policy exist.",
+      "enum": [
+        "ppe",
+        "restricted_zone",
+        "person_in_path",
+        "walkway"
+      ],
+      "title": "Hazard",
+      "type": "string"
+    },
     "ImageSize": {
       "additionalProperties": false,
       "properties": {
@@ -577,6 +588,9 @@
     "IncidentKey": {
       "additionalProperties": false,
       "properties": {
+        "hazard": {
+          "$ref": "#/$defs/Hazard"
+        },
         "inspection_id": {
           "format": "uuid",
           "title": "Inspection Id",
@@ -633,7 +647,8 @@
       "required": [
         "inspection_id",
         "profile_revision",
-        "session_id"
+        "session_id",
+        "hazard"
       ],
       "title": "IncidentKey",
       "type": "object"

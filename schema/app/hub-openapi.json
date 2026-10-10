@@ -1,0 +1,3180 @@
+{
+  "components": {
+    "schemas": {
+      "AssessmentItem": {
+        "properties": {
+          "assessment": {
+            "$ref": "#/components/schemas/FrameAssessment"
+          },
+          "cursor": {
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "iphone_frame_ts_ns": {
+            "title": "Iphone Frame Ts Ns",
+            "type": "integer"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_invalid_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PoseInvalidReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_valid": {
+            "title": "Pose Valid",
+            "type": "boolean"
+          },
+          "seq_id": {
+            "title": "Seq Id",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          }
+        },
+        "required": [
+          "cursor",
+          "delivery",
+          "source_mode",
+          "event_id",
+          "session_id",
+          "seq_id",
+          "iphone_frame_ts_ns",
+          "pose_valid",
+          "assessment"
+        ],
+        "title": "AssessmentItem",
+        "type": "object"
+      },
+      "AssessmentPage": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssessmentItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_after": {
+            "title": "Next After",
+            "type": "integer"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "items",
+          "next_after"
+        ],
+        "title": "AssessmentPage",
+        "type": "object"
+      },
+      "AssessmentStatus": {
+        "enum": [
+          "not_required",
+          "detected",
+          "not_detected",
+          "not_assessed",
+          "assessment_unavailable"
+        ],
+        "title": "AssessmentStatus",
+        "type": "string"
+      },
+      "Box": {
+        "additionalProperties": false,
+        "description": "One box in pixels of the upright (rotated) image.\n\nsource=\"model\":   a raw YOLO detection; cls_id is the model's class index.\nsource=\"derived\": produced by a PPE rule (e.g. \"no-safety-glasses\" on a face's eye band);\n                  cls_id is null and conf is the confidence of the subject it was derived from.",
+        "properties": {
+          "cls_id": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cls Id"
+          },
+          "cls_name": {
+            "minLength": 1,
+            "title": "Cls Name",
+            "type": "string"
+          },
+          "conf": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Conf",
+            "type": "number"
+          },
+          "source": {
+            "enum": [
+              "model",
+              "derived"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "xyxy": {
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Xyxy",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "cls_id",
+          "cls_name",
+          "conf",
+          "xyxy"
+        ],
+        "title": "Box",
+        "type": "object"
+      },
+      "Capabilities": {
+        "additionalProperties": false,
+        "properties": {
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "producers": {
+            "items": {
+              "$ref": "#/components/schemas/Producer"
+            },
+            "title": "Producers",
+            "type": "array"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleStatus"
+            },
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules",
+          "producers"
+        ],
+        "title": "Capabilities",
+        "type": "object"
+      },
+      "Delivery": {
+        "description": "Set by the hub on receipt. Backfilled records never update current status.",
+        "enum": [
+          "realtime",
+          "backfilled"
+        ],
+        "title": "Delivery",
+        "type": "string"
+      },
+      "DetectionEvent": {
+        "additionalProperties": false,
+        "description": "C2 \u2014 YOLO result for one source frame, tagged with the pose matched by timestamp.\n\nConsumers MUST check pose_valid before using pose; an invalid event may still carry the\nnearest pose for debugging. Boxes only: hazard decisions belong to the alerts/safety branch.",
+        "properties": {
+          "boxes": {
+            "items": {
+              "$ref": "#/components/schemas/Box"
+            },
+            "title": "Boxes",
+            "type": "array"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "image_size": {
+            "$ref": "#/components/schemas/ImageSize"
+          },
+          "inference_latency_ms": {
+            "minimum": 0.0,
+            "title": "Inference Latency Ms",
+            "type": "number"
+          },
+          "iphone_frame_ts_ns": {
+            "minimum": 0.0,
+            "title": "Iphone Frame Ts Ns",
+            "type": "integer"
+          },
+          "jetson_receive_ts_ns": {
+            "minimum": 0.0,
+            "title": "Jetson Receive Ts Ns",
+            "type": "integer"
+          },
+          "model_id": {
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "msg_type": {
+            "const": "detection_event",
+            "title": "Msg Type",
+            "type": "string"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_dt_ms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pose Dt Ms"
+          },
+          "pose_invalid_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PoseInvalidReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_valid": {
+            "title": "Pose Valid",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "const": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "seq_id": {
+            "minimum": 0.0,
+            "title": "Seq Id",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "tracking_state": {
+            "$ref": "#/components/schemas/TrackingState"
+          }
+        },
+        "required": [
+          "schema_version",
+          "msg_type",
+          "event_id",
+          "session_id",
+          "seq_id",
+          "iphone_frame_ts_ns",
+          "jetson_receive_ts_ns",
+          "inference_latency_ms",
+          "model_id",
+          "image_size",
+          "tracking_state",
+          "boxes",
+          "pose_valid"
+        ],
+        "title": "DetectionEvent",
+        "type": "object"
+      },
+      "EdgeStatus": {
+        "additionalProperties": false,
+        "description": "Writer fields are null when no vision.server run is publishing (unknown, not zero).",
+        "properties": {
+          "disk_free_bytes": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disk Free Bytes"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "store_bytes": {
+            "minimum": 0.0,
+            "title": "Store Bytes",
+            "type": "integer"
+          },
+          "writer_dropped": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Writer Dropped"
+          },
+          "writer_errors": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Writer Errors"
+          },
+          "writer_queued": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Writer Queued"
+          }
+        },
+        "required": [
+          "store_bytes"
+        ],
+        "title": "EdgeStatus",
+        "type": "object"
+      },
+      "EvidenceBody": {
+        "additionalProperties": false,
+        "description": "Metadata of one clean upright full-resolution JPEG blob, tied to its exact source frame.",
+        "properties": {
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "image_pixels_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Image Pixels Sha256",
+            "type": "string"
+          },
+          "image_size": {
+            "$ref": "#/components/schemas/ImageSize"
+          },
+          "iphone_frame_ts_ns": {
+            "minimum": 0.0,
+            "title": "Iphone Frame Ts Ns",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "evidence",
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_type": {
+            "const": "image/jpeg",
+            "title": "Media Type",
+            "type": "string"
+          },
+          "model_id": {
+            "minLength": 1,
+            "title": "Model Id",
+            "type": "string"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_invalid_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PoseInvalidReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_valid": {
+            "title": "Pose Valid",
+            "type": "boolean"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/EvidenceReason"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "seq_id": {
+            "minimum": 0.0,
+            "title": "Seq Id",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "sha256",
+          "size_bytes",
+          "media_type",
+          "image_pixels_sha256",
+          "event_id",
+          "session_id",
+          "seq_id",
+          "iphone_frame_ts_ns",
+          "model_id",
+          "image_size",
+          "reason",
+          "rules",
+          "pose_valid"
+        ],
+        "title": "EvidenceBody",
+        "type": "object"
+      },
+      "EvidenceReason": {
+        "enum": [
+          "derived_box",
+          "scene_finding",
+          "incident"
+        ],
+        "title": "EvidenceReason",
+        "type": "string"
+      },
+      "FeedAge": {
+        "additionalProperties": false,
+        "description": "Rover-clock age of the newest item; null with a reason when there has been none.",
+        "properties": {
+          "age_ms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Ms"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "FeedAge",
+        "type": "object"
+      },
+      "FrameAssessment": {
+        "additionalProperties": false,
+        "description": "One frame under the inspection's bound profile revision (\u00a74).",
+        "properties": {
+          "inspection_id": {
+            "format": "uuid",
+            "title": "Inspection Id",
+            "type": "string"
+          },
+          "no_requirements_selected": {
+            "title": "No Requirements Selected",
+            "type": "boolean"
+          },
+          "profile_revision": {
+            "exclusiveMinimum": 0.0,
+            "title": "Profile Revision",
+            "type": "integer"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/RequirementAssessment"
+            },
+            "title": "Requirements",
+            "type": "array"
+          },
+          "worksite_id": {
+            "minLength": 1,
+            "title": "Worksite Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inspection_id",
+          "worksite_id",
+          "profile_revision",
+          "no_requirements_selected",
+          "requirements"
+        ],
+        "title": "FrameAssessment",
+        "type": "object"
+      },
+      "FrameCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "negative": {
+            "minimum": 0.0,
+            "title": "Negative",
+            "type": "integer"
+          },
+          "neutral": {
+            "minimum": 0.0,
+            "title": "Neutral",
+            "type": "integer"
+          },
+          "positive": {
+            "minimum": 0.0,
+            "title": "Positive",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "positive",
+          "negative",
+          "neutral"
+        ],
+        "title": "FrameCounts",
+        "type": "object"
+      },
+      "Freshness": {
+        "additionalProperties": false,
+        "properties": {
+          "health": {
+            "$ref": "#/components/schemas/FeedAge"
+          },
+          "pose": {
+            "$ref": "#/components/schemas/FeedAge"
+          },
+          "results": {
+            "$ref": "#/components/schemas/FeedAge"
+          },
+          "video": {
+            "$ref": "#/components/schemas/FeedAge"
+          }
+        },
+        "required": [
+          "video",
+          "results",
+          "pose",
+          "health"
+        ],
+        "title": "Freshness",
+        "type": "object"
+      },
+      "GapBody": {
+        "additionalProperties": false,
+        "description": "Records first_seq..last_seq of `lane` were removed on the rover before the hub had them.",
+        "properties": {
+          "first_seq": {
+            "exclusiveMinimum": 0.0,
+            "title": "First Seq",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "gap",
+            "title": "Kind",
+            "type": "string"
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "last_seq": {
+            "exclusiveMinimum": 0.0,
+            "title": "Last Seq",
+            "type": "integer"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/GapReason"
+          }
+        },
+        "required": [
+          "kind",
+          "lane",
+          "first_seq",
+          "last_seq",
+          "reason"
+        ],
+        "title": "GapBody",
+        "type": "object"
+      },
+      "GapReason": {
+        "enum": [
+          "pruned_retention",
+          "pruned_disk_pressure"
+        ],
+        "title": "GapReason",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Hazard": {
+        "description": "The three hazard categories (+ walkway). person_in_path and walkway have no producer yet:\ntheir incidents exist only as SAMPLE data until a producer and its own policy exist.",
+        "enum": [
+          "ppe",
+          "restricted_zone",
+          "person_in_path",
+          "walkway"
+        ],
+        "title": "Hazard",
+        "type": "string"
+      },
+      "ImageSize": {
+        "additionalProperties": false,
+        "properties": {
+          "height": {
+            "exclusiveMinimum": 0.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "width": {
+            "exclusiveMinimum": 0.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "ImageSize",
+        "type": "object"
+      },
+      "IncidentBody": {
+        "additionalProperties": false,
+        "description": "One append-only state transition (\u00a78.3). Records are never edited.",
+        "properties": {
+          "calibrated": {
+            "title": "Calibrated",
+            "type": "boolean"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/FrameCounts"
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentEndReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Event Ids",
+            "type": "array"
+          },
+          "evidence_sha256": {
+            "default": [],
+            "items": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Evidence Sha256",
+            "type": "array"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "interruption_ns": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interruption Ns"
+          },
+          "key": {
+            "$ref": "#/components/schemas/IncidentKey"
+          },
+          "kind": {
+            "const": "incident",
+            "title": "Kind",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed_iphone_ts_ns": {
+            "minimum": 0.0,
+            "title": "Observed Iphone Ts Ns",
+            "type": "integer"
+          },
+          "policy_params_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Policy Params Sha256",
+            "type": "string"
+          },
+          "policy_version": {
+            "exclusiveMinimum": 0.0,
+            "title": "Policy Version",
+            "type": "integer"
+          },
+          "transition": {
+            "$ref": "#/components/schemas/IncidentTransition"
+          }
+        },
+        "required": [
+          "kind",
+          "incident_id",
+          "transition",
+          "key",
+          "policy_version",
+          "policy_params_sha256",
+          "calibrated",
+          "observed_iphone_ts_ns",
+          "counts",
+          "event_ids"
+        ],
+        "title": "IncidentBody",
+        "type": "object"
+      },
+      "IncidentEndReason": {
+        "enum": [
+          "condition_not_observed",
+          "not_assessed",
+          "session_changed",
+          "inspection_ended",
+          "source_stopped"
+        ],
+        "title": "IncidentEndReason",
+        "type": "string"
+      },
+      "IncidentKey": {
+        "additionalProperties": false,
+        "properties": {
+          "hazard": {
+            "$ref": "#/components/schemas/Hazard"
+          },
+          "inspection_id": {
+            "format": "uuid",
+            "title": "Inspection Id",
+            "type": "string"
+          },
+          "profile_revision": {
+            "exclusiveMinimum": 0.0,
+            "title": "Profile Revision",
+            "type": "integer"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "zone_profile_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Profile Sha256"
+          }
+        },
+        "required": [
+          "inspection_id",
+          "profile_revision",
+          "session_id",
+          "hazard"
+        ],
+        "title": "IncidentKey",
+        "type": "object"
+      },
+      "IncidentLocation": {
+        "additionalProperties": false,
+        "description": "Camera pose of the frame (\"observed from here\"), never the person's position.",
+        "properties": {
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unlocalized_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PoseInvalidReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "event_id"
+        ],
+        "title": "IncidentLocation",
+        "type": "object"
+      },
+      "IncidentTransition": {
+        "enum": [
+          "candidate",
+          "confirmed",
+          "discarded",
+          "ended",
+          "reopened"
+        ],
+        "title": "IncidentTransition",
+        "type": "string"
+      },
+      "InspectionEndReason": {
+        "enum": [
+          "operator",
+          "source_stopped"
+        ],
+        "title": "InspectionEndReason",
+        "type": "string"
+      },
+      "InspectionEndedBody": {
+        "additionalProperties": false,
+        "properties": {
+          "inspection_id": {
+            "format": "uuid",
+            "title": "Inspection Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "inspection_ended",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/InspectionEndReason"
+          }
+        },
+        "required": [
+          "kind",
+          "inspection_id",
+          "reason"
+        ],
+        "title": "InspectionEndedBody",
+        "type": "object"
+      },
+      "InspectionItem": {
+        "properties": {
+          "ended": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Item"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspection_id": {
+            "format": "uuid",
+            "title": "Inspection Id",
+            "type": "string"
+          },
+          "profile_revision": {
+            "title": "Profile Revision",
+            "type": "integer"
+          },
+          "profile_sha256": {
+            "title": "Profile Sha256",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          },
+          "started": {
+            "$ref": "#/components/schemas/Item"
+          },
+          "worksite_id": {
+            "title": "Worksite Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inspection_id",
+          "worksite_id",
+          "profile_revision",
+          "profile_sha256",
+          "source_mode",
+          "started"
+        ],
+        "title": "InspectionItem",
+        "type": "object"
+      },
+      "InspectionPage": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InspectionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "items"
+        ],
+        "title": "InspectionPage",
+        "type": "object"
+      },
+      "InspectionStartedBody": {
+        "additionalProperties": false,
+        "properties": {
+          "inspection_id": {
+            "format": "uuid",
+            "title": "Inspection Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "inspection_started",
+            "title": "Kind",
+            "type": "string"
+          },
+          "profile_revision": {
+            "exclusiveMinimum": 0.0,
+            "title": "Profile Revision",
+            "type": "integer"
+          },
+          "profile_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Profile Sha256",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "worksite_id": {
+            "minLength": 1,
+            "title": "Worksite Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "inspection_id",
+          "worksite_id",
+          "profile_revision",
+          "profile_sha256"
+        ],
+        "title": "InspectionStartedBody",
+        "type": "object"
+      },
+      "Item": {
+        "properties": {
+          "cursor": {
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "hub_rx_wall_ns": {
+            "title": "Hub Rx Wall Ns",
+            "type": "integer"
+          },
+          "record": {
+            "$ref": "#/components/schemas/Record"
+          }
+        },
+        "required": [
+          "cursor",
+          "delivery",
+          "hub_rx_wall_ns",
+          "record"
+        ],
+        "title": "Item",
+        "type": "object"
+      },
+      "Lane": {
+        "enum": [
+          "control",
+          "track",
+          "observation"
+        ],
+        "title": "Lane",
+        "type": "string"
+      },
+      "LaneStatus": {
+        "properties": {
+          "behind": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Behind"
+          },
+          "committed_seq": {
+            "title": "Committed Seq",
+            "type": "integer"
+          },
+          "records": {
+            "title": "Records",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "records",
+          "committed_seq"
+        ],
+        "title": "LaneStatus",
+        "type": "object"
+      },
+      "LivePose": {
+        "additionalProperties": false,
+        "properties": {
+          "iphone_ts_ns": {
+            "minimum": 0.0,
+            "title": "Iphone Ts Ns",
+            "type": "integer"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_invalid_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PoseInvalidReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pose_valid": {
+            "title": "Pose Valid",
+            "type": "boolean"
+          },
+          "seq_id": {
+            "minimum": 0.0,
+            "title": "Seq Id",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "seq_id",
+          "iphone_ts_ns",
+          "pose_valid"
+        ],
+        "title": "LivePose",
+        "type": "object"
+      },
+      "LiveState": {
+        "additionalProperties": false,
+        "properties": {
+          "active_inspection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Inspection Id"
+          },
+          "app_version": {
+            "const": 1,
+            "title": "App Version",
+            "type": "integer"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "edge": {
+            "$ref": "#/components/schemas/EdgeStatus"
+          },
+          "edge_id": {
+            "minLength": 1,
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StreamHealth"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "msg_type": {
+            "const": "live_state",
+            "title": "Msg Type",
+            "type": "string"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LivePose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rover": {
+            "$ref": "#/components/schemas/RoverClock"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "source_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "store_epoch": {
+            "format": "uuid",
+            "title": "Store Epoch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_version",
+          "msg_type",
+          "edge_id",
+          "store_epoch",
+          "rover",
+          "freshness",
+          "capabilities",
+          "edge"
+        ],
+        "title": "LiveState",
+        "type": "object"
+      },
+      "NoticeBody": {
+        "additionalProperties": false,
+        "description": "Capability / health notices: 'Required \u2014 assessment unavailable', writer drops, low rate...",
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "pattern": "^[a-z_]+$",
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Details",
+            "type": "object"
+          },
+          "kind": {
+            "const": "notice",
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "code",
+          "message"
+        ],
+        "title": "NoticeBody",
+        "type": "object"
+      },
+      "ObservationBody": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event": {
+            "$ref": "#/components/schemas/DetectionEvent"
+          },
+          "evidence_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Sha256"
+          },
+          "frame_verdicts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Verdict"
+            },
+            "title": "Frame Verdicts",
+            "type": "object"
+          },
+          "image_pixels_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Image Pixels Sha256",
+            "type": "string"
+          },
+          "kind": {
+            "const": "observation",
+            "title": "Kind",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleStatus"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "scene": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene"
+          },
+          "verdicts": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectVerdict"
+            },
+            "title": "Verdicts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "event",
+          "rules",
+          "verdicts",
+          "frame_verdicts",
+          "image_pixels_sha256"
+        ],
+        "title": "ObservationBody",
+        "type": "object"
+      },
+      "Page": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_after": {
+            "title": "Next After",
+            "type": "integer"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "items",
+          "next_after"
+        ],
+        "title": "Page",
+        "type": "object"
+      },
+      "Pose": {
+        "additionalProperties": false,
+        "description": "Camera position in the ARKit world frame (right-handed, +Y up, origin = session start).\n\nyaw_rad: rotation about world +Y; 0 = facing the session's initial -Z, positive = turning left.",
+        "properties": {
+          "x_m": {
+            "title": "X M",
+            "type": "number"
+          },
+          "y_m": {
+            "title": "Y M",
+            "type": "number"
+          },
+          "yaw_rad": {
+            "maximum": 3.141592653589793,
+            "minimum": -3.141592653589793,
+            "title": "Yaw Rad",
+            "type": "number"
+          },
+          "z_m": {
+            "title": "Z M",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x_m",
+          "y_m",
+          "z_m",
+          "yaw_rad"
+        ],
+        "title": "Pose",
+        "type": "object"
+      },
+      "PoseInvalidReason": {
+        "enum": [
+          "tracking_not_normal",
+          "stale",
+          "session_mismatch",
+          "dt_exceeded",
+          "no_pose"
+        ],
+        "title": "PoseInvalidReason",
+        "type": "string"
+      },
+      "PreviewRef": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "image_size": {
+            "$ref": "#/components/schemas/ImageSize"
+          },
+          "seq_id": {
+            "minimum": 0.0,
+            "title": "Seq Id",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "source_image_size": {
+            "$ref": "#/components/schemas/ImageSize"
+          }
+        },
+        "required": [
+          "event_id",
+          "session_id",
+          "seq_id",
+          "image_size",
+          "source_image_size",
+          "sha256"
+        ],
+        "title": "PreviewRef",
+        "type": "object"
+      },
+      "Producer": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProducerStatus"
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "Producer",
+        "type": "object"
+      },
+      "ProducerStatus": {
+        "enum": [
+          "integrated",
+          "prototype",
+          "not_integrated"
+        ],
+        "title": "ProducerStatus",
+        "type": "string"
+      },
+      "ProfileRevisionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "profile_revision",
+            "title": "Kind",
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/WorksiteProfile"
+          }
+        },
+        "required": [
+          "kind",
+          "profile"
+        ],
+        "title": "ProfileRevisionBody",
+        "type": "object"
+      },
+      "Record": {
+        "additionalProperties": false,
+        "description": "One durable lane record. `(edge_id, store_epoch, lane, seq)` is the deduplication key; order by\n`seq`, never by time.",
+        "properties": {
+          "app_version": {
+            "const": 1,
+            "title": "App Version",
+            "type": "integer"
+          },
+          "body": {
+            "discriminator": {
+              "mapping": {
+                "evidence": "#/components/schemas/EvidenceBody",
+                "gap": "#/components/schemas/GapBody",
+                "incident": "#/components/schemas/IncidentBody",
+                "inspection_ended": "#/components/schemas/InspectionEndedBody",
+                "inspection_started": "#/components/schemas/InspectionStartedBody",
+                "notice": "#/components/schemas/NoticeBody",
+                "observation": "#/components/schemas/ObservationBody",
+                "profile_revision": "#/components/schemas/ProfileRevisionBody",
+                "track_point": "#/components/schemas/TrackPointBody"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ObservationBody"
+              },
+              {
+                "$ref": "#/components/schemas/TrackPointBody"
+              },
+              {
+                "$ref": "#/components/schemas/EvidenceBody"
+              },
+              {
+                "$ref": "#/components/schemas/ProfileRevisionBody"
+              },
+              {
+                "$ref": "#/components/schemas/InspectionStartedBody"
+              },
+              {
+                "$ref": "#/components/schemas/InspectionEndedBody"
+              },
+              {
+                "$ref": "#/components/schemas/IncidentBody"
+              },
+              {
+                "$ref": "#/components/schemas/GapBody"
+              },
+              {
+                "$ref": "#/components/schemas/NoticeBody"
+              }
+            ],
+            "title": "Body"
+          },
+          "edge_id": {
+            "minLength": 1,
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "lane": {
+            "$ref": "#/components/schemas/Lane"
+          },
+          "msg_type": {
+            "const": "record",
+            "title": "Msg Type",
+            "type": "string"
+          },
+          "rover": {
+            "$ref": "#/components/schemas/RoverClock"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "seq": {
+            "exclusiveMinimum": 0.0,
+            "title": "Seq",
+            "type": "integer"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          },
+          "store_epoch": {
+            "format": "uuid",
+            "title": "Store Epoch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_version",
+          "msg_type",
+          "edge_id",
+          "store_epoch",
+          "lane",
+          "seq",
+          "source_mode",
+          "rover",
+          "body"
+        ],
+        "title": "Record",
+        "type": "object"
+      },
+      "RequirementAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requirement": {
+            "enum": [
+              "eyewear",
+              "helmet",
+              "gloves",
+              "vest",
+              "boots"
+            ],
+            "title": "Requirement",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentStatus"
+          }
+        },
+        "required": [
+          "requirement",
+          "status"
+        ],
+        "title": "RequirementAssessment",
+        "type": "object"
+      },
+      "RoverClock": {
+        "additionalProperties": false,
+        "description": "Rover times of one record. Never subtract them from laptop or iPhone times.",
+        "properties": {
+          "clock_synced": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clock Synced"
+          },
+          "mono_ns": {
+            "minimum": 0.0,
+            "title": "Mono Ns",
+            "type": "integer"
+          },
+          "wall_ns": {
+            "minimum": 0.0,
+            "title": "Wall Ns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "wall_ns",
+          "mono_ns",
+          "clock_synced"
+        ],
+        "title": "RoverClock",
+        "type": "object"
+      },
+      "RuleStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "missing_classes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Classes",
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "active"
+        ],
+        "title": "RuleStatus",
+        "type": "object"
+      },
+      "SourceMode": {
+        "description": "Declared by the operator at server start: the server cannot tell a replay client from a phone.",
+        "enum": [
+          "LIVE",
+          "REPLAY",
+          "SAMPLE"
+        ],
+        "title": "SourceMode",
+        "type": "string"
+      },
+      "StatusResponse": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Evidence",
+            "type": "object"
+          },
+          "gaps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "lanes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LaneStatus"
+            },
+            "title": "Lanes",
+            "type": "object"
+          },
+          "link": {
+            "additionalProperties": true,
+            "title": "Link",
+            "type": "object"
+          },
+          "live": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "live_is_current": {
+            "title": "Live Is Current",
+            "type": "boolean"
+          },
+          "live_received_age_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Received Age Ms"
+          },
+          "live_received_wall_ns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Received Wall Ns"
+          },
+          "source_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          },
+          "workspaces": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceInfo"
+            },
+            "title": "Workspaces",
+            "type": "array"
+          }
+        },
+        "required": [
+          "workspace",
+          "link",
+          "live_is_current",
+          "lanes",
+          "gaps",
+          "evidence",
+          "workspaces"
+        ],
+        "title": "StatusResponse",
+        "type": "object"
+      },
+      "StreamHealth": {
+        "additionalProperties": false,
+        "description": "C3 \u2014 iPhone stream health as seen by the vision server. Consumers stop on stale=true.",
+        "properties": {
+          "dropped_count": {
+            "minimum": 0.0,
+            "title": "Dropped Count",
+            "type": "integer"
+          },
+          "emitted_ts_ns": {
+            "minimum": 0.0,
+            "title": "Emitted Ts Ns",
+            "type": "integer"
+          },
+          "last_rx_ts_ns": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Rx Ts Ns"
+          },
+          "last_seq_id": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seq Id"
+          },
+          "msg_type": {
+            "const": "stream_health",
+            "title": "Msg Type",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "tracking_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrackingState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "msg_type",
+          "emitted_ts_ns",
+          "stale",
+          "dropped_count"
+        ],
+        "title": "StreamHealth",
+        "type": "object"
+      },
+      "SubjectVerdict": {
+        "additionalProperties": false,
+        "properties": {
+          "ppe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Box"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule": {
+            "minLength": 1,
+            "title": "Rule",
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/Box"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/Verdict"
+          },
+          "violation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Box"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rule",
+          "verdict",
+          "subject"
+        ],
+        "title": "SubjectVerdict",
+        "type": "object"
+      },
+      "TrackPointBody": {
+        "additionalProperties": false,
+        "description": "Valid phone-camera pose (never the rover's or a person's position). A new `segment` starts\nafter any invalid pose; segments are never joined across a gap.",
+        "properties": {
+          "iphone_ts_ns": {
+            "minimum": 0.0,
+            "title": "Iphone Ts Ns",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "track_point",
+            "title": "Kind",
+            "type": "string"
+          },
+          "packet": {
+            "enum": [
+              "frame",
+              "pose"
+            ],
+            "title": "Packet",
+            "type": "string"
+          },
+          "pose": {
+            "$ref": "#/components/schemas/Pose"
+          },
+          "segment": {
+            "minimum": 0.0,
+            "title": "Segment",
+            "type": "integer"
+          },
+          "seq_id": {
+            "minimum": 0.0,
+            "title": "Seq Id",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "session_id",
+          "segment",
+          "seq_id",
+          "iphone_ts_ns",
+          "packet",
+          "pose"
+        ],
+        "title": "TrackPointBody",
+        "type": "object"
+      },
+      "TrackingState": {
+        "description": "Mirrors ARCamera.TrackingState.",
+        "enum": [
+          "normal",
+          "limited",
+          "not_available"
+        ],
+        "title": "TrackingState",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "Verdict": {
+        "enum": [
+          "wearing",
+          "not_wearing",
+          "unverified"
+        ],
+        "title": "Verdict",
+        "type": "string"
+      },
+      "WorksiteProfile": {
+        "additionalProperties": false,
+        "description": "Immutable revision of a worksite's PPE requirements. `sha256` covers every other field.",
+        "properties": {
+          "app_version": {
+            "const": 1,
+            "title": "App Version",
+            "type": "integer"
+          },
+          "msg_type": {
+            "const": "worksite_profile",
+            "title": "Msg Type",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "requirements": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "propertyNames": {
+              "enum": [
+                "eyewear",
+                "helmet",
+                "gloves",
+                "vest",
+                "boots"
+              ]
+            },
+            "title": "Requirements",
+            "type": "object"
+          },
+          "revision": {
+            "exclusiveMinimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "worksite_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Worksite Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_version",
+          "msg_type",
+          "worksite_id",
+          "revision",
+          "name",
+          "requirements",
+          "sha256"
+        ],
+        "title": "WorksiteProfile",
+        "type": "object"
+      },
+      "WorkspaceInfo": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "edge_id": {
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "store_epoch": {
+            "format": "uuid",
+            "title": "Store Epoch",
+            "type": "string"
+          }
+        },
+        "required": [
+          "edge_id",
+          "store_epoch",
+          "archived"
+        ],
+        "title": "WorkspaceInfo",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Laptop hub for the dashboard and 2D Twin. Read-only views of rover data; no motion, arming or fault endpoints. Every item states source_mode and delivery.",
+    "title": "BOB hub API (C10)",
+    "version": "bob-app v1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/assessments": {
+      "get": {
+        "operationId": "assessments_v1_assessments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "inspection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inspection Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delivery",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Delivery"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assessments"
+      }
+    },
+    "/v1/evidence/{sha256}": {
+      "get": {
+        "operationId": "evidence_v1_evidence__sha256__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sha256",
+            "required": true,
+            "schema": {
+              "title": "Sha256",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evidence"
+      }
+    },
+    "/v1/incidents": {
+      "get": {
+        "operationId": "incidents_v1_incidents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "inspection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inspection Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hazard",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Hazard"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hazard"
+            }
+          },
+          {
+            "in": "query",
+            "name": "transition",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/IncidentTransition"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Transition"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delivery",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Delivery"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Incidents"
+      }
+    },
+    "/v1/inspections": {
+      "get": {
+        "operationId": "inspections_v1_inspections_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Inspections"
+      }
+    },
+    "/v1/observations": {
+      "get": {
+        "operationId": "observations_v1_observations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "inspection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inspection Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_mode",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceMode"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Mode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delivery",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Delivery"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Observations"
+      }
+    },
+    "/v1/preview/latest": {
+      "get": {
+        "operationId": "preview_v1_preview_latest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview"
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "operationId": "get_status_v1_status_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Status"
+      }
+    }
+  }
+}

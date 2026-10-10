@@ -169,3 +169,22 @@ class ReplicaCore:
         rows = self.db.execute("SELECT lane, first_seq, last_seq, reason, detected_wall_ns FROM gaps WHERE ws_id=? "
                                "ORDER BY lane, first_seq", (ws.ws_id,)).fetchall()
         return [dict(zip(("lane", "first_seq", "last_seq", "reason", "detected_wall_ns"), r)) for r in rows]
+
+    def query(self, ws: Workspace, kinds: tuple[str, ...], after_rowid: int = 0, limit: int = 100,
+              where: Optional[dict[str, str]] = None, source_mode: Optional[str] = None,
+              delivery: Optional[str] = None) -> list[tuple[int, str, int, str]]:
+        """Paged history: (rowid, delivery, hub_rx_wall_ns, json) in arrival order. `where` maps a fixed
+        JSON path (from code, never from the request) to the value it must equal."""
+        sql = (f"SELECT rowid, delivery, hub_rx_wall_ns, json FROM records WHERE ws_id=? AND rowid>? "
+               f"AND kind IN ({','.join('?' * len(kinds))})")
+        args: list[Any] = [ws.ws_id, after_rowid, *kinds]
+        for path, value in (where or {}).items():
+            sql, args = sql + " AND json_extract(json, ?) = ?", args + [path, value]
+        if source_mode is not None:
+            sql, args = sql + " AND source_mode=?", args + [source_mode]
+        if delivery is not None:
+            sql, args = sql + " AND delivery=?", args + [delivery]
+        return self.db.execute(sql + " ORDER BY rowid LIMIT ?", (*args, limit)).fetchall()
+
+    def max_rowid(self, ws: Workspace) -> int:
+        return self.db.execute("SELECT COALESCE(MAX(rowid), 0) FROM records WHERE ws_id=?", (ws.ws_id,)).fetchone()[0]

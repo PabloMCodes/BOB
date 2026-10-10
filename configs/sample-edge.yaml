@@ -1,0 +1,7 @@
+# SAMPLE edge (dashboard Step 6): a fixture-driven store served by the normal edge API so a frontend can
+# be built for producers that do not exist yet. Build: uv run python -m bobapp.sample
+# Serve:  uv run python -m bobapp.edge.api --edge-config configs/sample-edge.yaml
+edge_id: sample-edge
+store_dir: runs/sample-edge
+api:
+  port: 8771

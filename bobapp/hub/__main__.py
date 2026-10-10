@@ -1,6 +1,7 @@
 """Operator-laptop hub CLI (Milestone A: rover-to-laptop link without a frontend).
 
-    uv run python -m bobapp.hub sync   [--hub-config F]      # long-running: replicate the rover store
+    uv run python -m bobapp.hub serve  [--hub-config F]      # sync rover (+ SAMPLE edge) and serve the frontend API
+    uv run python -m bobapp.hub sync   [--hub-config F]      # long-running: replicate the rover store only
     uv run python -m bobapp.hub status [--hub-config F]      # link state, per-lane lag, gaps, evidence
     uv run python -m bobapp.hub tail   [--hub-config F] [--lane control] [--follow]
 
@@ -20,7 +21,7 @@ from typing import Any
 from bobapp.contracts import Lane, Record
 from bobapp.edge.api.auth import load_token
 
-from .config import http_base, load_hub_config, replica_path
+from .config import http_base, load_hub_config, replica_path, sample_replica_path
 from .replica import Replica
 from .sync import HubSyncClient
 
@@ -53,6 +54,40 @@ def cmd_sync(config: dict[str, Any]) -> None:
         await client.run(stop)
 
     asyncio.run(main())
+
+
+def cmd_serve(config: dict[str, Any]) -> None:
+    import uvicorn
+
+    from bobapp.edge.api.auth import resolve_bind
+
+    from .api import create_hub_app
+    token = load_token(config["api"]["token_env"])
+    host, warning = resolve_bind(None, config["api"]["host"], token)
+    if warning:
+        print(f"[hub] WARNING: {warning}", flush=True)
+    edges = {"rover": (config["edge_url"], config["token_env"], replica_path(config))}
+    sample = config.get("sample") or {}
+    if sample.get("edge_url"):
+        edges["sample"] = (sample["edge_url"], sample["token_env"], sample_replica_path(config))
+
+    async def background(stop: asyncio.Event) -> None:
+        def log(name: str) -> Any:
+            def on_event(kind: str, data: Any) -> None:
+                if kind == "connected":
+                    print(f"[hub:{name}] connected to {data['workspace'].edge_id}"
+                          + (" — NEW STORE" if data["new_store"] else ""), flush=True)
+                elif kind == "disconnected":
+                    print(f"[hub:{name}] DISCONNECTED ({data}) — rover state unknown since last contact", flush=True)
+            return on_event
+
+        clients = [HubSyncClient(Replica(path), config, load_token(token_env), url, http_base(url), log(name))
+                   for name, (url, token_env, path) in edges.items()]
+        await asyncio.gather(*(c.run(stop) for c in clients))
+
+    app = create_hub_app(config, token, {name: path for name, (_, _, path) in edges.items()}, background)
+    print(f"[hub] API on {host or 'all interfaces'}:{config['api']['port']} — workspaces {list(edges)}", flush=True)
+    uvicorn.run(app, host=host, port=config["api"]["port"], log_level="warning", ws="websockets-sansio")
 
 
 def cmd_status(config: dict[str, Any]) -> None:
@@ -113,13 +148,15 @@ def cmd_tail(config: dict[str, Any], lane: str | None, follow: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=("sync", "status", "tail"))
+    parser.add_argument("command", choices=("serve", "sync", "status", "tail"))
     parser.add_argument("--hub-config", type=Path)
     parser.add_argument("--lane", choices=[lane.value for lane in Lane])
     parser.add_argument("--follow", action="store_true")
     args = parser.parse_args()
     config = load_hub_config(args.hub_config)
-    if args.command == "sync":
+    if args.command == "serve":
+        cmd_serve(config)
+    elif args.command == "sync":
         cmd_sync(config)
     elif args.command == "status":
         cmd_status(config)

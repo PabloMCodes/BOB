@@ -14,6 +14,14 @@ blobs:
   max_bytes_per_s: 1000000         # evidence prefetch cap; starting value to measure (shared hotspot)
   retry_s: 5.0                     # retry after a network error (a 404 from the rover is final: missing)
 
-api:                               # Step 6 frontend API (browser -> hub only)
-  host: 127.0.0.1
+sample:                            # optional SAMPLE edge (Step 6): replicated into its own database,
+  edge_url: ws://127.0.0.1:8771    # never mixed with rover data. null to disable.
+  token_env: BOB_EDGE_TOKEN
+
+api:                               # Step 6 frontend API (browser -> hub only, never -> rover)
+  host: ""                         # LAN (IPv4 + IPv6); requires the token. Without a token: loopback only
   port: 8780
+  token_env: BOB_EDGE_TOKEN        # header "Authorization: Bearer ..." or ?token= (WebSocket / <img>)
+  cors_origins: [http://localhost:5173, http://127.0.0.1:5173]
+  live_interval_s: 0.5             # WS /v1/live status cadence
+  send_timeout_s: 5.0              # a browser that cannot take a message this long is disconnected

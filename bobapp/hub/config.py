@@ -27,6 +27,11 @@ def replica_path(config: dict[str, Any]) -> Path:
     return (root if root.is_absolute() else REPO_ROOT / root) / config["hub_id"]
 
 
+def sample_replica_path(config: dict[str, Any]) -> Path:
+    """The SAMPLE edge is replicated into a separate database: it can never enter rover counts."""
+    return replica_path(config).with_name(config["hub_id"] + "-sample")
+
+
 def http_base(edge_url: str) -> str:
     """ws://host:port -> http://host:port (wss -> https)."""
     scheme, sep, rest = edge_url.partition("://")

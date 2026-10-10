@@ -50,6 +50,7 @@ from .control import (
 )
 from .incident import (
     FrameCounts,
+    Hazard,
     IncidentBody,
     IncidentEndReason,
     IncidentKey,
@@ -96,7 +97,7 @@ __all__ = [
     "APP_MESSAGE_MODELS", "APP_VERSION", "BODY_LANE", "LANE_PRIORITY", "REQUIREMENT_RULES",
     "AppMessage", "AppVersion", "AssessmentStatus", "BlobStatus", "BlobStatusValue", "Body",
     "Capabilities", "Delivery", "EdgeStatus", "EvidenceBody", "EvidenceReason", "FeedAge",
-    "FrameAssessment", "FrameCounts", "Freshness", "GapBody", "GapReason", "IncidentBody",
+    "FrameAssessment", "FrameCounts", "Freshness", "Hazard", "GapBody", "GapReason", "IncidentBody",
     "IncidentEndReason", "IncidentKey", "IncidentLocation", "IncidentTransition", "InspectionEndReason",
     "InspectionEndedBody", "InspectionStartedBody", "Lane", "LaneInfo", "LivePose", "LiveState",
     "NonNegInt", "NoticeBody", "ObservationBody", "PosInt", "PreviewRef", "Producer", "ProducerStatus",
