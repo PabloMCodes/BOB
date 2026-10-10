@@ -2,12 +2,16 @@
 
     uv run python -m tools.replay_detect runs/server/<time>/stream.bobrec [--config configs/x.yaml]
         [--rule glasses --segments "wearing:0-10,not_wearing:12-22"] [--save-images]
+        [--edge [--edge-config F]]
 
 Unlike the live server nothing is dropped, so two runs over the same file must give the same boxes
 (Step 6 determinism). It runs the same frame path as `vision.server --detect` (detect_frame).
 
 Messages go through the server's own admission step (FrameServer.admit: stream monitor + Step 7
 associator), so pose validity offline is exactly what the live server decides for the same messages.
+
+--edge: also fill the rover edge store (source REPLAY) through the same publisher as the live server;
+offline it waits for the writer instead of dropping, so the store is complete.
 
 --segments: seconds from the first frame of the recording, label wearing | not_wearing. Per segment,
 only judged frames count (unverified = no verdict, never a pass). Pass: >= --min-accuracy correct and,
@@ -61,9 +65,9 @@ class SegmentScore:
 
 
 def run(records: Iterable[Record], pipeline: Pipeline, config: dict[str, Any],
-        on_frame=None, on_undecodable=None) -> list[FrameOutcome]:
+        on_frame=None, on_undecodable=None, on_admit=None) -> list[FrameOutcome]:
     mount = config["camera"]["mount_orientation"]
-    server = FrameServer(config, clock=time.time_ns)  # admission + association only, no network
+    server = FrameServer(config, clock=time.time_ns, on_admit=on_admit)  # admission + association, no network
     outcomes: list[FrameOutcome] = []
     first_ts: Optional[int] = None
     for record in records:
@@ -154,6 +158,8 @@ def main() -> None:
     parser.add_argument("--segments", default=None, help='e.g. "wearing:0-10,not_wearing:12-22"')
     parser.add_argument("--min-accuracy", type=float, default=0.8)
     parser.add_argument("--save-images", action="store_true", help="annotated frames -> <out>/frames/")
+    parser.add_argument("--edge", action="store_true", help="also fill the rover edge store (source REPLAY)")
+    parser.add_argument("--edge-config", type=Path, help="override of configs/edge.yaml")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -187,10 +193,22 @@ def main() -> None:
         if args.save_images:
             (out / "zone_frames").mkdir(exist_ok=True)
 
+    publisher = None
+    if args.edge:
+        from bobapp.edge.config import load_edge_config, store_path
+        from bobapp.edge.publish import EdgePublisher
+        from bobapp.edge.store import EdgeStore
+        edge_config = load_edge_config(args.edge_config)
+        store = EdgeStore(store_path(edge_config), edge_config["edge_id"], edge_config["clock_synced"])
+        publisher = EdgePublisher(store, edge_config, source_mode="REPLAY", run_id=out.name, pipeline=pipeline,
+                                  render_config=config["render"], stale_ms=config["timing"]["stale_ms"],
+                                  zones_enabled=inspector is not None, blocking=True)
+
     def consume(outcome, detection):
         nonlocal scene_count
         if save_frame:
             save_frame(outcome, detection)
+        record = None
         if inspector:
             record, assessment = inspector.inspect(detection, "REPLAY")
             scene_file.write(json.dumps(record) + "\n")
@@ -202,14 +220,18 @@ def main() -> None:
                             cv2.FONT_HERSHEY_SIMPLEX, .5, (255,255,255), 1)
                 if not cv2.imwrite(str(out / "zone_frames" / f"{outcome.event.event_id}.jpg"), image):
                     raise OSError("Could not write zone evidence")
+        if publisher is not None:
+            publisher.on_detection(detection, record)
 
     undecodable: list[int] = []
     try:
         outcomes = run(load(args.recording), pipeline, config, on_frame=consume,
-                       on_undecodable=lambda f: undecodable.append(f.packet.seq_id))
+                       on_undecodable=lambda f: undecodable.append(f.packet.seq_id),
+                       on_admit=publisher.on_admit if publisher is not None else None)
     finally:
         if scene_file:
             scene_file.close()
+        edge_stats = publisher.close(timeout=60) if publisher is not None else None
     with open(out / "detections.jsonl", "w") as fh:
         for o in outcomes:
             fh.write(o.event.model_dump_json() + "\n")
@@ -217,6 +239,8 @@ def main() -> None:
                "undecodable_seq_ids": undecodable}
     if inspector:
         summary["scene_frames"] = scene_count
+    if edge_stats is not None:
+        summary["edge"] = edge_stats
     if segments:
         scores = score(outcomes, args.rule, segments)
         summary["rule"] = args.rule

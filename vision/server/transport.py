@@ -31,6 +31,7 @@ class FrameServer:
         record: Optional[BinaryIO] = None,
         on_health: Optional[Callable[[StreamHealth], None]] = None,
         clock: Clock = time.time_ns,
+        on_admit: Optional[Callable[[FramePacket | PosePacket, Optional[int], int], None]] = None,
     ) -> None:
         timing, server = config["timing"], config["server"]
         self.clock = clock
@@ -42,6 +43,7 @@ class FrameServer:
         self.ping_interval_s = server["ping_interval_s"]
         self.record = record
         self.on_health = on_health
+        self.on_admit = on_admit  # optional publication hook; must only enqueue (receive thread)
         self.latest_health: Optional[StreamHealth] = None
 
     async def handle(self, ws: ServerConnection) -> None:
@@ -82,6 +84,8 @@ class FrameServer:
         if not keep:
             return None
         gap_ns = self.associator.observe(msg)
+        if self.on_admit is not None:
+            self.on_admit(msg, gap_ns, rx_ns)
         return ReceivedFrame(msg, payload, rx_ns, gap_ns) if isinstance(msg, FramePacket) else None
 
     async def health_loop(self) -> None:

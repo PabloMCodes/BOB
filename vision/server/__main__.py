@@ -1,9 +1,14 @@
 """Run the stream server with the upright debug view.
 
     uv run python -m vision.server [--record] [--no-view] [--port 8765] [--run-dir DIR]
+        [--detect [--zones F] [--edge [--edge-config F]]] [--source-mode LIVE|REPLAY|SAMPLE]
 
 Writes <run_dir>/stream_health.jsonl (C3, every timing.health_interval_ms), summary.json on exit,
 and stream.bobrec with --record (replayable with tools/replay_client).
+
+--edge also publishes observations, track, evidence and live state to the rover edge store
+(configs/edge.yaml, dashboard plan §5) through a bounded writer that never blocks the frame path.
+--source-mode is declared, not inferred: the server cannot tell a replay client from a phone.
 """
 
 from __future__ import annotations
@@ -31,8 +36,12 @@ def main() -> None:
     parser.add_argument("--config", type=Path, help="runtime override, e.g. configs/footwear.yaml")
     parser.add_argument("--detect", action="store_true", help="run shared PPE pipeline, draw boxes and write C2 JSONL")
     parser.add_argument("--zones", type=Path, help="opt-in yellow-tape profile; requires --detect")
-    parser.add_argument("--zones-source-mode", choices=("LIVE", "REPLAY", "SAMPLE"), default="LIVE",
-                        help="label known replay/sample inputs honestly when feeding the network server")
+    parser.add_argument("--source-mode", choices=("LIVE", "REPLAY", "SAMPLE"), default=None,
+                        help="label known replay/sample inputs honestly (default LIVE); applies to C7 and edge records")
+    parser.add_argument("--zones-source-mode", choices=("LIVE", "REPLAY", "SAMPLE"), default=None,
+                        help="alias of --source-mode (kept for existing commands)")
+    parser.add_argument("--edge", action="store_true", help="publish to the rover edge store; requires --detect")
+    parser.add_argument("--edge-config", type=Path, help="override of configs/edge.yaml")
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--record", action="store_true", help="save every received message to stream.bobrec")
@@ -41,6 +50,11 @@ def main() -> None:
     args = parser.parse_args()
     if args.zones and not args.detect:
         parser.error("--zones requires --detect")
+    if args.edge and not args.detect:
+        parser.error("--edge requires --detect")
+    if args.source_mode and args.zones_source_mode and args.source_mode != args.zones_source_mode:
+        parser.error("--source-mode and --zones-source-mode disagree")
+    source_mode = args.source_mode or args.zones_source_mode or "LIVE"
     inspector = None
     if args.zones:
         from vision.scene import SceneInspector, SceneWriter
@@ -71,8 +85,22 @@ def main() -> None:
             "model": config["model"], "footwear_model": config.get("footwear_model"),
         }, indent=2))
 
+    publisher = None
+    if args.edge:
+        from bobapp.edge.config import load_edge_config, store_path
+        from bobapp.edge.publish import EdgePublisher
+        from bobapp.edge.store import EdgeStore
+        edge_config = load_edge_config(args.edge_config)
+        store = EdgeStore(store_path(edge_config), edge_config["edge_id"], edge_config["clock_synced"])
+        publisher = EdgePublisher(store, edge_config, source_mode=source_mode, run_id=run_dir.name,
+                                  pipeline=pipeline, render_config=config["render"],
+                                  stale_ms=config["timing"]["stale_ms"], zones_enabled=inspector is not None)
+        print(f"[server] edge store {store.path} epoch {store.store_epoch} ({source_mode})", flush=True)
+
     def on_health(h: StreamHealth) -> None:
         health_file.write(h.model_dump_json() + "\n")
+        if publisher is not None:
+            publisher.on_health(h)
 
     def shutdown(signum: int, _frame: Any) -> None:
         # SIGTERM (systemd on the Jetson) / SIGINT, also when started in the background. Only the
@@ -84,7 +112,8 @@ def main() -> None:
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
-    server = FrameServer(config, record=record, on_health=on_health)
+    server = FrameServer(config, record=record, on_health=on_health,
+                         on_admit=publisher.on_admit if publisher is not None else None)
     thread = ServerThread(server, args.host, args.port)
     port = thread.start()
     print(f"[server] listening on ws://{args.host}:{port}  -> {run_dir}", flush=True)
@@ -109,8 +138,9 @@ def main() -> None:
                         detections.write(event.model_dump_json() + "\n")
                         detections.flush()
                         inference_ms.append(result.inference_ms)
+                        scene_record = None
                         if inspector:
-                            scene_record, assessment = inspector.inspect(detection, args.zones_source_mode)
+                            scene_record, assessment = inspector.inspect(detection, source_mode)
                             scene_writer.submit(scene_record)
                             scene_count += 1
                             scene_total_ms += scene_record["scene_processing_ms"]
@@ -118,6 +148,8 @@ def main() -> None:
                             if not args.no_view:
                                 scene_image = draw_zone(detection.image, assessment)
                                 scene_session, scene_rx_ns = event.session_id, frame.rx_ts_ns
+                        if publisher is not None:
+                            publisher.on_detection(detection, scene_record)
                         image = draw(detection.image, result.boxes, config["render"]["categories"],
                                      hide=config["render"]["hide"])
                         lines.append(f"CV {result.inference_ms:.0f} ms | {len(result.boxes)} boxes | pose {event.pose_valid}")
@@ -133,11 +165,11 @@ def main() -> None:
             if scene_image is not None and not args.no_view:
                 if scene_session != server.associator.current_session:
                     shown = np.zeros_like(scene_image)
-                    label = f"{args.zones_source_mode} - session changed; waiting for a current observation"
+                    label = f"{source_mode} - session changed; waiting for a current observation"
                 else:
                     shown = scene_image.copy()
                     age_ms = (time.time_ns() - scene_rx_ns) / 1e6
-                    label = f"{args.zones_source_mode} - {'STALE last observation' if age_ms > config['timing']['stale_ms'] else 'current observation'} ({age_ms:.0f} ms since receive)"
+                    label = f"{source_mode} - {'STALE last observation' if age_ms > config['timing']['stale_ms'] else 'current observation'} ({age_ms:.0f} ms since receive)"
                 cv2.putText(shown, label, (8, shown.shape[0]-16), cv2.FONT_HERSHEY_SIMPLEX,
                             .5, (0, 0, 0), 3)
                 cv2.putText(shown, label, (8, shown.shape[0]-16), cv2.FONT_HERSHEY_SIMPLEX,
@@ -150,6 +182,8 @@ def main() -> None:
                 print("[server] " + " | ".join(stats_lines(server.monitor.stats())), flush=True)
                 if scene_writer:
                     print("[zones] " + json.dumps(scene_writer.stats()), flush=True)
+                if publisher is not None:
+                    print("[edge] " + json.dumps(publisher.writer.stats()), flush=True)
     except KeyboardInterrupt:
         pass
     finally:
@@ -165,6 +199,8 @@ def main() -> None:
         if scene_writer:
             summary["zones"] = {"frames": scene_count, "scene_mean_ms": scene_total_ms / scene_count if scene_count else None,
                                 "scene_max_ms": scene_max_ms, "writer": scene_writer.close()}
+        if publisher is not None:
+            summary["edge"] = publisher.close()  # bounded wait; unfinished work is reported, not hidden
         (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
         health_file.close()
         if detections is not None:

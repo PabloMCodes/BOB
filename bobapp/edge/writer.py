@@ -5,6 +5,9 @@ Work items run on the writer thread, so JPEG encoding, hashing and disk I/O neve
 Control items (evidence, notices) have their own queue and go first; observations, track points and
 the preview are dropped first when storage is slow. A drop is reported in live status at once and as
 a `writer_dropped` notice record as soon as the store keeps up again.
+
+`blocking=True` is for offline replay only (not real-time): submits wait instead of dropping, so a
+replayed store is complete and deterministic.
 """
 from __future__ import annotations
 
@@ -23,11 +26,11 @@ WorkItem = Callable[[EdgeStore], None]
 class EdgeWriter:
     def __init__(self, store: EdgeStore, source_mode: SourceMode, run_id: Optional[str] = None,
                  control_capacity: int = 32, data_capacity: int = 64,
-                 retention: Optional[dict[str, Any]] = None) -> None:
+                 retention: Optional[dict[str, Any]] = None, blocking: bool = False) -> None:
         if control_capacity < 1 or data_capacity < 1:
             raise ValueError("writer capacities must be positive")
         self.store, self.source_mode, self.run_id = store, SourceMode(source_mode), run_id
-        self.retention = retention
+        self.retention, self.blocking = retention, blocking
         self.control: queue.Queue[WorkItem] = queue.Queue(maxsize=control_capacity)
         self.data: queue.Queue[WorkItem] = queue.Queue(maxsize=data_capacity)
         self.closed = threading.Event()
@@ -47,6 +50,11 @@ class EdgeWriter:
         return self._submit(self.data, "data", item)
 
     def _submit(self, q: queue.Queue, name: str, item: WorkItem) -> bool:
+        if self.closed.is_set():
+            raise RuntimeError("edge writer is closed")
+        if self.blocking:
+            q.put(item)
+            return True
         with self.lock:
             if self.closed.is_set():
                 raise RuntimeError("edge writer is closed")
