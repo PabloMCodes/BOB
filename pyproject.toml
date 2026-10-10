@@ -19,9 +19,15 @@ dependencies = [
 dev = [
     "pytest>=8,<9",
 ]
+labeling = [
+    "clip",
+]
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+clip = { git = "https://github.com/ultralytics/CLIP.git" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

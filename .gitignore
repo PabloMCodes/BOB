@@ -16,11 +16,20 @@ runs/*
 *.onnx
 *.engine
 
-# Local config overrides
+# Local config overrides and secrets (e.g. ROBOFLOW_API_KEY) — never commit
 configs/local.yaml
+.env
+.env.*
+!.env.example
 
 # macOS / Xcode
 .DS_Store
 xcuserdata/
 DerivedData/
 *.xcuserstate
+
+# iOS (XcodeGen: project.yml is the source of truth)
+ios/*.xcodeproj/
+ios/BOBCapture/Info.plist
+ios/Signing.local.xcconfig
+ios/build/
