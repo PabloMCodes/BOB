@@ -3,6 +3,9 @@
 Standalone hardware test requested alongside the CV work. It does not consume
 computer vision detections or control the rover autonomously.
 
+See [CONTEXT.md](../../CONTEXT.md) for the full hardware session handoff,
+decisions, observed failures, and the ground connection fix.
+
 ## Hardware and wiring
 
 ESP32 DevKit V1, TB6612FNG motor driver, MAX98357A I2S speaker amplifier.
@@ -23,9 +26,13 @@ The D labels below mean GPIO numbers, not physical header positions.
 | MAX98357A | DIN | D33 |
 
 GPIO34 is input-only and cannot drive LRC. Move that wire to GPIO26 before
-testing audio. Amplifier VIN and SD/EN wiring remain unconfirmed on the user's
-hardware; verify them against the module documentation. MAX98357A supply range
-is 2.5–5.5 V. Connect the speaker across the amplifier's speaker outputs;
+testing audio. The user's module has only G, V, BCL, LRC, and DIN pins; it has
+no exposed amplifier SD/EN pin. V is connected to nominal 5 V (user measured
+4.16 V at the module). G must be wired to ESP32 GND and shared supply ground.
+The ESP32's GND pins are internally connected, but that does not connect an
+external amplifier unless its G pin is physically wired to that ground.
+Leave the ESP32 EN pin alone; it controls the ESP32, not the amplifier.
+MAX98357A supply range is 2.5–5.5 V. Connect the speaker across the amplifier's speaker outputs;
 neither speaker output goes to ground.
 
 Right motor positive goes to AO1, negative to AO2. Left motor positive goes to
@@ -90,9 +97,10 @@ The BLE service and command UUIDs match the previous WALL-Y sketch.
 
 - User reported the motor commands worked as intended after reversing the
   right motor polarity (2026-10-10).
-- User reported no audible output from the original one-second speaker test,
-  although Serial Monitor showed the test starting and ending.
-- The five-second tone with increased amplitude still needs physical testing.
+- Speaker was initially silent despite start/end messages. The user found an
+  open amplifier G → ESP32 GND connection, secured a permanent ground jumper,
+  and confirmed the speaker worked (2026-10-10). The exact uploaded firmware
+  revision was not independently verified; the repo uses the five-second tone.
 - Python client syntax checked locally. Arduino compilation and a BLE connection
   have not been verified in the agent's Linux environment.
 
