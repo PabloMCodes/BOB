@@ -1,0 +1,2 @@
+# Separate from the computer vision environment; requires Python 3.10+.
+bleak==3.0.2

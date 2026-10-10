@@ -324,3 +324,10 @@ BOB/
 ## Out of scope for this branch
 
 Motor control, safety supervisor / P0–P4 state machine, evidence logging & alerting, obstacle detection, TensorRT engine build (must be done on the Jetson itself).
+
+## Standalone hardware bench tests
+
+The user-requested [ESP32 motor and speaker test](hardware/esp32/README.md)
+contains the Arduino sketch, Mac BLE terminal client, wiring, and test results.
+It is independent of the CV pipeline; production motor control remains outside
+the CV work described above.
