@@ -5,10 +5,132 @@
 device: auto
 
 model:
-  # Stock weights until Step 3 produces models/ppe_best.pt
-  weights: yolov8n.pt
+  # SH17 YOLOv8s (17 classes incl. person/face/head/glasses/helmet) — see models/sh17.md.
+  # Relative to repo root. Downloaded from weights_url on first use; sha256 is always verified
+  # because .pt files are pickles (loading one executes code).
+  weights: models/sh17_yolov8s.pt
+  weights_url: https://github.com/ahmadmughees/SH17dataset/releases/download/v1/yolo8s.pt
+  weights_sha256: dfaf451bdda3f92fe4012327e337225929ad7af22146b00e0d6989c2f4e40a4b
   imgsz: 640
   conf: 0.35
+
+pipeline:
+  # single:    one pass over the whole frame at model.imgsz.
+  # head_crop: pass 1 finds people at model.imgsz; pass 2 re-runs the model on a square crop of
+  #            each person's head region taken from the full-resolution frame. Needed at 3 m+,
+  #            where glasses are only ~5-6 px at 640 (see README Step 3).
+  mode: head_crop
+  crop:
+    imgsz: 320            # upscaling crops further (e.g. 640) measurably hurt detection
+    conf: 0.30
+    min_person_conf: 0.40
+    head_scale: 2.0       # crop side = this x the pass-1 head box's longest edge (preferred)
+    head_fraction: 0.35   # fallback when pass 1 found no head: side = fraction of person height
+    max_crops: 8
+    classes: [face, glasses, head, helmet]  # pass-1 + pass-2 boxes merged, deduplicated per class
+    nms_iou: 0.5
+  feet_crop:
+    # Runs only when an active rule judges these classes (the boots rule, i.e. a fine-tuned
+    # model with safety-boots). Never runs with SH17.
+    imgsz: 320
+    conf: 0.30
+    fraction: 0.25        # crop side = max(person width, fraction x person height)
+    classes: [shoes, safety-boots]
+
+ppe:
+  # A subject (face/head) is judged only if big and confident enough; otherwise no verdict —
+  # "no violation seen" is NOT the same as "compliant".
+  # region: vertical band of the subject box, as fractions of its height (negative = above it),
+  #         where the PPE box centre must lie. The violation box is that band clipped to the subject.
+  rules:
+    glasses:
+      subject: face
+      ppe: glasses
+      violation: no-safety-glasses
+      region: [0.10, 0.60]   # eye band
+      min_subject_px: 24
+      min_subject_conf: 0.50
+      min_overlap: 0.50      # fraction of the PPE box inside the subject box
+    helmet:
+      subject: head
+      ppe: helmet
+      violation: no-helmet
+      region: [-0.40, 0.60]  # helmet sits on / above the top of the head
+      min_subject_px: 24
+      min_subject_conf: 0.50
+      min_overlap: 0.30
+    gloves:                  # one verdict per visible hand; hidden hands -> no verdict
+      subject: hands
+      ppe: gloves
+      violation: no-gloves
+      region: [-0.20, 1.20]  # glove box centre on / just around the hand
+      min_subject_px: 16
+      min_subject_conf: 0.50
+      min_overlap: 0.30
+    boots:
+      # The class itself decides. Inactive with SH17 ('shoes' = any footwear, no 'safety-boots'
+      # class); activates automatically with the fine-tuned model. Labelling convention:
+      # safety boots -> safety-boots, any other footwear -> shoes.
+      kind: class
+      compliant: safety-boots
+      noncompliant: shoes
+      violation: no-safety-boots
+      min_subject_px: 12
+      min_subject_conf: 0.50
+
+training:
+  # Classes of the fine-tuned model (order = class id). Labelling convention:
+  #   hands: every visible hand, gloved or not    gloves: each glove being worn
+  #   shoes: any NON-safety footwear              safety-boots: safety / work boots
+  #   glasses: any eyewear incl. clear safety glasses
+  classes: [person, head, face, glasses, helmet, hands, gloves, shoes, safety-boots]
+  prelabel:
+    conf: 0.25            # drafts for human correction: favour recall over precision
+    nms_iou: 0.5
+    # YOLO-World adds candidates SH17 misses (clear glasses, boots). Prompt -> class above.
+    world_weights: models/yolov8s-worldv2.pt
+    world_weights_sha256: 9b2c17ab6124a913e9b3a5c170617920d91b0f01111a8479da69f00e2cf27792
+    world_prompts:
+      eyeglasses: glasses
+      sunglasses: glasses
+      safety glasses: glasses
+      work boots: safety-boots
+      safety boots: safety-boots
+      sneakers: shoes
+      gloves: gloves
+  # External datasets merged by tools/build_dataset.py. class_map: source class -> training class;
+  # "review" = per-box decision from tools/review_boots.py. Other training classes on these images
+  # (person, face, hands...) are pseudo-labelled by SH17 at pseudo_conf so they aren't background.
+  pseudo_conf: 0.50
+  # Only these, and only self-consistent (person must contain a head/face). SH17 on shoe close-ups
+  # put 'person' on sandals, 'helmet' on footballs, 'gloves' on laces — PPE classes are never
+  # pseudo-labelled on external data.
+  pseudo_classes: [person, head, face, hands]
+  external:
+    footwear-w1uf6-v2:   # Roboflow Universe pe3-kxttv/footwear-w1uf6 v2, CC BY 4.0
+      class_map:
+        boots: review
+        flip_flops: shoes
+        loafers: shoes
+        sandals: shoes
+        sneakers: shoes
+        soccer: shoes
+
+camera:
+  # Used when the phone reports face_up / face_down / unknown (e.g. lying flat in a rover mount).
+  # Must be one of: portrait, portrait_upside_down, landscape_left, landscape_right
+  # Rover mount: portrait, tilted up ~15°, ~20 cm off the floor.
+  mount_orientation: portrait
+
+render:
+  # Class names are normalized (lowercase, '_' and ' ' -> '-') before matching.
+  # Colors: violation=red, compliant=green, person=blue, anything else=grey.
+  categories:
+    violation: [no-safety-glasses, no-helmet, no-gloves, no-safety-boots, no-hardhat, no-vest, no-safety-vest]
+    compliant: [glasses, helmet, gloves, safety-boots, hardhat, vest, safety-vest]
+    person: [person]
+  # Detected but not drawn (still in DetectionEvent). Face/head hidden so the eye-band box reads clearly.
+  hide: [face, head, ear, ear-mufs, foot, hands, shoes, tool, gloves]
 
 server:
   host: 0.0.0.0
