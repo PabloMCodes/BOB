@@ -1,264 +1,408 @@
-# BOB dashboard and 2D Twin integration plan
+# BOB dashboard, rover-to-laptop sync and 2D Twin integration plan
 
-Planning date: October 10, 2026. Status: proposed implementation plan; no application implementation performed for this plan.
+Planning date: October 10, 2026 (revision 2). Status: **Step 0 decisions recorded (§9 Step 0, §11); implementation of Steps 1–9 in progress on `autoCV` — the README progression row "D" is the source of truth for what is built and tested.** Revision 2 adds the rover-to-laptop data link (store locally on the rover, resynchronize when the link returns) and a frontend-ready backend API, and corrects the revision 1 inventory against the current `autoCV` tree.
 
-## 1. Scope and planning basis
+## 1. Scope
 
-User-confirmed sequence: **CV dashboard first; read-only 2D Twin follows.** Present the three original hazard categories—PPE, person in path, and marked restricted zone—with clearly labeled sample data wherever a real producer is unavailable. Treat this repository as the complete implementation inventory. Jetson deployment and ESP32/throttle integration have not started.
+Requested in this revision:
 
-Additional user requirement: the dashboard lets an operator check or uncheck which PPE conditions are required for a worksite, such as eyewear protection and safety boots. This configures inspection requirements; it is not merely a display filter. The Twin remains read-only. Requirement changes do not grant actuator authority.
+1. Feed data produced on the rover computer (Jetson; the Mac today) back to the operator laptop so it can drive the CV dashboard and the 2D Twin.
+2. Deliver a **backend only**: a documented API and live feed that a frontend can plug into. No frontend is built here.
+3. Rover-side behavior similar to a car that records on board and uploads when it reconnects: the rover keeps working and recording when the laptop link drops, and the laptop catches up when the link returns.
+4. Carry the evidence images that the worksite's required checks depend on.
 
-No deadline or available builder count was confirmed. Therefore this plan uses dependencies and acceptance gates, not the earlier document's hour-22/hour-26 schedule. Ownership below denotes responsibilities, not an assumption that separate people are available.
+Earlier user-confirmed decisions still apply: CV dashboard first, read-only 2D Twin after; three hazard categories (PPE, person in path, marked restricted zone) with clearly labeled sample data where no producer exists; worksite requirement checkboxes with saved changes applying at the **next explicitly started inspection** (§4).
 
-Reviewed sources:
+User-confirmed on October 10, 2026 for this revision: **D1** phone ↔ rover computer stays on a rover-local link; **D2** no cloud or internet upload; **D3** assessments and incidents are computed on the rover. **D7** (incident confirmation) was delegated to this plan and is defined in §8 with parameters still to be calibrated.
 
-- `/Users/hboho/Downloads/safety-twin-integration-plan(1).md`, in full.
-- `/Users/hboho/Downloads/Knight Hacks 2026 Construction-Safety Rover  36-Hour Executable Build Plan.md`, in full.
-- Repository `AGENTS.md`, `README.MD`, `integration.md`, runtime configuration, Swift capture implementation, Python transport work, perception pipeline, recording/replay, and C1/C2/C3 schema definitions.
+No deadline or team capacity is confirmed, so the plan uses dependencies and gates, not a schedule. Revision 1 reviewed two downloaded planning documents (`safety-twin-integration-plan(1).md`, the 36-hour build plan); revision 2 did not re-read them.
 
-The downloaded documents are planning inputs. Their statements about existing services, proposed repositories, ownership, and schedules are not evidence of implemented capabilities or instructions to start implementation.
+## 2. Corrections to the request and to revision 1
 
-### Changes recommended to the attached plan
+| # | Assumption | What the repository shows | Consequence for this plan |
+| --- | --- | --- | --- |
+| 1 | Data is already pulled from the WebSocket integration | The only WebSocket is **inbound C1: phone → server** (`FrameServer`, binary, port 8765). It never sends results out, and it counts C2/C3 messages sent on it as bad input. All outputs go to local files under `runs/server/<time>/`; no process or machine receives them over the network. | Keep WebSocket as the technology, but add a **new, separate outbound endpoint** on the rover with resume, acknowledgment and gap semantics (§5). Do not reuse or extend the frozen C1 connection (§5.6). |
+| 2 | Jetson data is available to feed back | No Jetson deployment exists. J1–J6 in [jetson-handoff.md](../jetson-handoff.md) are marked not run. The Mac runs `vision.server`. | Build and test the rover role as a separate process on the Mac now; move it to the Jetson unchanged after J1–J6 pass. |
+| 3 | The rover reconnects "to the internet" to update the feed | The working link is a local network (iPhone hotspot used in Step 5). No cloud service exists. | "Reconnect" means **rover ↔ laptop over the local network**. No cloud upload (D2, confirmed). |
+| 4 | The Twin shows the rover's position | The pose is the **phone camera's** ARKit pose in a session-local frame; there is no phone-to-rover transform. | The Twin labels the marker "Phone camera"; pins mean "observed from here", never the person's position (§7). |
+| 5 | The rover's track is already available | Standalone pose packets reach only the associator; they are not published or stored. C2 carries a pose only for frames that were processed. | Add a track sidecar fed from `FrameServer.admit()` (Step 3). |
+| 6 | Required checks determine which images are captured | Requirements are an inspection policy. The detector, rules and raw observations are independent of them. | Capture evidence from raw observations; apply requirements in the assessment layer. Unchecking a requirement never deletes evidence (§4). |
+| 7 | Revision 1: the Swift sender is a placeholder | `StreamSender` is implemented; a 117.8 s live iPhone run streamed 1179 frames with 0 sequence gaps (README Step 5). | Live phone input is available on the Mac; physical kill tests are still pending. |
+| 8 | Revision 1: association means nearest pose within 50 ms | Each frame carries its own ARFrame pose (`pose_dt_ms = 0`). `timing.pose_tolerance_ms` is unused; `dt_exceeded` is reserved (README Step 7). | Track and pins use the same `associate()` validity rules. No pose buffer is introduced. |
+| 9 | Revision 1: marked zones are sample-only | C7 restricted-zone inspection (`scene_findings.jsonl`, `scene_version: 1`) runs on the Mac live and in replay; physical tape acceptance is pending. C8 walkway is a library with no CLI or live output yet. | Marked zone is a **real prototype producer** (show as LIVE/REPLAY with "physical acceptance pending"). Person in path and walkway stay NOT INTEGRATED / SAMPLE. |
+| 10 | Revision 1: ESP32 integration not started | A standalone ESP32 BLE motor/speaker bench test exists, driven from a Mac terminal ([hardware/esp32](../../hardware/esp32/README.md)). Status prints go to USB serial only; no telemetry returns over BLE. | Controller feedback stays NOT INTEGRATED. Neither the rover API nor the laptop service may import or call the BLE client. |
+| 11 | Live video can be forwarded as-is | The phone sends about 259 KB per 1920×1440 frame at 10 Hz (2.66 MB/s measured). | Forward a reduced live preview; send full-resolution images only as evidence, with a bandwidth cap (§5.4). |
 
-1. Build the dashboard on the Mac now; do not wait for a moving rover.
-2. Establish replay and sample scenarios early so integration can be tested without hardware.
-3. Start the Twin only after a working CV/evidence dashboard, but allow phone-only localization validation before the rover is ready.
-4. Keep the existing BOB repository and frozen CV contracts. Do not create or rename a repository to match the old proposal.
-5. Establish one incident/evidence service; none exists to reuse yet. Begin with JSONL and JPEGs, consistent with the repository's local recording approach. SQLite is an optional later storage implementation, not a prerequisite for a map.
-6. Replace “safe to move” UI language with individual observed readiness/fault states. Missing hardware telemetry must remain unknown.
+Still true from revision 1: C2 omits per-subject verdicts and rule availability; there is no browser UI, no FastAPI dependency, no incident store and no confirmation policy.
 
-## 2. Verified starting point
+## 3. Verified starting point
 
-| Area | What exists | What the dashboard cannot yet assume |
+| Area | Implemented today | Not available yet |
 | --- | --- | --- |
-| Perception | `vision.pipeline.Pipeline`, bounding boxes, derived PPE observations, per-subject verdicts, active/inactive rules, Mac webcam display | A live iPhone-to-inference service or validated real-world accuracy |
-| iPhone | ARKit preview, JPEG/pose encoding, `.bobrec` recording, statistics | A working sender: `CaptureController.emit` still has the Step 5 sender placeholder; no detection overlay |
-| Transport | Working-tree receiver, `tools/replay_client.py`, and `tests/test_server.py`; the receiver moved from `vision/server.py` toward `vision/server/` during this review | An accepted completed milestone. The inspected receiver displayed frames and health, not inference results; recheck the completed refactor before implementation |
-| Contracts | Frozen v2 C1 frames/poses, C2 `DetectionEvent`, C3 `StreamHealth` | Incident severity, evidence links, controller state, or a complete PPE-verdict transport |
-| Localization | ARKit camera transform to metric phone pose/yaw | Timestamp pose association, calibrated phone-to-rover transform, registered route or zone map |
-| Persistence | `.bobrec` support and receiver health JSONL work | A durable incident/evidence store |
-| Hardware/control | Planned in documentation | Implemented Jetson service, navigation, hazard supervisor, ESP32 feedback, throttle or measured standstill |
-| Browser UI | None found | An existing dashboard service or frontend stack |
+| Capture | Swift ARKit capture, `StreamSender` (1 frame in flight, reconnect), `.bobrec` recording | Physical kill tests (a–d) |
+| Transport | `vision/server/`: `FrameServer` (latest-frame-wins slot, `admit()`, C3 every 100 ms), `tools/replay_client.py` | Any outbound publication to other processes or machines |
+| Inference | `server --detect`: shared `Pipeline` → C2 `DetectionEvent` per processed frame, per-rule verdicts in memory (`Detection.verdicts`) | Verdicts or active/inactive rules in any published message |
+| Pose | Frame-bundled pose with `associate()` validity reasons | Published pose track; phone-to-rover transform |
+| Scene | C7 zones via `SceneInspector` + bounded `SceneWriter` | Walkway lane check/CLI; person-in-path producer |
+| Persistence | JSONL run files, `summary.json`, `.bobrec` | Durable store, resumable cursor, evidence images tied to observations |
+| Rover computer | Mac stand-in | Jetson install, engine, J1–J6 |
+| Hardware | ESP32 BLE bench test (manual terminal) | Controller telemetry, supervisor |
+| Dashboard | None | Any web service or frontend |
 
-The current SH17 model supports person and several PPE classes. The boots rule is inactive without a model containing `safety-boots`. A person box does not establish person-in-path status. A derived PPE box is a per-frame observation, not a temporally confirmed incident. The current C2 payload contains boxes but omits `FrameResult.verdicts` and rule availability.
+## 4. Confirmed product semantics (unchanged)
 
-The working tree changed during this read-only assessment. This inventory describes inspected behavior, not a tested or frozen revision. Step 1 must recheck the transport refactor and its tests before any implementation depends on it.
+These are user-confirmed requirements for the future application, not claims that it exists.
 
-## 3. Product shape
-
-Use one local browser application with three views added in sequence:
-
-| View | First useful content | Later connection |
+| Requirement setting | Condition | Meaning |
 | --- | --- | --- |
-| Live CV | Annotated image, PPE observations, three hazard-category cards, source mode, model/rule availability, stream and inference health | Live iPhone inference; actual person-in-path and zone observations |
-| Evidence | Selected observation/incident, matching snapshot, timestamps, source, reason, downloadable metadata | Confirmed incidents and correlated supervisor/controller responses |
-| Twin | Session-local 2D pose, heading, bounded path and observation-position incident pins | Calibrated rover pose, registered route, waypoints/zones, real navigation and hardware telemetry |
-
-The operator opens the dashboard on the Mac initially. The same browser application can later be opened by another device on the private LAN. An in-app Swift bounding-box overlay is a separate optional deliverable; it is not necessary for this browser dashboard and is not included in this plan.
-
-Every view distinguishes **LIVE**, **REPLAY**, **SAMPLE**, and **NOT INTEGRATED**. Freshness is separate: a live source can be stale, disconnected, or invalid. A disabled model rule is not the same as an unverified subject or an absent producer.
-
-Sample scenarios run in a separate, visibly labeled workspace. If a category card is shown beside live CV before its producer exists, it displays “Not integrated”; opening its sample demonstration must not pin a sample event to a real pose or overlay it on a real frame. Sample/replay data never enter live counts or operational state.
-
-### Worksite requirements panel — included in the first dashboard
-
-Provide a named worksite profile with checkboxes for eyewear protection, helmet, gloves, high-visibility vest, and safety boots. Show saved requirements and any pending edits clearly. Recommend persisting profiles locally so requirements can be reused across inspections; scope profiles by worksite and bind each inspection to a specific revision.
-
-| Requirement setting | Assessment condition | Dashboard meaning |
-| --- | --- | --- |
-| Unchecked | Any observation | **Not required** for this worksite; no missing-item inspection incident is raised under this policy |
-| Checked | Supported model/rule with sufficient subject evidence | Show **Detected** or **Not detected**, with candidate/confirmed incident status handled separately |
-| Checked | Subject occluded, absent, too small, or uncertain | **Not assessed / Unverified**; never a pass or an assumed violation |
-| Checked | Required producer/class is unavailable | **Required — assessment unavailable**, with the reason; keep the requirement visible |
-
-For example, a worksite may require eyewear and a helmet while leaving gloves optional. Bare hands then do not create a worksite missing-gloves incident. Selecting safety boots while SH17 is active preserves that requirement but displays that the current model cannot assess it. Capability limitations remain visible: the existing glasses class recognizes eyewear generally, so detection alone cannot verify protective certification.
-
-Keep raw detections and detector observations intact. Python applies the worksite profile to inspection results and incident generation; the browser renders the result and submits profile edits. A separate visibility filter may hide boxes without changing requirements. Unchecking PPE must not erase past incidents, change detector confidence thresholds, disable person-in-path or zone protection, clear physical faults, or resume motion.
-
-Use an explicit “Save for next inspection” action rather than treating an unsaved checkbox change as active policy. Show the selected worksite and active requirement revision on CV, evidence, and Twin views, with saved changes labeled “Pending — next inspection.” Publish saved revisions to all connected browsers and reject conflicting edits rather than silently overwriting a newer revision.
-
-**User-confirmed decision:** saved changes apply at the next inspection. When an operator explicitly starts a new inspection, the backend atomically binds its inspection ID to the selected worksite's latest saved requirement revision. All observations, assessments, and incidents in that inspection use that immutable revision, including work still in flight when a newer profile is saved. Unsaved edits do not apply. Saving a profile, reconnecting a browser or phone, and resetting the ARKit session do not themselves start a new inspection or activate pending requirements. Historical results always retain their original policy; any replay under different requirements is a separately labeled analysis. Starting an inspection is an application-level action and does not arm or move the rover.
-
-## 4. Step-by-step implementation sequence
-
-### Step 1 — Establish the baseline and ownership
-
-**Work:** review and land or explicitly isolate the in-progress transport work; identify a known baseline revision; record implemented versus planned capabilities. Assign owners for CV publication, dashboard/evidence, localization, and eventual hardware adapters. Preserve unrelated working-tree edits.
-
-Use an isolated dashboard worktree/feature branch based on the accepted BOB baseline. Do not assume `main` or the old plan's `safety` branch exists. Establish the integration branch with the repository owner, then update the branch registry and apply `integration.md` gates when applicable.
-
-**Deliverable:** capability inventory, ownership table, baseline revision, and consumer interfaces.
-
-**Gate:** the team can identify the source of every proposed dashboard field, including fields that currently have no producer.
-
-### Step 2 — Define dashboard contracts and deterministic scenarios
-
-**Work:** define a separately versioned observation envelope around the unchanged C2/C3 messages. Specify source identity, source mode, session, source frame sequence, event identity, image dimensions, evidence references, observation timestamps and their clock domains, verdicts, and capability/freshness states.
-
-Define a separate versioned worksite-requirements contract: worksite/profile identity, revision, selected PPE requirements, and activation boundary. Reference the applied revision from inspection assessments and incidents without modifying frozen CV messages. Add scenarios for unchecked requirements, checked-but-unsupported requirements, all requirements unchecked, profile switching, and pending versus active edits.
-
-Create fixtures for all three hazard categories, including normal observation, candidate/confirmed incident, unverified PPE, inactive boots rule, missing evidence, tracking loss, stale source, disconnect, source restart, and session reset. A confirmed sample event is sample data, not a confirmation algorithm.
-
-Keep `wearing`, `not_wearing`, and `unverified` per subject/rule. Do not infer a positive PPE verdict from an empty list of violation boxes. Treat confidence on a derived box as the subject's confidence, not a calibrated probability that PPE is absent.
-
-**Deliverable:** contract descriptions, small labeled fixtures, and a source/capability matrix. No motor-command interface is introduced.
-
-**Gate:** the same dashboard consumer can read sample and future real envelopes without changing page components; source mode and provenance are always visible.
-
-### Step 3 — Build the first CV dashboard using sample and recorded inputs
-
-**Work:** build the local browser service, annotated frame panel, hazard cards, connection/tracking status, rule availability, and a compact recent-observation list. Use a separate scenario view for unavailable hazard categories. Include explicit empty, loading, stale, and error states from the start.
-
-Include the worksite requirements panel in this first dashboard milestone. Make requirement checkboxes distinct from box-visibility filters. Persist saved profiles through a Python-owned configuration service, with backend validation and a visible save result. If no PPE requirements are selected, display “No PPE requirements selected” rather than an all-clear result.
-
-Recommended stack: a new FastAPI browser/API service plus locally served HTML/CSS/JavaScript; use WebSocket for observations and a correlated image delivery path. Retain the existing phone WebSocket receiver rather than rewriting C1 in FastAPI. FastAPI supports WebSocket endpoints; it is a new dependency here, not an existing repository service. See the [official WebSocket documentation](https://fastapi.tiangolo.com/advanced/websockets/).
-
-Keep image and result identity together. Prefer initially sending a server-annotated upright image produced from the exact inference frame. The browser may resize it without independently shifting boxes. If separate browser overlays are added later, apply the image's exact scale and letterbox offsets and reject unmatched frame IDs.
-
-**Deliverable:** an offline-capable dashboard that visibly demonstrates all three categories, plus a recorded-input path.
-
-**Gate:** no boxes or metadata are displayed on the wrong frame; samples are unmistakable; missing producers never display a healthy/clear state. Closing or reconnecting a browser does not affect the producer.
-
-### Step 4 — Connect real Python inference before depending on live phone transport
-
-**Work:** pass recorded frames, and optionally the existing Mac camera source, through the existing `Pipeline`. Publish its boxes, verdicts, active/inactive rules, model identity, inference timing, and matching annotated image. Run inference once per frame and share results with clients; never instantiate a detector per browser.
-
-Apply the active worksite requirement revision in the Python inspection layer. Preserve the original pipeline verdicts and derived observations; generate worksite assessments only for required checks, preserving unavailable/unverified states. The default operator overlay should reflect required inspection checks, while a clearly identified diagnostic view can expose raw detections independently.
-
-Assemble C2 events through a CV-owned adapter. Where valid timestamp association is not yet available, emit the correct invalid-pose state rather than filling it from the latest pose. Map placement remains disabled for those observations.
-
-**Deliverable:** a functioning CV dashboard showing actual PPE/person observations in replay or Mac-camera mode. Person-in-path and marked-zone categories remain sample-only until their producers are implemented.
-
-**Gate:** a fixed recording produces reproducible semantic results within declared numeric tolerances; video/result correlation remains correct under slow inference; unverified and inactive rules are visible.
-
-### Step 5 — Complete and validate live iPhone-to-Mac streaming
-
-**Work:** complete the thin Swift sender; validate local-network permission, reconnect behavior, bounded send work, and session changes. Connect the receiver's latest-frame slot to `Pipeline`, then the dashboard publication adapter. Continue dropping superseded frames rather than accumulating latency.
-
-Expose capture, receive, inference, and display rates separately. A healthy pose-packet stream must not make frozen video appear fresh: track last frame age, last inference-result age, tracking quality, and stream packet age independently. Existing `StreamHealth.stale` reflects accepted packet activity and is insufficient by itself for all these indicators.
-
-**Deliverable:** real phone video with Python-generated boxes displayed in the browser on the Mac.
-
-**Gate:** on a physical iPhone, test portrait/landscape, full person versus partial body/hands, near and intended operating distances, no person, camera occlusion, background/foreground, disconnect, and session reset. Verify honest UI states and frame alignment; record detector misses separately from transport/UI failures. No promise that every visible hand or person will be detected.
-
-### Step 6 — Add incident handling and durable evidence
-
-**Work:** introduce one application-layer incident/evidence service. It owns observation-to-incident policy and persistence; the frontend does not invent confirmation, severity, or actions. Keep this separate from `vision/` detection logic and from future motor authority.
-
-Define a bounded temporal-confirmation policy per real producer before promoting observations to confirmed incidents. Specify repeated-observation grouping, duplicate suppression, episode end, reset behavior, and maximum history. Avoid counting each detected frame as a new incident. Until a policy exists, display observations rather than confirmed hazards.
-
-Persist the worksite identity and applied requirement revision with each assessment/incident and retain the corresponding immutable profile revision. A later checkbox change must not relabel or delete historical evidence. Report requirement changes separately from hazard resolution.
-
-Use one writer for incident JSONL and JPEG snapshots. Publish metadata independently of snapshot success. Add storage limits, retention, restart recovery, and missing-image/write-failure states. Existing `.bobrec` files are useful input recordings; they are not already an incident store. If SQLite later becomes necessary, put it behind the same repository interface and retain a single writer; [SQLite WAL documentation](https://sqlite.org/wal.html) describes its single-writer limit.
-
-**Deliverable:** selectable incident/observation history with source-frame evidence and export.
-
-**Gate:** metadata survives restart; the evidence frame matches the source; duplicate/replayed messages do not inflate incident counts; disk/image failure is visible and cannot stall inference or future control.
-
-**Milestone A: usable CV dashboard.** This milestone ends here. Jetson, motors, and the Twin are not prerequisites.
-
-### Step 7 — Establish localization and coordinate meaning
-
-**Work:** implement and validate the repo's timestamp association milestone: nearest eligible pose to the source frame's `iphone_frame_ts_ns`, same session, normal tracking, within configured tolerance (currently 50 ms). Invalid association leaves the observation unlocalized. A new session clears buffers and pending associations; late work from a retired session must not appear in the active view.
-
-The current pose is the **phone camera pose**. Validate a 2D projection in meters using the repository's +Y-up ARKit convention. Preserve the documented positive-left yaw and test the display with measured forward travel and turns. Define the phone-to-rover mounting transform with the navigation owner later; do not label an uncalibrated phone marker as the rover center.
-
-**Deliverable:** validated phone-localization output, frame/session identity, and projection specification.
-
-**Gate:** forward/left/right tests show no mirrored map or inverted heading; stale/limited tracking stops path updates; reset starts a new coordinate frame. Association failures keep their images and observations.
-
-### Step 8 — Add the read-only 2D Twin
-
-**Work:** add an SVG map with position, heading, meter scale, bounded breadcrumbs, and selectable incident pins linked to the evidence view. Before mounting calibration, label the moving marker “Phone camera.” Pins mean **observed from here**, not the person's or hazard's world position.
-
-Show unlocalized incidents in a list. Show the last valid position as stale without extrapolating. Route/waypoint and zone geometry may be sample or schematic first; distinguish that from geometry registered to the active session. Reset invalidates route/zone registration and starts a fresh trail. Older incidents remain available in their own session views.
-
-Propose a maximum initial map refresh of 5 Hz and measure the effect; this is a UI budget, not a control timeout. Downsample path points and bound retention independently of source capture rate.
-
-**Deliverable:** a phone-driven or replay-driven operational Twin that works before the rover moves.
-
-**Gate:** every pin resolves to the correct event/evidence/session; no cross-session paths; unknown positions stay unlocalized; a failed or disabled Twin leaves CV and evidence functional.
-
-**Milestone B: CV dashboard plus read-only 2D Twin.** Neither live throttle nor Jetson deployment is required.
-
-### Step 9 — Replace sample producers one category at a time
-
-**Work:** integrate actual person-in-path and marked-zone producers when their owners build them. A person box is input to a future path policy, not a stop decision. A displayed map polygon is not proof of boundary detection. Define producer-owned region/marker semantics, confirmation, availability, and evidence correlation before connecting each feed.
-
-Register any new non-PPE hazard contract separately with the integration owners. The README anticipates a v3 change for scene findings; that requires an explicit contract decision. Do not silently put scene hazards into v2 or treat a UI envelope as approval to change CV semantics.
-
-**Gate:** each real category passes repeatable positive, negative, stale, and missing-input cases before its sample badge is removed. Live and sample histories remain separate.
-
-### Step 10 — Connect Jetson and controller telemetry when available
-
-**Work:** deploy the same application boundaries on the Jetson; verify its actual Python/JetPack/runtime compatibility and device resolution. Keep target-engine creation/parity in the CV deployment milestone. Rerun the dashboard fixture/replay suite and measure target-device throughput with UI/Twin off and on.
-
-Add read-only adapters for navigation, supervisor requests, and ESP32 reports. Display requested state/reason, actual reported mode/fault/output, command/ack correlation, timestamp and freshness separately. Missing telemetry remains “Not integrated” or “Unknown,” never a fabricated zero throttle, disarmed state, or successful stop.
-
-A controller acknowledgment or neutral actuator output does not establish physical standstill. Show physical-stop timing as “Not measured” unless an independently validated measurement exists. Hardware commissioning and all actual movement gates remain owned by the hardware/supervisor workstream; this dashboard plan does not authorize or implement them.
-
-**Deliverable:** connected real producers using the same UI contracts and views.
-
-**Gate:** substitutions require adapter/configuration changes rather than redesigned pages; no sample state leaks into live operation; dashboard failures do not delay the independently tested hardware response.
-
-## 5. Contracts that make later integration cheaper
-
-| Feed | Reuse or add | Essential information |
-| --- | --- | --- |
-| Phone capture | Reuse C1 v2 | Session, sequence, source timestamp, image metadata, pose/tracking |
-| Detection result | Reuse C2 v2 | Event/frame identity, model and derived boxes, upright dimensions, validity and inference timing |
-| Stream health | Reuse C3 v2 | Stream session, stale flag, drops, last reception and tracking; supplement frame/result freshness outside C3 |
-| PPE presentation | New separately versioned sidecar | C2 event reference, per-subject verdicts, active/inactive rules, source mode |
-| Worksite requirements | New Python-owned configuration contract | Worksite/profile ID, immutable revision, selected checks, next-inspection activation, pending/active status |
-| Inspection lifecycle | New application contract | Inspection ID, worksite, bound requirement revision, explicit start/end; independent of ARKit session identity |
-| Worksite assessment | New application contract | Source observation, worksite and applied profile revision, required/not-required status, assessment availability and result |
-| Confirmed incident/evidence | New application contract | Incident ID, source observations, hazard, confirmation state, evidence status, occurrence times, location meaning |
-| Twin configuration | New read-only contract | Session/frame identity, units, transform revision, route/zone registration status |
-| Navigation/supervisor | Future producer contract | Requested state/reason, waypoint/error, producer sequence, observation time, related incident |
-| Controller feedback | Future producer contract | Reported mode/fault/output, acknowledged command sequence, report receipt time; unavailable fields remain null/unknown |
-
-Do not append fields to existing frozen messages: their validators reject extras. Any actual `vision/schema/` change must follow the version bump, fixture, exported JSON Schema, and Swift-mirror requirements together. Sidecars have their own version and tests, and are documented as new interfaces in `integration.md`.
-
-Keep original recorded identities available for evidence; use a separate playback/run identity for replay instances. Reconnect obtains a current snapshot and a bounded history, with explicit gaps and event deduplication. Do not merge records from different runs solely because sequence numbers match.
-
-## 6. Runtime isolation and timing
-
-Use a producer/consumer boundary: capture and Python inference publish observations; the dashboard/evidence layer consumes them; the browser renders them. Future supervisor/controller feeds enter through observation-only adapters.
-
-- Keep browser fan-out, image encoding, disk persistence, and history queries outside inference and future control loops. A separate process with bounded publication is the recommended starting boundary.
-- Coalesce high-rate frame/pose state to the latest value. Treat incident metadata separately so any overflow or persistence loss is reported explicitly.
-- The receiver inspected before the in-progress refactor wrote optional recordings and health callbacks synchronously on its receive/event-loop path. Recheck the final implementation and do not reuse that pattern as proof of nonblocking evidence delivery before adding dashboard persistence/fan-out.
-- Never launch model inference or one evidence writer per browser. Limit client queues, image sizes, and history queries; disconnect or resynchronize slow consumers.
-- Browser routes expose observation, history, replay controls, and worksite inspection-profile editing. Python validates and applies profile changes. Neither profile nor replay controls can send actuator commands, alter live route/motor-safety policy, clear faults, or resume motion. The Twin itself remains read-only.
-- Use same-host monotonic measurements for processing durations, wall time for human-readable occurrence dates, and phone timestamps for same-phone association. State the clock domain for each field.
-- The existing `jetson_receive_ts_ns` means receiver time even on the Mac; preserve its contract and label the host correctly in the UI. Do not relabel Mac metrics as Jetson results.
-- Receiver “added latency” is relative to a minimum observed offset, not absolute phone-to-host latency. Do not subtract device clocks or present inference duration as end-to-end latency.
-
-## 7. Acceptance and delivery gates
-
-| Gate | Evidence required |
+| Unchecked | Any | **Not required**; no missing-item incident under this profile |
+| Checked | Supported rule, sufficient subject evidence | **Detected / Not detected**; incident confirmation handled separately |
+| Checked | Subject occluded, absent, small or uncertain | **Not assessed / Unverified**; never a pass or an assumed violation |
+| Checked | Producer/class unavailable (e.g. boots with SH17 only) | **Required — assessment unavailable**, with reason |
+| All unchecked | — | **No PPE requirements selected**, not an all-clear |
+
+- Saving creates an immutable profile revision. Saved changes apply only when an operator **explicitly starts the next inspection**; the inspection binds atomically to that revision. Reconnecting a browser or phone, resetting ARKit, or reconnecting the rover link never starts an inspection or activates pending edits.
+- Historical observations, evidence and incidents keep their original revision. Re-assessing under another profile is a separately labeled analysis.
+- Python validates and applies profiles; the browser submits edits and displays results. A box-visibility filter is separate from requirements.
+- Starting an inspection is an application action. It does not arm or move the rover.
+- Every view distinguishes **LIVE / REPLAY / SAMPLE / NOT INTEGRATED**. Freshness and delivery (real-time vs backfilled, §5.5) are separate properties.
+
+## 5. Rover-to-laptop architecture
+
+### 5.1 Roles
+
+```
+ iPhone (on rover)                ROVER COMPUTER (Mac today → Jetson)                        OPERATOR LAPTOP
+ ┌───────────────┐  C1 WS   ┌──────────────────────────────────────────────┐   sync    ┌──────────────────────────────┐
+ │ ARKit capture │────────► │ vision.server  (unchanged frame path)         │  link     │ bob hub                      │
+ └───────────────┘          │   Pipeline → C2 / verdicts / C7 / pose track │ (LAN,     │  sync client → replica store │
+                            │        │ bounded hand-off (never blocks)     │  may drop)│  evidence cache              │
+                            │        ▼                                     │           │  worksite profile authoring  │
+                            │ edge writer thread → EDGE STORE (SQLite WAL  │◄─────────►│  frontend API: REST + WS     │
+                            │   + evidence JPEG files)                     │           │  OpenAPI + fixtures          │
+                            │        ▲ read-only                           │           └──────────────┬───────────────┘
+                            │ edge API process (sync, live, blobs,         │                          │ HTTP/WS
+                            │   inspection start/end, profile delivery)    │                          ▼
+                            └──────────────────────────────────────────────┘                  browser (future frontend)
+```
+
+| Role | Runs on | Owns | Must not |
+| --- | --- | --- | --- |
+| `vision.server` + publication hook | Rover | Frames, inference, association, C2/C3/C7 (CV-owned) | Wait on storage, the network or clients |
+| Edge writer + edge store | Rover | Durable, ordered records; evidence files; inspection binding; assessments; incident policy | Live inside `vision/` detection logic |
+| Edge API | Rover, separate process | Serving the store to the hub; accepting inspection/profile commands | Expose motion, arming or fault-clearing endpoints; run inference |
+| Hub | Laptop | Replica, link state, profile authoring, frontend API | Invent confirmation or severity; talk to BLE/ESP32 |
+| Frontend | Browser | Rendering | Connect to the rover directly |
+
+Rationale:
+
+- **The rover is the source of truth.** Assessments, incidents and evidence are produced on the rover, so an inspection completed while the laptop is out of range is just as complete after resync.
+- **The laptop pulls (subscribes); the rover does not push.** The rover never needs to know the laptop's address, a dead laptop costs the rover nothing, and the Jetson serves one consumer (the hub), never one stream per browser.
+- **The SQLite file is the process boundary.** One writer thread in `vision.server`, readers in the edge API (WAL mode allows concurrent readers with one writer). A crashed or slow edge API cannot stall inference. `sqlite3` is in the Python standard library, so this adds no Jetson dependency. Revision 1 proposed JSONL first; SQLite is recommended here because resume-from-cursor, acknowledgment and retention pruning are simple queries rather than custom indexing.
+- **On the Mac today, all of it runs on one machine**: `vision.server --detect`, the edge API and the hub as three processes, fed by the live phone or `tools/replay_client.py`.
+
+### 5.2 Identity and ordering
+
+| Field | Meaning |
 | --- | --- |
-| Contract integrity | Valid/invalid fixtures, unchanged v2 fixtures unless deliberately versioned, source modes and unknown values tested |
-| CV display | Matching frame and boxes under resize, slow inference, rotations and reconnects; per-subject unverified states preserved |
-| Worksite requirements | Check/uncheck semantics, persisted/reloaded profiles, unsupported requirements, no-requirements state, revision conflict handling; saved edits leave the current inspection unchanged and activate only on explicit next-inspection start; reconnects/ARKit resets do not activate edits; historical and in-flight results retain their bound revision |
-| Incident integrity | Temporal policy documented; duplicate suppression; matching snapshot; missing evidence and restart recovery tested |
-| Twin integrity | Measured direction/scale checks; correct session association; reset/stale handling; unlocalized fallback |
-| Isolation | Slow/closed browser, killed UI worker, full storage, missing JPEG, producer restart and disconnected source remain bounded and visible |
-| Offline readiness | With upstream internet disconnected but private LAN intact, assets, video, map, evidence and history work without CDN/cloud dependencies |
-| Hardware handoff | Same replay scenarios pass on the Jetson; real telemetry provenance; controller requests/reports separate; on/off resource measurements recorded |
+| `edge_id` | Stable rover-computer identity (configured) |
+| `store_epoch` | UUID created with the store. A wiped or replaced store gets a new epoch; the hub must not merge across epochs. |
+| `run_id` | One `vision.server` start (matches the run directory) |
+| `lane`, `seq` | Per-lane monotonic sequence, continuing across restarts within an epoch. `(edge_id, store_epoch, lane, seq)` is the deduplication key. |
+| `source_mode` | LIVE / REPLAY / SAMPLE, set by the operator at server start (generalizing the existing `--zones-source-mode`). The server cannot detect that a replay client is feeding it, so this label is declared, not inferred. |
+| `session_id`, `seq_id`, `event_id` | Unchanged C1/C2 identities for frame and session association |
+| `inspection_id`, `profile_revision` | Bound at explicit inspection start (§4) |
 
-Run required repository tests and relevant new consumer tests at implementation milestones, and G1–G8 when integrating as applicable. Record actual physical-iPhone results in the README rather than treating simulator tests as device validation. Performance thresholds should be agreed after a baseline run; none of the proposed refresh budgets are achieved measurements.
+Clocks: order by `seq`, never by time. Record rover wall time and rover monotonic time with each record, plus a `clock_synced` flag (unknown when it cannot be determined; an offline Jetson's wall clock may be wrong). The hub stamps its own receive time. Never subtract laptop and rover clocks to compute latency, as with the existing iPhone/Mac rule.
 
-For implementation planning, proposed ownership boundaries are `dashboard/` for service/static UI/adapters, a separate application incident/evidence module, dashboard-specific tests, and `docs/` for contracts/runbooks. No application modules or implementation directories were created for this plan. CV-owned changes stay with the CV owner. Namespace future configuration under the relevant component and document interfaces before merging.
+### 5.3 What travels, by class
 
-## 8. Recommended work order and scope cuts
+| Class | Contents | Delivery | Rover retention |
+| --- | --- | --- | --- |
+| **Live state** (latest wins, never backfilled) | Preview JPEG of the latest processed frame with its `event_id`; current pose and validity; C3 health; feed ages (last frame, last result, last pose); edge status (disk, writer drops) | Pushed at a capped rate; dropped when the socket is busy | Memory / single row |
+| **Control lane** | Inspection start/end, profile revisions received, assessments, incident transitions, evidence metadata, gap and drop notices | Ordered, at-least-once, cursor resume; highest priority | Until acknowledged by the hub **and** past retention |
+| **Track lane** | Downsampled valid pose points per session (§7) | Ordered, cursor resume | Same |
+| **Observation lane** | Per processed frame: C2 event plus a versioned sidecar (per-subject verdicts, active/inactive rules, C7 reference) | Ordered, cursor resume; lowest priority on backfill | Bounded; the first lane pruned under disk pressure, with a gap notice |
+| **Blobs** | Evidence JPEGs, content-addressed by SHA-256 | Pulled by the hub after their metadata arrives | Same as control lane |
+| **Bulk** | `.bobrec` raw recordings | Manual operator copy only; never automatic | Per retention decision (D4) |
 
-Critical path: baseline/contracts → sample dashboard → real recorded CV → live phone CV → incidents/evidence → timestamp localization → 2D Twin → additional real hazard adapters → hardware deployment/telemetry.
+Separate lanes let the hub catch up on incidents and the track before replaying thousands of per-frame observations, without breaking ordering inside a lane.
 
-Independent work can proceed concurrently: the dashboard shell can consume fixtures while the CV owner completes phone transport; localization tests can be prepared before the Twin UI. With one builder, follow the critical path in order. Do not divert the future hardware owner into map styling.
+### 5.4 Sync protocol (the "reconnect and catch up" behavior)
 
-If time becomes tight, retain annotated CV, source labels, freshness, and evidence first. Keep unavailable hazards as explicit sample demonstrations. Defer the map before compromising evidence correlation, and defer route registration or hardware panels before pretending they are connected. A recorded demo must retain its REPLAY label.
+1. **Hello.** The hub opens `WS /v1/sync` with its last committed cursor per lane. The edge replies with `edge_id`, `store_epoch`, oldest available and head `seq` per lane, rover clock information and `source_mode` of the current run.
+2. **Epoch check.** A different `store_epoch` means a new store: the hub archives the old replica view and starts fresh, never merging.
+3. **Gap check.** If the hub's cursor is older than the oldest retained `seq`, the edge sends an explicit `gap` record ("records n–m pruned on the rover before sync"). The UI shows the gap; it never closes silently.
+4. **Live first, then backfill.** The edge sends live state immediately, then backfill batches in lane priority (control → track → observations), then tails new records as they are written.
+5. **Acknowledge after commit.** The hub acknowledges the highest contiguous `seq` per lane only after committing to its replica. The edge prunes only acknowledged records, except under disk pressure, where it prunes the oldest observation records first and writes a notice.
+6. **Blobs.** The hub fetches `GET /v1/blobs/{sha256}` for evidence it lacks, rate-limited, and verifies the hash. A missing or failed blob leaves the metadata visible with "evidence missing".
+7. **Bandwidth cap.** Backfill and blob transfer obey a configurable byte-rate cap. If the phone and the laptop share one hotspot, unbounded catch-up competes with the phone's 2.66 MB/s stream and would show up as slot drops and stale frames on the rover. The cap is a starting value to measure, not a known-safe number.
+8. **Idempotence.** Replays of the same records do not create duplicates or inflate counts.
 
-Defer 3D reconstruction, persistent mapping across resets, worker identity, inferred metric hazard positions from image boxes alone, cloud services, remote driving, route editing, thermal/gas feeds, and speculative compliance percentages.
+Hub link states shown to the frontend: **CONNECTED** · **CATCHING UP** (records behind, per lane) · **DISCONNECTED** (last contact time; rover state since then unknown) · **NEW STORE** (epoch changed). A disconnected rover is shown as **unknown**, never as stopped or idle.
 
-The first acceptance target is specific: **open a browser on the Mac, play a known recording through the real Python pipeline, see correctly aligned detections and honest PPE status, and demonstrate the other two hazard categories in a clearly separate sample workspace.** Then connect live iPhone data, establish durable incident evidence, and extend the same contracts into the 2D Twin.
+### 5.5 Real-time versus backfilled
+
+Each record carries rover observation times; the hub adds receive time and a derived `delivery: realtime | backfilled`. Backfilled observations appear in history and as historical track segments. They never update "current" status cards, never count as live, and are never presented as current worksite conditions.
+
+### 5.6 Why a new WebSocket endpoint instead of the phone's
+
+| Need | Reuse C1 phone socket (port 8765) | New sync endpoint (`/v1/sync`) |
+| --- | --- | --- |
+| Direction | Phone → vision only; outbound C2/C3 are rejected as bad input | Rover → laptop, with laptop → rover acknowledgments |
+| Contract | Frozen v2 binary framing; changes need a schema bump and a Swift mirror | Own versioned envelopes; the phone and Swift are untouched |
+| Phone stream protection | Extra clients compete with the phone's one-frame-in-flight flow and latest-frame-wins slot | Separate process reading the store; cannot stall capture or inference |
+| Laptop out of range | No storage or resume | Records already stored; resume from per-lane cursor |
+| Ordering, duplicates, gaps | Not defined for consumers | `seq` per lane, deduplication key, explicit `gap` records |
+
+The hub connects to the rover, so the rover never needs the laptop's address. A slow hub receives the latest live state and catches up on durable lanes; it never builds a queue on the rover.
+
+### 5.7 Security boundary
+
+Bind the edge API to the rover network, require a pre-shared token kept in `.env` (never committed or printed), and keep it read-only except for: start/end inspection and deliver a profile revision. No endpoint may move, arm, stop, clear faults on or otherwise command the rover. Requested and reported controller states remain future read-only adapters (Step 11).
+
+## 6. Frontend-ready API (served by the hub)
+
+The browser talks only to the hub. The hub publishes an OpenAPI description and a fixture set for every envelope, including SAMPLE fixtures, so a frontend can be built before the rover link is ready.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /v1/status` | Link state, per-lane lag, source mode, feed freshness (video, results, pose, health), capability matrix: rules active/inactive with reason, producers integrated / prototype / NOT INTEGRATED |
+| `WS /v1/live` | Snapshot on connect, then deltas: preview frame reference, live pose, health, new records, link-state changes. Slow clients receive the latest state, not a queue. |
+| `GET/PUT /v1/worksites/{id}` | Profile authoring; `PUT` requires the expected revision and returns `409` on conflict |
+| `GET /v1/worksites/{id}/revisions/{rev}` | Immutable revision |
+| `POST /v1/inspections` / `POST /v1/inspections/{id}/end` | Forwarded to the edge; fails honestly when the link is down or another inspection is active |
+| `GET /v1/inspections`, `/v1/assessments`, `/v1/incidents`, `/v1/observations` | Paged history with cursors, filtered by inspection, session, source mode and delivery |
+| `GET /v1/evidence/{sha256}` | Image, or a status (pending sync / missing / hash mismatch) |
+| `GET /v1/twin/sessions`, `/v1/twin/sessions/{id}/track`, `/v1/twin/sessions/{id}/pins` | Twin data (§7) |
+| `GET /v1/preview/latest` | Latest annotated preview JPEG with its `event_id` |
+
+Envelope rules: every response states `source_mode`, `delivery`, freshness and the clock domain of each timestamp. Unknown values are `null` with a reason, never zero or a default. Boxes stay in upright-image pixels with `image_size`, so an overlay can scale them exactly or the preview can be used as rendered.
+
+Recommended stack: FastAPI for the hub and the edge API (generates the OpenAPI description the frontend needs; pure Python, so it runs on the Jetson). It is a new dependency for both. Install uvicorn without optional C extensions on the Jetson unless they are verified there.
+
+## 7. Twin data specification
+
+**Projection.** ARKit world: right-handed, +Y up, origin and initial facing at session start; `yaw_rad = 0` faces the session's initial −Z, positive turns left. Map coordinates: east = `x_m`, north = −`z_m`. In SVG (y down): `svg_x = x_m · scale`, `svg_y = z_m · scale`; heading arrow = (−sin yaw, −cos yaw). Map "up" is the direction the phone faced at session start, not compass north. Height (`y_m`) is ignored.
+
+**Track points** are created on the rover from admitted pose and frame packets, using the same validity rules as C2 (`associate()`): current session, tracking `normal`, not stale, yaw defined. Invalid poses end the current segment. Proposed downsampling, to be measured: emit when moved ≥ 5 cm, turned ≥ 2°, or 1 s elapsed while valid. Retention per session is bounded.
+
+**Sessions.** A new `session_id` starts a new map; old sessions remain viewable but are never merged or drawn on the new one.
+
+**Pins.** An observation, assessment or incident with `pose_valid = true` is pinned at the camera position of its own frame, labeled "observed from here", optionally with a heading wedge. Invalid association → listed as unlocalized with its reason; never placed using the latest pose.
+
+**Staleness and the link.** Stale pose → last known position labeled with its age, no extrapolation. Link down → "last synced at *t*; rover position since then unknown". After reconnect, the backfilled segment appears in a distinct historical style.
+
+**Later enablers, not in scope:** phone-to-rover mount transform (with the navigation owner); person or hazard world positions (would need range, e.g. the iPhone's LiDAR depth, which is not streamed today); registered route or zone geometry.
+
+## 8. Incident confirmation policy (D7)
+
+Status: defined in this revision at the user's request. The structure below is the definition; the parameter values are **starting values to calibrate** (§8.6), not measured results. The policy runs on the rover in the application layer (D3), outside `vision/`.
+
+### 8.1 Why a policy is needed and what it confirms
+
+- A derived box is one frame's observation. Step 6 measured that JPEG noise alone flips a borderline glasses detection between frames, so single frames both over- and under-report.
+- Nothing tracks subjects across frames: the pipeline does not know that a face in frame *n* is the same person in frame *n + 1*. The policy therefore confirms a **condition** ("someone in view is missing required eyewear"), not a violation by a specific worker. Counting workers is deferred together with worker identity.
+
+### 8.2 Inputs and classification
+
+Each processed frame contributes one value per rule: the existing `frame_verdict` (any judged subject `not_wearing` → `not_wearing`; else any `wearing` → `wearing`; else `unverified`). Window timing uses `iphone_frame_ts_ns` (the same-session phone clock), so replaying a recording gives the same incidents regardless of processing speed. Episodes are keyed by **(inspection, session, rule)** for PPE and **(inspection, session, zone id)** for zones.
+
+| Bound profile / run state | Policy behavior |
+| --- | --- |
+| Requirement checked, rule active | Produces incidents |
+| Requirement checked, rule inactive or producer missing | No incidents; one capability notice per inspection: "Required — assessment unavailable" |
+| Requirement unchecked | Observations stored; no incidents |
+| No inspection running | Observations stored; no incidents |
+| Restricted-zone profile active in the run | Zone incidents; the zone profile hash is recorded |
+
+| Frame class | PPE rule | Restricted zone (C7) |
+| --- | --- | --- |
+| Positive | `not_wearing` | Region `recognized` and ≥ 1 `possible_person_in_zone` |
+| Negative | `wearing` | Region `recognized`, no positive finding. Means "not observed", never "zone clear" |
+| Neutral (never counts either way) | `unverified` | Region `unverified` |
+
+Judged frames = positive + negative.
+
+### 8.3 States
+
+```
+               first positive frame                 criteria met                 end condition
+   (nothing) ─────────────────────► CANDIDATE ───────────────────► CONFIRMED ───────────────────► ENDED (reason)
+                                        │                              ▲                              │
+                                        │ no positive for window_s     └──── REOPENED ◄───────────────┘
+                                        ▼                                    (re-confirmed within merge_gap_s)
+                                    DISCARDED
+```
+
+Every transition is an append-only record in the control lane. Records are never edited or deleted.
+
+### 8.4 Rules and initial parameters
+
+| Parameter | Initial value | Basis |
+| --- | --- | --- |
+| `window_s` | 2.0 s | About 20 frames at the phone's 10 Hz |
+| `confirm_min_frames` | 5 positive frames in the window | At least 0.5 s of evidence at 10 Hz; isolated noisy frames cannot confirm |
+| `confirm_min_fraction` | 0.8 of judged frames in the window | Same 80 % criterion as the Step 6 on/off test |
+| `clear_window_s`, `clear_min_frames`, `clear_min_fraction` | 3.0 s, 8 negative frames, 0.8 | Ending needs stronger evidence than starting, which limits flapping |
+| `lost_after_s` | 5.0 s without a judged frame | Subject left, became occluded or too small, or input stopped |
+| `merge_gap_s` | 10.0 s | A quick re-confirmation continues the same incident |
+| `min_processing_hz` | 2.5 Hz (= `confirm_min_frames` / `window_s`) | Below this, confirmation is impossible; report it instead of failing silently |
+
+1. **Candidate.** The first positive frame for a key opens a candidate. It is shown as "candidate", never as confirmed.
+2. **Confirm.** In the trailing `window_s`: positives ≥ `confirm_min_frames` **and** positives ÷ judged ≥ `confirm_min_fraction`. Neutral frames are excluded from both counts.
+3. **Discard.** A candidate with no positive frame for `window_s` is discarded. Its observations remain in history.
+4. **End.** A confirmed incident ends with exactly one reason:
+   - `condition_not_observed`: the trailing `clear_window_s` meets the clear criteria. Display "no longer observed", never "resolved" or "compliant"; a different person may now be in view.
+   - `not_assessed`: no judged frame for `lost_after_s`. Long `unverified` stretches end here; they never count as clearing.
+   - `session_changed`: a new ARKit session invalidated coordinates. A new incident may confirm in the new session.
+   - `inspection_ended`.
+   - `source_stopped`: the run ended or the rover service restarted. Open incidents are closed at startup, never resumed from memory.
+5. **Reopen.** If the same key re-confirms within `merge_gap_s` after `condition_not_observed` or `not_assessed`, the same incident is reopened with the interruption recorded. Otherwise a new incident starts.
+6. **Retired sessions.** Frames of a retired session (`pose_invalid_reason = session_mismatch`, or arriving after the switch) never open or extend an episode in the new session.
+7. **Low rate.** If the processed rate for a session drops below `min_processing_hz`, the status shows "confirmation unavailable: processing rate" until it recovers. Candidates are still listed.
+8. **Confidence.** No extra confidence threshold beyond the rules' existing subject thresholds. Derived-box confidence is not a probability that PPE is absent.
+
+### 8.5 What an incident records
+
+- Incident ID; key (inspection, bound profile revision, session, rule or zone id plus zone profile hash); `source_mode`; policy version and parameter hash.
+- Every state transition with its phone-clock observation time and rover times.
+- Counts of positive, negative and neutral frames, and the `event_id`s of the frames that caused each transition.
+- Evidence, bounded to 10 images per incident: first positive frame, confirming frame, highest subject-confidence positive frame, last positive frame, plus at most one every 30 s while open.
+- Location: camera pose of the first, confirming and last positive frames where `pose_valid`; otherwise "unlocalized" with the reason. The Twin pin uses the confirming frame's pose ("observed from here").
+- Not included in v1: severity or ranking (a separate product decision), and operator review. A later "acknowledged" or "dismissed as false positive" note is stored separately and never changes policy records.
+
+Person in path and walkway have no producer, so they have no policy yet. Define theirs when a producer exists (Step 11); until then they stay SAMPLE.
+
+### 8.6 Tests, calibration and proposed acceptance
+
+- **Implementation shape:** a pure, deterministic function from ordered observations to transitions, plus a replay tool that runs it over `tools/replay_detect` output.
+- **Synthetic timeline tests** (same style as `tests/test_association.py`): a single noisy frame → nothing; alternating frames at 60 % positive → no confirmation; 1 s of sustained positives → confirmed; neutral gaps; `lost_after_s` timeout; session change; reopen versus new incident; retired-session frames; low-rate status; replayed duplicate records → no extra incidents.
+- **Calibration data:** the Step 6 live on/off recordings for glasses, helmet and vest (capture still pending), plus a restricted-zone recording.
+- **Proposed acceptance, for agreement before calibration:** 0 confirmed incidents during any `wearing` segment; every `not_wearing` segment of ≥ 10 s confirmed within 3 s of its start, provided the model judged the subject; each incident ends within `clear_window_s` + 1 s of the PPE being put back on.
+- **Configuration:** parameters live in an application-owned file (e.g. `configs/incidents.yaml`), never under CV keys. Changing them creates a new policy version; past incidents keep the version that produced them.
+
+## 9. Step-by-step implementation plan
+
+Each step is independently demonstrable. Steps 1–7 need neither a Jetson nor a frontend.
+
+### Step 0 — Baseline and decisions
+
+**Work:** settle the remaining open decisions in §11 (D1–D3 confirmed; D7 defined in §8). Agree the §8.6 acceptance targets. Land or isolate in-progress walkway work. Record the baseline commit. Decide owners: CV hook (CV owner), edge/hub (application owner).
+**Gate:** every dashboard and Twin field in §6–7 has a named source or is marked NOT INTEGRATED.
+
+**Recorded October 10, 2026.** Baseline commit `bd0d6d7` (walkway Step 3d landed separately), `uv run pytest` 378 passed. Scope for this round: Steps 1–9 on the Mac (Milestone C); physical gates stay pending. Stack: FastAPI + uvicorn (no `[standard]` extras). D4/D5/D6/D8 and the §8.6 targets accepted as recommended (§11). Owners: CV hook — Humbertxx (CV owner); edge store, edge API and hub — built on `autoCV` by Humbertxx in the meantime, **application owner still to be named**.
+
+| §6–7 field | Source |
+| --- | --- |
+| Link state, per-lane lag | Hub sync client (Step 5) |
+| `source_mode` | Declared at `vision.server` start (`--source-mode`, Step 3) |
+| Freshness: video / results / pose / health | Edge live state: last processed frame, last C2, last admitted pose, latest C3 (Step 3) |
+| Capability matrix — rules | `Pipeline.rules` vs configured `ppe.rules` (inactive reason = missing classes), observation sidecar (Step 3) |
+| Capability matrix — producers | PPE: prototype (LIVE/REPLAY). Restricted zone (C7): prototype, physical acceptance pending. Person in path: **NOT INTEGRATED**. Walkway (C8): **NOT INTEGRATED** (library only). Controller / supervisor telemetry: **NOT INTEGRATED** |
+| Preview frame | Edge writer, 640 px, ≤ 5 Hz (Step 3, D5) |
+| Profiles and revisions | Hub (Step 7) |
+| Inspections, assessments | Edge (Step 7, D3) |
+| Incidents | Edge policy §8 (Step 8), labeled "policy uncalibrated" |
+| Observations | C2 + `bob-app` observation sidecar (Step 3) |
+| Evidence | Edge blob store (Step 3 capture, Step 8 incident frames) |
+| Twin track | Track hook at `FrameServer.admit()` (Step 3), served by the Twin API (Step 9) |
+| Twin pins / unlocalized | C2 `pose_valid` / `pose_invalid_reason` of each observation's own frame (Step 9) |
+| Rover position, heading | **NOT INTEGRATED** — the marker is the phone camera (no phone-to-rover transform) |
+| Person / hazard world position | **NOT INTEGRATED** (no range data) |
+
+### Step 1 — Contracts and fixtures
+
+**Work:** define separately versioned envelopes (`bob-app` v1): observation sidecar (C2 `event_id` reference, per-subject verdicts, active/inactive rules with reasons), track point, evidence metadata, profile revision, inspection, assessment, incident, live state, and the sync messages (hello, batch, ack, gap, blob status). Valid/invalid fixtures, each invalid fixture breaking one rule. Frozen v2 C1/C2/C3 and C7 stay untouched. Draft as new interfaces for `integration.md` §2 (proposed C9 edge sync, C10 hub API) when Step 2 lands.
+**Gate:** fixtures validate; one consumer can read SAMPLE, REPLAY and LIVE envelopes without branching on source.
+
+### Step 2 — Edge store library
+
+**Work:** SQLite (WAL) store: lanes with monotonic `seq`, `store_epoch`, blob files written atomically and addressed by SHA-256, acknowledgment table, retention and disk-pressure pruning with gap notices, single writer thread with a bounded input queue that counts drops (same pattern as `SceneWriter`).
+**Gate:** unit tests for restart continuity (no reused `seq`), crash mid-write (no partial records), full disk (visible error, inference callers never block), pruning produces gap records.
+
+### Step 3 — Publication hook in `vision.server` (CV-owned)
+
+**Work:** after `detect_frame()`, hand references (event, verdicts, rule availability, upright image, C7 record) to the edge writer's bounded queue; encoding and disk I/O happen on the writer thread. Add a track hook at `FrameServer.admit()` that only enqueues (it runs on the receive thread). Evidence capture policy (D6): save the clean upright frame for frames with any derived box or scene finding, rate-limited per rule per session, with pixel hash and C2 identity. Preview JPEG at a capped rate. Generalize the source-mode flag. Use the same hook from `tools/replay_detect.py` so offline runs fill a store too.
+**Gate:** `uv run pytest`; replay determinism and `detections.jsonl` unchanged; a deliberately blocked writer leaves rx→event p95 within tolerance of the Step 8 measurement and counts every dropped record; destructive suite still passes.
+
+### Step 4 — Edge API process
+
+**Work:** read-only sync service over the store: `/v1/sync` (hello, lanes, live, tail), `/v1/blobs/{sha256}`, token check, inspection start/end, profile delivery. Dual-stack listening (the IPv6-only hotspot lesson from Step 5).
+**Gate:** killing or stalling the edge API changes nothing in inference or the store; no motion endpoint exists (route-list test).
+
+### Step 5 — Hub sync client and replica
+
+**Work:** connect, resume per lane, dedupe, acknowledge after commit, epoch and gap handling, blob fetcher with byte-rate cap and hash check, link state machine.
+**Gate:** a test proxy between hub and edge cuts the link for a timed interval during a replay; after reconnect the replica equals the edge store record-for-record, counts are not inflated, backfilled records are labeled, gaps appear when retention is forced, and an epoch change is detected.
+
+**Milestone A — rover-to-laptop link on one Mac:** replay → `vision.server --detect` → edge store → edge API → hub, surviving link cuts. Demonstrate with a small CLI (`hub status` / `hub tail`) rather than a frontend.
+
+### Step 6 — Frontend API and sample workspace
+
+**Work:** hub REST + `WS /v1/live` (§6), OpenAPI, a fixture-driven "sample edge" that speaks the same sync protocol with `source_mode = SAMPLE` into a separate workspace (person in path, walkway, confirmed-incident examples).
+**Gate:** contract tests against the OpenAPI schema; sample records never appear in live counts or on real poses; a closed or slow browser never affects the hub or the rover.
+
+### Step 7 — Worksite profiles and inspection lifecycle
+
+**Work:** profile authoring and immutable revisions on the hub (editable while the rover is offline). At explicit start, the hub sends the full revision to the edge, which verifies its hash, binds `inspection_id`, and applies it to observations in Python. Assessments use §4 semantics.
+**Gate:** check/uncheck, unsupported requirement, no-requirements state, conflicting edits (`409`), saved-but-pending revisions, in-flight results keeping their revision, and reconnects/ARKit resets that do not start inspections or activate edits.
+
+**Milestone B — frontend-ready backend:** a frontend developer can build every dashboard view against the hub using LIVE/REPLAY data from the Mac and SAMPLE data for missing producers.
+
+### Step 8 — Incidents and evidence
+
+**Work:** implement the §8 policy on the edge as a pure function with versioned parameters; write transitions and evidence references to the control lane; add the replay calibration tool. Until it passes calibration, label incidents "policy uncalibrated".
+**Gate:** §8.6 synthetic timeline tests; calibration against the on/off recordings meets the agreed targets; replayed messages do not create extra incidents; evidence matches its source frame (pixel hash); missing evidence and restart recovery (`source_stopped`) are visible.
+
+### Step 9 — Twin backend
+
+**Work:** track lane, session list, pins and unlocalized lists (§7).
+**Gate (physical):** walk the phone forward, turn left, turn right and press Reset: no mirrored map, correct heading, new session = new map, stale tracking stops the path, invalid frames stay unlocalized. Record observed results in the README.
+
+**Milestone C — dashboard and Twin data complete on the Mac.**
+
+### Step 10 — Move the rover role to the Jetson
+
+**Prerequisite:** J1–J6 pass. **Work:** run `vision.server` + edge API as systemd services; laptop runs the hub. Measure inference latency with the edge writer and API on and off, store growth per hour, and catch-up time after a timed disconnect.
+**Gate (physical):** with the phone on the rover-local link (D1), carry the laptop out of range during an inspection and back: phone capture and inference continue uninterrupted, the hub shows DISCONNECTED → CATCHING UP → CONNECTED, the track and incidents fill in as backfilled, and the phone stream shows no added drops attributable to catch-up.
+
+### Step 11 — Later producers and telemetry
+
+Person in path, walkway (C8 once it has output), controller and supervisor telemetry as read-only adapters with requested and reported state shown separately and missing feedback shown as unknown. Each new producer gets its own §8-style confirmation policy before its SAMPLE label is removed. No cloud upload (D2).
+
+## 10. Acceptance gates
+
+| Gate | Evidence |
+| --- | --- |
+| Contracts | Valid/invalid fixtures; frozen v2 untouched; unknown values tested |
+| Non-blocking | Blocked/slow writer, dead edge API, full disk: inference latency within tolerance, all drops counted |
+| Sync integrity | Timed link cuts: replica equals store; no duplicates; gaps explicit; epoch change detected |
+| Honest delivery | Backfilled records never shown as current; disconnected rover state shown as unknown |
+| Worksite semantics | All §4 cases including revision binding and reconnect/reset non-activation |
+| Incident policy | §8.6 timeline tests; calibration targets met on recordings; deterministic replay |
+| Evidence | Pixel hash matches source frame; missing evidence visible; incidents not inflated by replays |
+| Twin | Physical forward/left/right/reset test; session separation; unlocalized fallback |
+| Isolation and authority | No motion/arming/fault endpoints anywhere; no BLE access from edge or hub |
+| Offline | Works with no internet; frontend assets and fonts served locally |
+| Jetson | Same replay suite on the device; resource use with sync on and off recorded |
+
+Run `uv run pytest` at each implementation step; record measured results in the README progression; run `integration.md` G1–G8 when merging. No threshold above is an achieved measurement.
+
+## 11. Decisions
+
+| # | Decision | Status |
+| --- | --- | --- |
+| D1 | Rover network topology | **Confirmed:** phone ↔ rover computer on a rover-local link (rover access point/router, or the phone hotspot carried on the rover); the laptop leaving range never breaks capture. Which device provides that network is still to be chosen. |
+| D2 | Cloud or internet upload | **Confirmed: no.** The system works entirely on the local network. |
+| D3 | Where assessments and incidents are computed | **Confirmed:** on the rover (edge), so offline inspections are complete. |
+| D4 | Rover storage budget and retention | **Confirmed (starting values, to measure):** store cap 2 GiB; acknowledged records older than 24 h are pruned; over the cap or below 1 GiB free disk, the oldest observation records are pruned first with a gap notice. Control lane and evidence are kept until acknowledged. |
+| D5 | Live preview size and rate | **Confirmed (starting values):** annotated upright preview, 640 px wide, ≤ 5 Hz, JPEG quality 70, latest wins. Full resolution only as evidence. |
+| D6 | Evidence capture policy | **Confirmed:** clean full-resolution upright frame for frames with any derived box or scene finding, at most one per 2 s per rule per session, plus the §8.5 incident frames (bounded to 10 per incident), each with pixel hash and C2 identity. |
+| D7 | Incident confirmation policy | **Defined in §8** at the user's request. **§8.6 acceptance targets agreed**; parameters still need calibration on recordings, so incidents are labeled "policy uncalibrated". |
+| D8 | Link authentication | **Confirmed:** pre-shared token `BOB_EDGE_TOKEN` in `.env` (never committed or printed). |
+| D9 | Frontend stack | Open; the backend is stack-agnostic. |
+
+## 12. Scope cuts
+
+If time is short, keep in this order: honest source/freshness labels → rover store with link-cut resync → evidence correlation → profile/inspection binding → Twin. Drop map styling, route registration and hardware panels before compromising evidence correlation or labeling. Deferred: 3D reconstruction, persistent maps across sessions, worker identity, hazard world positions from image boxes, remote driving, route editing, compliance percentages.
