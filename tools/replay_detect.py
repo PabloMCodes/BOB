@@ -61,7 +61,7 @@ class SegmentScore:
 
 
 def run(records: Iterable[Record], pipeline: Pipeline, config: dict[str, Any],
-        on_frame=None) -> list[FrameOutcome]:
+        on_frame=None, on_undecodable=None) -> list[FrameOutcome]:
     mount = config["camera"]["mount_orientation"]
     server = FrameServer(config, clock=time.time_ns)  # admission + association only, no network
     outcomes: list[FrameOutcome] = []
@@ -72,6 +72,8 @@ def run(records: Iterable[Record], pipeline: Pipeline, config: dict[str, Any],
             continue  # a pose, or a message the live server would drop (late / old session)
         detection = detect_frame(frame, pipeline, mount, server.associator)
         if detection is None:
+            if on_undecodable is not None:
+                on_undecodable(frame)  # corrupt JPEG: counted, never silently skipped
             continue
         ts = frame.packet.iphone_frame_ts_ns
         first_ts = ts if first_ts is None else first_ts
@@ -174,11 +176,14 @@ def main() -> None:
                          hide=config["render"]["hide"])
             cv2.imwrite(str(out / "frames" / f"{outcome.t_s:08.2f}s_seq{outcome.event.seq_id}.jpg"), image)
 
-    outcomes = run(load(args.recording), pipeline, config, on_frame=save_frame)
+    undecodable: list[int] = []
+    outcomes = run(load(args.recording), pipeline, config, on_frame=save_frame,
+                   on_undecodable=lambda f: undecodable.append(f.packet.seq_id))
     with open(out / "detections.jsonl", "w") as fh:
         for o in outcomes:
             fh.write(o.event.model_dump_json() + "\n")
-    summary = {"recording": str(args.recording), "model_id": pipeline.model_id, **summarize(outcomes)}
+    summary = {"recording": str(args.recording), "model_id": pipeline.model_id, **summarize(outcomes),
+               "undecodable_seq_ids": undecodable}
     if segments:
         scores = score(outcomes, args.rule, segments)
         summary["rule"] = args.rule

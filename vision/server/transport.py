@@ -97,6 +97,9 @@ class FrameServer:
             max_size=self.max_message_bytes,
             compression=None,  # JPEG doesn't compress; deflate would only cost CPU
             ping_interval=self.ping_interval_s, ping_timeout=self.ping_interval_s,
+            # A vanished phone never answers the close handshake either: without this the dead
+            # connection lingers for the library default of 10 s (found in Step 8).
+            close_timeout=self.ping_interval_s,
         ) as server:
             health = asyncio.create_task(self.health_loop())
             ready(server.sockets[0].getsockname()[1])

@@ -99,10 +99,11 @@ def main() -> None:
                         lines.append("  ".join(f"{k} {v.value}" for k, v in detection.verdicts.items()))
                 else:
                     image = decode_upright(frame, mount)
-                if image is not None:
-                    if not args.no_view:
-                        image = overlay_stats(image, stats_lines(server.monitor.stats()) + lines)
-                        cv2.imshow("BOB stream", image)
+                if image is None:
+                    server.monitor.undecodable(frame)  # corrupt JPEG: never analysed, but counted (I3)
+                elif not args.no_view:
+                    image = overlay_stats(image, stats_lines(server.monitor.stats()) + lines)
+                    cv2.imshow("BOB stream", image)
                 server.monitor.processed(frame)
             if not args.no_view and (cv2.waitKey(1) & 0xFF) == ord("q"):
                 break

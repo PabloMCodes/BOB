@@ -22,7 +22,8 @@ def stats_lines(s: StreamStats) -> list[str]:
     return [
         f"{'STALE' if s.stale else 'live'}  conn {s.connections}  session {session}  tracking {s.tracking_state or '-'}",
         f"frames {s.frame_hz:.1f} Hz  poses {s.pose_hz:.1f} Hz  ({s.frames} / {s.poses})",
-        f"drops: phone {s.seq_gaps}  server {s.slot_drops}  late {s.out_of_order + s.retired_drops}  bad {s.decode_errors}",
+        f"drops: phone {s.seq_gaps}  server {s.slot_drops}  late {s.out_of_order + s.retired_drops}"
+        f"  bad {s.decode_errors}  bad-jpeg {s.undecodable}",
         f"added latency p50/p95 {_fmt(s.added_latency_p50_ms)}/{_fmt(s.added_latency_p95_ms)} ms"
         f"  mac {_fmt(s.process_p50_ms)}/{_fmt(s.process_p95_ms)} ms",
     ]
