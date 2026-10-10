@@ -87,6 +87,12 @@ def test_zidane_no_glasses_no_helmet(detector):
     assert _verdicts(result, "helmet") == ["not_wearing", "not_wearing"]
 
 
+@pytest.mark.parametrize("name", ["bus.jpg", "zidane.jpg"])
+def test_nobody_without_vest_judged_wearing(detector, name):
+    verdicts = _verdicts(_run(detector, "head_crop", name), "vest")
+    assert "not_wearing" in verdicts and "wearing" not in verdicts
+
+
 def test_violation_box_lies_on_face(detector):
     result = _run(detector, "head_crop", "zidane.jpg")
     for v in result.verdicts:

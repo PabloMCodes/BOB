@@ -67,6 +67,14 @@ ppe:
       min_subject_px: 16
       min_subject_conf: 0.50
       min_overlap: 0.30
+    vest:                    # hi-vis vest on the torso. SH17 'safety-vest' only: hi-vis jackets /
+      subject: person        # coveralls aren't a class, so they can read as no-safety-vest
+      ppe: safety-vest
+      violation: no-safety-vest
+      region: [0.15, 0.65]   # torso band: shoulders to hips
+      min_subject_px: 96     # vest then spans >= ~30 px
+      min_subject_conf: 0.50
+      min_overlap: 0.60
     boots:
       # The class itself decides. Inactive with SH17 ('shoes' = any footwear, no 'safety-boots'
       # class); activates automatically with the fine-tuned model. Labelling convention:

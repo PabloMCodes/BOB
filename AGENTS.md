@@ -37,7 +37,7 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | `vision/` | Importable package: config, schema, detector, render, server, pose buffer, events |
 | `vision/detector.py`, `render.py`, `orientation.py`, `detect.py` | YOLO wrapper → `schema.Box`, safety-color drawing, sensor→upright rotation, webcam CLI |
 | `vision/pipeline.py` | **Single entry point** for frames: `single` or `head_crop` (people → full-res head crops) → PPE rules. Webcam, eval and server must all go through it |
-| `vision/ppe.py` | Rules → derived violation boxes + per-subject verdicts. `kind: pair` (face↔glasses, head↔helmet, hands↔gloves) and `kind: class` (safety-boots vs shoes). Rules whose classes the model lacks are inactive (`split_active`) |
+| `vision/ppe.py` | Rules → derived violation boxes + per-subject verdicts. `kind: pair` (face↔glasses, head↔helmet, hands↔gloves, person↔safety-vest) and `kind: class` (safety-boots vs shoes). Rules whose classes the model lacks are inactive (`split_active`) |
 | `tools/prelabel.py` | Draft YOLO labels (SH17 + YOLO-World) in `training.classes` for hand correction. Needs `uv run --group labeling` for YOLO-World |
 | `tools/review_boots.py` | CLIP-sorted hand review of Roboflow `boots` boxes → `data/labeling/boots_review.json` (`score` needs the labeling group; `review` is an OpenCV window) |
 | `tools/build_dataset.py` | External dataset + review decisions + filtered SH17 pseudo-labels → `data/datasets/<name>/` YOLO training set |

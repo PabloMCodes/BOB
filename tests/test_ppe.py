@@ -148,12 +148,51 @@ SH17_NAMES = ["person", "ear", "ear-mufs", "face", "face-guard", "face-mask", "f
 def test_boots_inactive_with_sh17_never_approximated():
     active, inactive = split_active(rules_from_config(CONFIG), SH17_NAMES)
     assert [r.name for r in inactive] == ["boots"]
-    assert {r.name for r in active} == {"glasses", "helmet", "gloves"}
+    assert {r.name for r in active} == {"glasses", "helmet", "gloves", "vest"}
 
 
 def test_boots_active_with_finetuned_classes():
+    # The 9 fine-tune classes have no safety-vest, so the vest rule switches off with that model.
     active, inactive = split_active(rules_from_config(CONFIG), CONFIG["training"]["classes"])
-    assert inactive == [] and "boots" in {r.name for r in active}
+    assert [r.name for r in inactive] == ["vest"] and "boots" in {r.name for r in active}
+
+
+# --- vest (pair rule on the person's torso) -----------------------------------------------
+
+VEST = RULES["vest"]
+PERSON = (200.0, 100.0, 300.0, 400.0)  # 100 x 300 px; torso band 0.15-0.65 -> y 145-295
+VEST_ON = (210.0, 150.0, 290.0, 280.0)  # centre y=215 -> 0.38
+
+
+def test_vest_on_torso_is_wearing():
+    v = only(apply_rule(VEST, [box("person", PERSON), box("safety-vest", VEST_ON)]))
+    assert v.verdict is Verdict.WEARING and v.ppe.xyxy == VEST_ON
+
+
+def test_no_vest_is_violation_on_torso():
+    v = only(apply_rule(VEST, [box("person", PERSON, conf=0.7)]))
+    assert v.verdict is Verdict.NOT_WEARING
+    b = v.violation
+    assert b.source == "derived" and b.cls_name == "no-safety-vest" and b.conf == 0.7
+    assert b.xyxy == pytest.approx((200.0, 145.0, 300.0, 295.0))
+
+
+def test_vest_at_feet_does_not_count():
+    # e.g. a vest lying on the floor next to the person's feet
+    assert only(apply_rule(VEST, [box("person", PERSON), box("safety-vest", (210.0, 360.0, 290.0, 400.0))])).verdict \
+        is Verdict.NOT_WEARING
+
+
+def test_one_vest_cannot_serve_two_people():
+    other = (260.0, 100.0, 360.0, 400.0)  # overlapping person whose torso band also holds the vest
+    verdicts = apply_rule(VEST, [box("person", PERSON), box("person", other, conf=0.8), box("safety-vest", VEST_ON)])
+    assert sorted(v.verdict for v in verdicts) == [Verdict.NOT_WEARING, Verdict.WEARING]
+
+
+@pytest.mark.parametrize("person, conf", [((200.0, 100.0, 240.0, 180.0), 0.9), (PERSON, 0.3)])
+def test_small_or_uncertain_person_unverified_for_vest(person, conf):
+    v = only(apply_rule(VEST, [box("person", person, conf=conf)]))
+    assert v.verdict is Verdict.UNVERIFIED and v.violation is None
 
 
 def test_unknown_rule_kind_rejected():

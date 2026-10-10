@@ -41,12 +41,14 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 1 | Message / event schema contract | ✅ Done | pytest on valid/invalid JSON fixtures + wire codec + JSON Schema drift | 74/74 pass · 7 valid / 28 invalid fixtures · 4 message types |
 | 2 | Detector wrapper + bounding box render + rotation | ✅ Done (webcam run pending) | Real-model tests on bundled images, render/rotation unit tests, MPS vs CPU benchmark, visual check | 110/110 pass · yolov8n @640: **MPS p50 9.1 ms / p95 11.8 ms (~109 FPS)** · CPU p50 20.9 ms |
 | 3 | PPE model + safety-glasses/helmet rules | 🟡 Built — **own-photo eval pending** | Rule unit tests, real-model regressions on bundled images, `tools/eval_ppe.py` on own photos at 3 m+ (recall ≥ 0.9, precision ≥ 0.8) | 157/157 pass · head_crop fixes missed sunglasses that single-pass @640 misses · yolov8s head_crop **53 ms** (5 passes) on 1440×1920 |
+| 3a | Hi-vis vest rule | 🟡 Built — **own-photo eval pending** | Rule unit tests, real-model regression on bundled images, `tools/eval_ppe.py --rule vest` | 204/204 pass · `bus.jpg` 4/4 and `zidane.jpg` 2/2 people → `not_wearing` (no vests in either) · positive case unmeasured |
 | 3b | Gloves + safety boots + one fine-tune (glasses/gloves/boots) | 🟡 Rules, pre-labeller, foot crop, boots review + dataset builder built — **boots review + own photos pending** | Rule/prelabel unit tests; eval on own photos after fine-tune | 190/190 pass · glasses baseline **4/11** (SH17) · YOLO-World 8/11 · Roboflow footwear: 2,758 imgs, 2,562 boots CLIP-scored |
 | 4 | iOS ARKit capture app (Xcode) | 🟡 Built + Simulator-tested — **on-device checklist pending** | Swift unit tests vs shared fixtures, Swift→Python golden recording, on-device recording + `tools/inspect_recording.py` | Swift 11/11 · Python 196/196 · unsigned device build ✅ · golden recording decodes (yaw +90° ✓) |
 | 5 | WebSocket transport + record/replay | ⬜ | Replay client in pytest, live FPS/drops/latency, kill test | — |
 | 6 | Live inference + bounding boxes | ⬜ | Replay determinism, live PPE on/off test, p50/p95 latency | — |
 | 7 | Pose ↔ detection timestamp association | ⬜ | Synthetic timeline unit tests, live occlusion + ARKit reset | — |
 | 8 | CV destructive tests + Jetson handoff prep | ⬜ | Scripted failure suite, `.pt` vs `.onnx` parity | — |
+| 3c | Scene hazards — *inspection findings only* (backlog, after Step 7) | ⬜ | To define: restricted floor zones, open edges / stairs, blocked walkways / debris | — |
 
 ### Step 0 — Environment & repo skeleton ✅
 
@@ -106,6 +108,17 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 6. Camera-app photos are sharper than ARKit frames (no HDR/Deep Fusion in ARKit), so results are an upper bound; re-check with recorded ARKit frames in Step 5.
 
 **Done when:** the eval report shows a setting with recall ≥ 0.9 and precision ≥ 0.8 at 3 m — that sets the model (n/s), mode, and the resolution the phone must send in Step 4.
+
+### Step 3a — Hi-vis vest rule 🟡 (own-photo eval pending)
+
+- **Rule `vest`** (pair: `person` ↔ SH17 `safety-vest`): the vest box centre must lie in the person's **torso band** (15–65 % of the person height) and sit ≥ 60 % inside the person box → wearing. Otherwise a red **`no-safety-vest`** box is drawn on the torso band. People under 96 px tall or below conf 0.5 are unverified, with no box. One vest box can't make two people compliant.
+- **Limits:** only SH17's `safety-vest` counts, so hi-vis **jackets / coveralls may read as `no-safety-vest`**. "Low visibility" here means *no hi-vis vest*, not a dark scene. SH17's vest accuracy from the low rover camera is **unmeasured**. The 9-class fine-tune has no `safety-vest`, so the rule **switches off** with that model; it is never approximated.
+- **Test:** `uv run pytest` — vest on torso, no vest → torso box, vest at the feet doesn't count, one vest per person, small/uncertain person unverified, active with SH17 / inactive with the fine-tune classes. Real model: `bus.jpg` 4/4 and `zidane.jpg` 2/2 people `not_wearing`, never `wearing`.
+- **Pending (needs the team):** photos in `data/eval/vest/{wearing,not_wearing}/<distance>/` (same capture protocol as Step 3, incl. a few hi-vis jackets in `not_wearing/` to measure that limitation) → `uv run python -m tools.eval_ppe --rule vest`.
+
+### Step 3c — Scene hazards (backlog, after Step 7)
+
+Restricted floor zones, open edges / stairs, blocked walkways / debris. These are **not** person + PPE pairs: they need floor segmentation or geometry, plus the world position from Step 7's pose association. They also need a schema v3 change (findings that aren't tied to a person). They are **inspection findings for humans only**. The rover must never rely on them to avoid an edge or an obstacle; that is the safety supervisor's job, with its own sensors (AGENTS rule 7). Use Step 5 recording to collect footage of these scenes in the meantime.
 
 ### Step 3b — Gloves, safety boots, and one fine-tune for all 🟡 (data collection pending)
 
