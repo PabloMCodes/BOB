@@ -1,7 +1,7 @@
 """Wire contract between the iPhone app, the vision server, and downstream consumers.
 
 Frozen per AGENTS.md rule 3. Any change must, in the same PR:
-  1. bump SCHEMA_VERSION (common.py) and the Literal[1] version fields,
+  1. bump SCHEMA_VERSION and SchemaVersion together (common.py),
   2. update the Swift mirror in ios/ and the fixtures in tests/fixtures/,
   3. regenerate schema/*.schema.json:  uv run python -m tools.export_schema
 

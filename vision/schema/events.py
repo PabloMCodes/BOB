@@ -10,7 +10,15 @@ from uuid import UUID
 
 from pydantic import Field, Strict, field_validator, model_validator
 
-from .common import NonNegInt, PosInt, PoseInvalidReason, TimestampNs, TrackingState, _Model
+from .common import (
+    NonNegInt,
+    PosInt,
+    PoseInvalidReason,
+    SchemaVersion,
+    TimestampNs,
+    TrackingState,
+    _Model,
+)
 from .pose import Pose
 
 
@@ -20,12 +28,26 @@ class ImageSize(_Model):
 
 
 class Box(_Model):
-    """One YOLO detection. xyxy in pixels of the upright (rotated) image."""
+    """One box in pixels of the upright (rotated) image.
 
-    cls_id: NonNegInt
+    source="model":   a raw YOLO detection; cls_id is the model's class index.
+    source="derived": produced by a PPE rule (e.g. "no-safety-glasses" on a face's eye band);
+                      cls_id is null and conf is the confidence of the subject it was derived from.
+    """
+
+    source: Literal["model", "derived"]
+    cls_id: Optional[NonNegInt]
     cls_name: str = Field(min_length=1)
     conf: float = Field(ge=0.0, le=1.0)
     xyxy: tuple[float, float, float, float]
+
+    @model_validator(mode="after")
+    def _cls_id_matches_source(self) -> Box:
+        if self.source == "model" and self.cls_id is None:
+            raise ValueError("source='model' requires a cls_id")
+        if self.source == "derived" and self.cls_id is not None:
+            raise ValueError("source='derived' requires cls_id=null")
+        return self
 
     @field_validator("xyxy")
     @classmethod
@@ -45,7 +67,7 @@ class DetectionEvent(_Model):
     nearest pose for debugging. Boxes only: hazard decisions belong to the alerts/safety branch.
     """
 
-    schema_version: Literal[1]
+    schema_version: SchemaVersion
     msg_type: Literal["detection_event"]
     event_id: UUID
     session_id: UUID
@@ -83,7 +105,7 @@ class DetectionEvent(_Model):
 class StreamHealth(_Model):
     """C3 — iPhone stream health as seen by the vision server. Consumers stop on stale=true."""
 
-    schema_version: Literal[1]
+    schema_version: SchemaVersion
     msg_type: Literal["stream_health"]
     emitted_ts_ns: TimestampNs  # receiver clock
     session_id: Optional[UUID] = None

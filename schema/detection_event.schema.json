@@ -2,12 +2,19 @@
   "$defs": {
     "Box": {
       "additionalProperties": false,
-      "description": "One YOLO detection. xyxy in pixels of the upright (rotated) image.",
+      "description": "One box in pixels of the upright (rotated) image.\n\nsource=\"model\":   a raw YOLO detection; cls_id is the model's class index.\nsource=\"derived\": produced by a PPE rule (e.g. \"no-safety-glasses\" on a face's eye band);\n                  cls_id is null and conf is the confidence of the subject it was derived from.",
       "properties": {
         "cls_id": {
-          "minimum": 0,
-          "title": "Cls Id",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cls Id"
         },
         "cls_name": {
           "minLength": 1,
@@ -19,6 +26,14 @@
           "minimum": 0.0,
           "title": "Conf",
           "type": "number"
+        },
+        "source": {
+          "enum": [
+            "model",
+            "derived"
+          ],
+          "title": "Source",
+          "type": "string"
         },
         "xyxy": {
           "maxItems": 4,
@@ -42,6 +57,7 @@
         }
       },
       "required": [
+        "source",
         "cls_id",
         "cls_name",
         "conf",
@@ -208,7 +224,7 @@
       "type": "boolean"
     },
     "schema_version": {
-      "const": 1,
+      "const": 2,
       "title": "Schema Version",
       "type": "integer"
     },

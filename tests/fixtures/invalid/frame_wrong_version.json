@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 1,
   "msg_type": "frame",
   "session_id": "6F9619FF-8B86-4D11-B42D-00C04FC964FF",
   "seq_id": 42,

@@ -14,6 +14,7 @@ from pydantic import Field, Strict, field_validator, model_validator
 from .common import (
     NonNegInt,
     PosInt,
+    SchemaVersion,
     TimestampNs,
     TrackingReason,
     TrackingState,
@@ -56,7 +57,7 @@ class ImageInfo(_Model):
 
 
 class _PhonePacket(_Model):
-    schema_version: Literal[1]
+    schema_version: SchemaVersion
     session_id: UUID
     seq_id: NonNegInt
     iphone_frame_ts_ns: TimestampNs

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "msg_type": "detection_event",
   "event_id": "0b6e1f5e-2c4b-4f7a-9d39-6a1f1d7c8e21",
   "session_id": "6f9619ff-8b86-4d11-b42d-00c04fc964ff",
@@ -15,6 +15,7 @@
   "tracking_state": "normal",
   "boxes": [
     {
+      "source": "model",
       "cls_id": 0,
       "cls_name": "person",
       "conf": 0.91,
@@ -26,6 +27,7 @@
       ]
     },
     {
+      "source": "model",
       "cls_id": 2,
       "cls_name": "no-hardhat",
       "conf": 0.77,

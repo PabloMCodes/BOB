@@ -1,12 +1,35 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "msg_type": "frame",
   "session_id": "6F9619FF-8B86-4D11-B42D-00C04FC964FF",
   "seq_id": 43,
   "iphone_frame_ts_ns": 183456855678901,
   "tracking_state": "limited",
   "tracking_reason": "excessive_motion",
-  "camera_transform": [0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.1, -2.0, 1.0],
+  "camera_transform": [
+    0.0,
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.1,
+    -2.0,
+    1.0
+  ],
   "intrinsics": null,
-  "image": {"width": 640, "height": 480, "encoding": "jpeg", "device_orientation": "portrait", "byte_length": 18000}
+  "image": {
+    "width": 640,
+    "height": 480,
+    "encoding": "jpeg",
+    "device_orientation": "portrait",
+    "byte_length": 18000
+  }
 }

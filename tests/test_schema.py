@@ -11,6 +11,7 @@ import pytest
 
 from tools.export_schema import SCHEMA_DIR, render
 from vision.schema import (
+    SCHEMA_VERSION,
     DetectionEvent,
     FramePacket,
     PosePacket,
@@ -55,6 +56,10 @@ EXPECTED_ERRORS = {
     "detection_box_negative": ">= 0",
     "detection_conf_above_1": "conf",
     "detection_pose_valid_as_string": "pose_valid",
+    "detection_box_missing_source": "source",
+    "detection_box_bad_source": "source",
+    "detection_model_box_without_cls_id": "source='model' requires a cls_id",
+    "detection_derived_box_with_cls_id": "source='derived' requires cls_id=null",
     "stream_health_no_session_not_stale": "stale must be true",
     "unknown_msg_type": "msg_type",
 }
@@ -225,7 +230,7 @@ def test_packet_pose_property_matches_fixture():
 def test_python_built_event_validates():
     """Step 6/7 will construct events in Python; make sure that path works with real types."""
     event = DetectionEvent(
-        schema_version=1,
+        schema_version=SCHEMA_VERSION,
         msg_type="detection_event",
         event_id=uuid4(),
         session_id=uuid4(),
@@ -236,7 +241,10 @@ def test_python_built_event_validates():
         model_id="yolov8n",
         image_size={"width": 640, "height": 480},
         tracking_state="normal",
-        boxes=[{"cls_id": 0, "cls_name": "person", "conf": 0.5, "xyxy": [1.0, 2.0, 3.0, 4.0]}],
+        boxes=[
+            {"source": "model", "cls_id": 0, "cls_name": "person", "conf": 0.5, "xyxy": [1.0, 2.0, 3.0, 4.0]},
+            {"source": "derived", "cls_id": None, "cls_name": "no-helmet", "conf": 0.5, "xyxy": [1.0, 2.0, 3.0, 3.0]},
+        ],
         pose=pose_from_transform(_rot_y(0)),
         pose_valid=True,
         pose_dt_ms=0.0,

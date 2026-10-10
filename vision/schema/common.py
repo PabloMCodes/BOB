@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, Strict
 
-SCHEMA_VERSION = 1
+# Bump both together. v2: Box.source (model | derived), cls_id null for derived boxes.
+SCHEMA_VERSION = 2
+SchemaVersion = Literal[2]
 
 # Strict ints: reject "42" and 42.0 so Swift encoding mistakes surface in tests.
 NonNegInt = Annotated[int, Strict(), Field(ge=0)]

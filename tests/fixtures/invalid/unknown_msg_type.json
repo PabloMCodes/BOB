@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "msg_type": "heartbeat",
   "emitted_ts_ns": 1760100000000000000,
   "session_id": null,
