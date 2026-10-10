@@ -49,6 +49,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 7 | Pose ↔ detection timestamp association | 🟡 Built + synthetic-tested — **deliberate live occlusion / Reset / background run pending** | Synthetic timeline unit tests, live occlusion + ARKit reset | 21 timeline tests (mutation-checked) · existing live recordings: 3 session switches, each new session invalid only while ARKit `initializing` (1.0–1.3 s), 0 old-session frames after a switch; mid-session re-init (3.9 s) invalid, origin kept (≤ 3 cm, < 1°) |
 | 8 | CV destructive tests + Jetson handoff prep | 🟡 Built + Mac-verified — **on-device Jetson checks (J1–J6) pending** | Scripted failure suite, `.pt` vs `.onnx` parity | 20 destructive tests → **3 bugs found + fixed** · `.pt` vs `.onnx` (SH17 and + footwear): 92 images / 606–669 boxes, max \|Δconf\| 1.7e-6, **verdicts identical** · reproducible ONNX SHA · batched crops identical to sequential, live rx→event **p95 65.3 / 75.8 ms** (was 85.6 / 117.7) |
 | 3c | Restricted-zone inspection — no movement authority | 🟡 Mac live/replay prototype built; physical tape acceptance pending | Geometry, evidence validity, tape failure cases, correlated scene output | 35 zone/tape/scene tests; full suite 339 pass; 6 synthetic replay frames correlated to C2 |
+| 3d | Walkway obstruction (fixed camera) — no movement authority | 🟡 Steps 1–3 of 9 built (definition, settings, reference check + change mask); lane check, CLI and physical tripod test pending | Definition/config validation, synthetic reference-check and change-mask cases | 39 walkway tests pass; full suite 378 pass; synthetic only |
 
 ### Step 0 — Environment & repo skeleton ✅
 
@@ -115,6 +116,10 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 - **Limits:** only SH17's `safety-vest` counts, so hi-vis **jackets / coveralls may read as `no-safety-vest`**. "Low visibility" here means *no hi-vis vest*, not a dark scene. SH17's vest accuracy from the low rover camera is **unmeasured**. The 9-class fine-tune has no `safety-vest`, so the rule **switches off** with that model; it is never approximated.
 - **Test:** `uv run pytest` — vest on torso, no vest → torso box, vest at the feet doesn't count, one vest per person, small/uncertain person unverified, active with SH17 / inactive with the fine-tune classes. Real model: `bus.jpg` 4/4 and `zidane.jpg` 2/2 people `not_wearing`, never `wearing`.
 - **Pending (needs the team):** photos in `data/eval/vest/{wearing,not_wearing}/<distance>/` (same capture protocol as Step 3, incl. a few hi-vis jackets in `not_wearing/` to measure that limitation) → `uv run python -m tools.eval_ppe --rule vest`.
+
+### Step 3d — Walkway obstruction inspection 🟡 (steps 1–3 of 9)
+
+"Walkway closed" means **blocked by an obstruction**: no clear lane of a minimum width from the operator-marked entry edge to the exit edge. The walkway is an operator quadrilateral on a declared-empty reference image from a fixed tripod phone (L-shapes out of scope for the demo). Evidence is change vs that reference, so no new model. People are reported separately, not as obstructions. Built so far: `vision/walkway.py` (`WalkwayDefinition`, `WalkwayConfig`, `detect_changes`) and `configs/walkway.yaml`. A moved camera, lighting change, changed background or textureless scene gives `unverified` with no change evidence; the image is never re-aligned to fit. People handling, the lane check, the still-image CLI and the persistence tracker are not built yet. Details and limitations: [walkway guide](docs/walkway-obstruction.md).
 
 ### Step 3c — Restricted-zone inspection 🟡 (physical acceptance pending)
 
