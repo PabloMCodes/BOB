@@ -143,9 +143,16 @@ render:
 server:
   host: 0.0.0.0
   port: 8765
+  max_message_bytes: 8454144   # 8 MiB JPEG (schema MAX_PAYLOAD_BYTES) + 64 KiB header
+  ping_interval_s: 2.0         # WebSocket keepalive: a vanished phone (Wi-Fi drop) is closed after ~2x this
+  run_dir: runs/server         # <time>/stream_health.jsonl, summary.json, stream.bobrec (--record)
 
 timing:
   # Stream is stale if no valid packet within this window (CV doc: 200–300 ms)
   stale_ms: 250
+  # StreamHealth (C3) emission period
+  health_interval_ms: 100
+  # Frames per rolling latency percentile (added latency, Mac processing)
+  latency_window: 100
   # Max |frame_ts - pose_ts| for a detection's pose to be considered valid
   pose_tolerance_ms: 50
