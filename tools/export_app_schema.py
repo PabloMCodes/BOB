@@ -1,4 +1,4 @@
-"""Write schema/app/*.schema.json from bobapp/contracts.py (`bob-app` v1, C9/C10).
+"""Write schema/app/*.schema.json from bobapp/contracts/ (`bob-app` v1, C9/C10).
 
 Run after any contract change:  uv run python -m tools.export_app_schema
 tests/test_app_contracts.py fails if the committed files drift from the code.

@@ -1,0 +1,13 @@
+"""SQLite tables of the edge store."""
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS lane_head (lane TEXT PRIMARY KEY, head_seq INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS records (
+    lane TEXT NOT NULL, seq INTEGER NOT NULL, kind TEXT NOT NULL, wall_ns INTEGER NOT NULL,
+    size INTEGER NOT NULL, json TEXT NOT NULL, PRIMARY KEY (lane, seq));
+CREATE TABLE IF NOT EXISTS acks (hub_id TEXT NOT NULL, lane TEXT NOT NULL, seq INTEGER NOT NULL,
+    PRIMARY KEY (hub_id, lane));
+CREATE TABLE IF NOT EXISTS blobs (sha256 TEXT PRIMARY KEY, size INTEGER NOT NULL,
+    media_type TEXT NOT NULL, evidence_seq INTEGER);
+"""

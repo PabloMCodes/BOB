@@ -1,0 +1,39 @@
+# Rover edge settings (dashboard plan §5) — application-owned, never CV keys.
+# Override per machine in configs/edge.local.yaml (gitignored) or with --edge-config.
+edge_id: rover-mac             # stable rover-computer identity (Mac stand-in today)
+store_dir: runs/edge           # <store_dir>/<edge_id>/store.sqlite + blobs/ (gitignored)
+clock_synced: null             # true / false when known for this machine; null = unknown
+
+retention:                     # D4 — starting values, to measure (store growth per hour)
+  acked_max_age_s: 86400       # acknowledged records older than this are pruned
+  max_store_bytes: 2147483648  # 2 GiB: above it, oldest observations are pruned first (gap record)
+  min_free_disk_bytes: 1073741824
+  prune_interval_s: 30
+
+writer:                        # bounded hand-off from vision.server; overflow is dropped + counted
+  control_capacity: 32         # evidence, notices
+  data_capacity: 64            # observations, track points, preview
+
+preview:                       # D5 — annotated, latest wins, never stored as a record
+  width: 640
+  max_hz: 5
+  jpeg_quality: 70
+
+evidence:                      # D6 — clean full-resolution upright frame
+  min_interval_s: 2.0          # per rule (or zone) per session; incident frames bypass it
+  jpeg_quality: 90
+
+track:                         # plan §7 — proposed downsampling, to measure
+  min_move_m: 0.05
+  min_turn_deg: 2.0
+  max_interval_s: 1.0
+
+api:                           # Step 4 edge API (dual-stack: "::" also accepts IPv4 on macOS/Linux)
+  host: "::"
+  port: 8770
+  token_env: BOB_EDGE_TOKEN    # pre-shared token (D8), read from .env — never printed
+
+sync:
+  batch_records: 200
+  max_bytes_per_s: 1000000     # backfill + blob cap; starting value to measure (shared hotspot)
+  live_interval_s: 0.2
