@@ -40,6 +40,8 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
     private let orientationBox = Locked(DeviceOrientationWire.unknown)
     private let recordingBox = Locked(false)
     private let encoder = FrameEncoder()
+    private let encodeQueue = DispatchQueue(label: "bob.encode", qos: .userInitiated)
+    private let encoderBusy = Locked(false)
     private let recorder = Recorder()
 
     // Touched only on `queue`.
@@ -111,39 +113,67 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
         let wantPose = ts - lastPoseTs >= 1.0 / settings.poseHz
         guard wantFrame || wantPose else { return }  // cheap exit for the other ~50 fps
 
+        // Copy plain values out of the ARFrame and return fast: ARKit stops delivering images if the
+        // delegate retains too many ARFrames. Only the pixel buffer travels to the encoder.
         let (state, reason) = TrackingStateWire.from(frame.camera.trackingState)
         let transform = WireCodec.columnMajor(frame.camera.transform)
         let tsNs = WireCodec.timestampNs(ts)
+        lastPoseTs = ts
+
+        // Latest frame wins (AGENTS rule 6): one encode in flight; if busy, send this pose without the image.
+        if wantFrame && !encoderBusy.get() {
+            lastFrameTs = ts
+            encoderBusy.set(true)
+            let job = EncodeJob(
+                pixelBuffer: frame.capturedImage, sessionId: sessionId, tsNs: tsNs, state: state,
+                reason: reason, transform: transform, intrinsics: IntrinsicsWire(frame.camera),
+                orientation: orientationBox.get(), settings: settings
+            )
+            encodeQueue.async { self.encode(job) }
+            return
+        }
+        emitPose(sessionId: sessionId, tsNs: tsNs, state: state, reason: reason, transform: transform)
+    }
+
+    private func emitPose(sessionId: UUID, tsNs: UInt64, state: TrackingStateWire,
+                          reason: TrackingReasonWire?, transform: [Double]) {
+        let packet = PosePacket(
+            sessionId: sessionId, seqId: nextSeq(), iphoneFrameTsNs: tsNs,
+            trackingState: state, trackingReason: reason, cameraTransform: transform
+        )
+        window.poses += 1
         do {
-            if wantFrame {
-                lastFrameTs = ts
-                lastPoseTs = ts  // a frame message carries the pose too
-                let started = CACurrentMediaTime()
-                guard let jpeg = encoder.jpeg(frame.capturedImage, longSide: settings.longSide, quality: settings.jpegQuality) else {
-                    publishError("JPEG encoding failed")
-                    return
-                }
-                let packet = FramePacket(
-                    sessionId: sessionId, seqId: nextSeq(), iphoneFrameTsNs: tsNs,
-                    trackingState: state, trackingReason: reason, cameraTransform: transform,
-                    image: ImageInfoWire(width: jpeg.width, height: jpeg.height,
-                                         deviceOrientation: orientationBox.get(), byteLength: jpeg.data.count),
-                    intrinsics: IntrinsicsWire(frame.camera)
-                )
-                window.addFrame(bytes: jpeg.data.count, encodeMs: (CACurrentMediaTime() - started) * 1000,
-                                size: "\(jpeg.width)x\(jpeg.height)")
-                emit(try WireCodec.message(packet, payload: jpeg.data), state: state, reason: reason)
-            } else {
-                lastPoseTs = ts
-                let packet = PosePacket(
-                    sessionId: sessionId, seqId: nextSeq(), iphoneFrameTsNs: tsNs,
-                    trackingState: state, trackingReason: reason, cameraTransform: transform
-                )
-                window.poses += 1
-                emit(try WireCodec.message(packet), state: state, reason: reason)
-            }
+            emit(try WireCodec.message(packet), state: state, reason: reason)
         } catch {
             publishError("encode failed: \(error)")
+        }
+    }
+
+    /// On `encodeQueue`. The result hops back to `queue`, so seq_id stays in file order.
+    private func encode(_ job: EncodeJob) {
+        let started = CACurrentMediaTime()
+        let jpeg = encoder.jpeg(job.pixelBuffer, longSide: job.settings.longSide, quality: job.settings.jpegQuality)
+        let encodeMs = (CACurrentMediaTime() - started) * 1000
+        queue.async {
+            defer { self.encoderBusy.set(false) }
+            guard job.sessionId == self.sessionId else { return }  // session reset mid-encode: stale
+            guard let jpeg else {
+                self.publishError("JPEG encoding failed")
+                return
+            }
+            let packet = FramePacket(
+                sessionId: job.sessionId, seqId: self.nextSeq(), iphoneFrameTsNs: job.tsNs,
+                trackingState: job.state, trackingReason: job.reason, cameraTransform: job.transform,
+                image: ImageInfoWire(width: jpeg.width, height: jpeg.height,
+                                     deviceOrientation: job.orientation, byteLength: jpeg.data.count),
+                intrinsics: job.intrinsics
+            )
+            self.window.addFrame(bytes: jpeg.data.count, encodeMs: encodeMs, size: "\(jpeg.width)x\(jpeg.height)")
+            do {
+                self.emit(try WireCodec.message(packet, payload: jpeg.data), state: job.state, reason: job.reason)
+            } catch {
+                self.publishError("encode failed: \(error)")
+            }
         }
     }
 
@@ -211,4 +241,17 @@ private struct StatsWindow {
         self.encodeMs += encodeMs
         self.size = size
     }
+}
+
+/// Everything the encoder needs, copied out of an ARFrame so the frame itself is released immediately.
+private struct EncodeJob {
+    let pixelBuffer: CVPixelBuffer
+    let sessionId: UUID
+    let tsNs: UInt64
+    let state: TrackingStateWire
+    let reason: TrackingReasonWire?
+    let transform: [Double]
+    let intrinsics: IntrinsicsWire
+    let orientation: DeviceOrientationWire
+    let settings: CaptureSettings
 }
