@@ -1,0 +1,26 @@
+# First local run: keep SH17 for other PPE; fine-tune a separate two-class specialist.
+weights: models/sh17_yolov8n.pt
+weights_sha256: 5449f62bd7cf30c01c7fd138db2729a38abcb4d5120449773fba475d54f30b62
+device: auto
+project: runs/footwear
+name: reviewed-v1
+seed: 42
+epochs: 20
+patience: 7
+imgsz: 320
+batch: 16
+workers: 0
+freeze: 10
+optimizer: AdamW
+lr0: 0.001
+lrf: 0.1
+weight_decay: 0.0005
+warmup_epochs: 2
+amp: false
+cache: false
+mosaic: 0.5
+close_mosaic: 5
+scale: 0.3
+fliplr: 0.5
+plots: true
+save: true

@@ -14,6 +14,12 @@ model:
   imgsz: 640
   conf: 0.35
 
+# Optional specialist, enabled explicitly with configs/footwear.yaml after training.
+footwear_model:
+  enabled: false
+  weights: models/footwear_yolov8n_v1.pt
+  weights_sha256: null
+
 pipeline:
   # single:    one pass over the whole frame at model.imgsz.
   # head_crop: pass 1 finds people at model.imgsz; pass 2 re-runs the model on a square crop of
@@ -31,7 +37,7 @@ pipeline:
     nms_iou: 0.5
   feet_crop:
     # Runs only when an active rule judges these classes (the boots rule, i.e. a fine-tuned
-    # model with safety-boots). Never runs with SH17.
+    # model with safety-boots, or the optional specialist). Never runs with SH17 alone.
     imgsz: 320
     conf: 0.30
     fraction: 0.25        # crop side = max(person width, fraction x person height)

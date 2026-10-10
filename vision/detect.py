@@ -82,7 +82,7 @@ def main() -> None:
     ok = True
 
     print(
-        f"camera={camera_index} model={detector.model_id} device={detector.device} "
+        f"camera={camera_index} model={pipeline.model_id} device={detector.device} "
         f"mode={pipeline.mode} — press q to quit, s to snapshot"
     )
     fps = 0.0
@@ -95,7 +95,7 @@ def main() -> None:
             last = now
             violations = sum(b.source == "derived" for b in result.boxes)
             status = (
-                f"{detector.model_id} | {pipeline.mode} x{result.passes} | {detector.device} | "
+                f"{pipeline.model_id} | {pipeline.mode} x{result.passes} | {detector.device} | "
                 f"{result.inference_ms:.1f} ms | {fps:.1f} FPS | {violations} violations"
             )
             regions = result.crop_regions if args.show_crops else ()

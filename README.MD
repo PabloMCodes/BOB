@@ -42,7 +42,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 2 | Detector wrapper + bounding box render + rotation | ✅ Done (webcam run pending) | Real-model tests on bundled images, render/rotation unit tests, MPS vs CPU benchmark, visual check | 110/110 pass · yolov8n @640: **MPS p50 9.1 ms / p95 11.8 ms (~109 FPS)** · CPU p50 20.9 ms |
 | 3 | PPE model + safety-glasses/helmet rules | 🟡 Built — **own-photo eval pending** | Rule unit tests, real-model regressions on bundled images, `tools/eval_ppe.py` on own photos at 3 m+ (recall ≥ 0.9, precision ≥ 0.8) | 157/157 pass · head_crop fixes missed sunglasses that single-pass @640 misses · yolov8s head_crop **53 ms** (5 passes) on 1440×1920 |
 | 3a | Hi-vis vest rule | 🟡 Built — **own-photo eval pending** | Rule unit tests, real-model regression on bundled images, `tools/eval_ppe.py --rule vest` | 204/204 pass · `bus.jpg` 4/4 and `zidane.jpg` 2/2 people → `not_wearing` (no vests in either) · positive case unmeasured |
-| 3b | Gloves + safety boots + one fine-tune (glasses/gloves/boots) | 🟡 Rules, pre-labeller, foot crop, boots review + dataset builder built — **boots review + own photos pending** | Rule/prelabel unit tests; eval on own photos after fine-tune | 190/190 pass · glasses baseline **4/11** (SH17) · YOLO-World 8/11 · Roboflow footwear: 2,758 imgs, 2,562 boots CLIP-scored |
+| 3b | Gloves + safety boots + fine-tune | 🟡 **Footwear v1 trained and wired into the shared pipeline**; own-photo/worksite eval pending | Grouped held-out footwear test; shared-pipeline regression tests | 20 epochs; test boots precision **76.9%**, recall **66.7%**, AP50 **75.1%** (39 boxes); opt-in `configs/footwear.yaml`; [model card](models/footwear-v1.md) |
 | 4 | iOS ARKit capture app (Xcode) | 🟡 Built + Simulator-tested — **on-device checklist pending** | Swift unit tests vs shared fixtures, Swift→Python golden recording, on-device recording + `tools/inspect_recording.py` | Swift 11/11 · Python 196/196 · unsigned device build ✅ · golden recording decodes (yaw +90° ✓) |
 | 5 | WebSocket transport + record/replay | 🟡 **Live iPhone stream ✅** — kill tests (a–d) + live latency numbers pending | Replay client in pytest, live FPS/drops/latency, kill test | Python 223/223 · Swift 16/16 (+1 opt-in live) · loopback 1920×1440 @10 Hz (367 KB): **300/300 frames, 0 drops, added latency p50/p95 2.4/2.7 ms**, Mac decode+rotate 17.7/19.1 ms · Swift→Python 30/30 · server SIGKILL mid-stream → sender dropped 16 frames (none queued), reconnected by itself · **live iPhone (IPv6 hotspot): 117.8 s, 1179 frames @ 10.0 Hz, 1920×1440, 259 KB avg (2.66 MB/s), 0 seq gaps, 0 decode errors, tracking normal; upright ✓ for portrait + landscape_left** |
 | 6 | Live inference + bounding boxes | ⬜ | Replay determinism, live PPE on/off test, p50/p95 latency | — |
@@ -164,6 +164,24 @@ Same mount as before (landscape left, ~20 cm, tilted up ~15°), distances 2–4 
 On the dataset page → **Download Dataset → format "YOLOv8" → download zip** → unzip to `data/external/<dataset-name>/`. Check the license on the page. **Next step after that:** I inspect its real class names, image style and counts, then build `tools/build_dataset.py` (map its classes onto ours, pseudo-label the other classes with SH17 so people/faces aren't learned as background, split train/val by person) and `tools/train.py` (fine-tune SH17 YOLOv8s on the 9 classes). Those are deliberately **not** built yet — the converter depends on what's actually in the download.
 
 #### Training decision + boots review status
+
+**2026-10-10: first footwear training completed.** `tools/train_footwear.py` uses the approved
+reviewed labels and original non-boot classes, excluding whole images with unresolved or
+`drop-image` boxes. The 2,278 retained images are grouped into 1,840 train / 217 validation /
+221 test images; filename families and exact-byte duplicates stay together. Embedded mosaic
+overlap remains possible. No `data/eval/` or own photos were used.
+
+`configs/footwear.yaml` enables the hash-pinned two-class specialist in feet crops while SH17
+continues the other PPE checks. Use `uv run python -m vision.detect --config configs/footwear.yaml`
+for the Mac camera, or pass that config to the detection-enabled server. Generic SH17 `shoes`
+boxes never enter the boots rule. The default config keeps the specialist off until explicitly
+selected. Model outputs follow the broad reviewed visual convention, not protective certification.
+
+[Model card, reproduction commands and limitations](models/footwear-v1.md).
+Preview: `runs/footwear/preview/comparison.jpg`; test metrics: `runs/footwear/heldout-test/metrics.json`.
+The 20-epoch run took 537.7 seconds. Other PPE fine-tuning and personal worksite testing remain pending.
+Final checkout verification: **250 Python tests passed**; unsigned iOS build passed;
+15 Swift tests passed, 2 opt-in tests skipped. No physical-phone acceptance is claimed.
 
 - **Train on the MacBook Air, now, without own photos** → a **footwear-only model** (`shoes`, `safety-boots`) from **SH17 yolov8n**, used only inside the foot crop. SH17 keeps everything else — a 9-class model trained without glasses/helmet/gloves labels would *forget* them and make the critical glasses check worse.
 - **Boots review:** the assistant reviewed sheets 0–13 (1,120 boxes) with a written standard — *safety-boots* = rugged work-style boot with thick lug/treaded sole covering the ankle (work, logger, combat, hiking, rubber work boots); *shoes* = heels, riding/knee-high, UGG/fur, thin-soled dress/Chelsea/brogue, chukka, fashion ankle, smooth rain boots, high-top sneakers; *drop* = unrecognisable crop. Stored separately in `boots_review_assisted.json`; **human decisions always override** (`merged_decisions`). `review_boots review` now shows only undecided boxes. Remaining sheets are being evaluated by the team.

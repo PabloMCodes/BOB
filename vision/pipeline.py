@@ -128,6 +128,7 @@ class Pipeline:
         config: dict[str, Any],
         mode: Optional[str] = None,
         imgsz: Optional[int] = None,
+        footwear: Optional[Detector] = None,
     ) -> None:
         self.detector = detector
         self.mode = mode or config["pipeline"]["mode"]
@@ -138,31 +139,64 @@ class Pipeline:
         self.crop_classes = {normalize_class_name(c) for c in self.crop["classes"]}
         self.feet = config["pipeline"]["feet_crop"]
         self.feet_classes = {normalize_class_name(c) for c in self.feet["classes"]}
+        footwear = footwear if footwear is not None else self.footwear_from_config(config)
+        self.footwear = footwear
+        self.names = dict(detector.names)
+        self.model_id = detector.model_id
+        self.footwear_offset = max(self.names, default=-1) + 1
+        if footwear is not None:
+            if self.feet_classes != {"shoes", "safety-boots"}:
+                raise ValueError("specialist feet_crop.classes must include exactly shoes and safety-boots")
+            if set(footwear.names.values()) != {"shoes", "safety-boots"}:
+                raise ValueError("footwear model must have exactly shoes and safety-boots classes")
+            # An ensemble has its own class-index map. SH17's generic footwear must never
+            # become evidence of missing safety boots.
+            self.names = {i: n for i, n in self.names.items() if normalize_class_name(n) not in self.feet_classes}
+            self.names.update({self.footwear_offset + i: n for i, n in footwear.names.items()})
+            self.model_id += "+" + footwear.model_id
+            self.crop_classes -= self.feet_classes
         # Rules needing classes this model lacks (e.g. safety-boots with SH17) are switched off —
         # never approximated with a look-alike class.
-        self.rules, self.inactive_rules = split_active(rules_from_config(config), detector.names.values())
+        self.rules, self.inactive_rules = split_active(rules_from_config(config), self.names.values())
         for rule in self.inactive_rules:
-            missing = sorted(rule.requires - {normalize_class_name(c) for c in detector.names.values()})
-            print(f"[pipeline] rule {rule.name!r} inactive: model {detector.model_id} has no class {missing}")
-        # Feet crops only pay off when an active rule judges footwear (never with SH17).
+            missing = sorted(rule.requires - {normalize_class_name(c) for c in self.names.values()})
+            print(f"[pipeline] rule {rule.name!r} inactive: model {self.model_id} has no class {missing}")
+        # Feet crops only pay off when an active rule judges footwear (never with SH17 alone).
         needed = set().union(*(r.requires for r in self.rules)) if self.rules else set()
-        self.feet_enabled = self.mode == "head_crop" and bool(self.feet_classes & needed)
+        self.feet_enabled = (self.mode == "head_crop" or footwear is not None) and bool(self.feet_classes & needed)
         detector.warmup(self.imgsz)
         if self.mode == "head_crop":
             detector.warmup(self.crop["imgsz"])
-        if self.feet_enabled and self.feet["imgsz"] != self.crop["imgsz"]:
-            detector.warmup(self.feet["imgsz"])
+        if self.feet_enabled:
+            (footwear or detector).warmup(self.feet["imgsz"])
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Pipeline:
-        return cls(Detector.from_config(config), config)
+        footwear = cls.footwear_from_config(config)
+        return cls(Detector.from_config(config), config, footwear=footwear)
+
+    @staticmethod
+    def footwear_from_config(config: dict[str, Any]) -> Optional[Detector]:
+        """Also used by direct Pipeline construction (e.g. the PPE comparison evaluator)."""
+        settings = config.get("footwear_model", {})
+        footwear = None
+        if settings.get("enabled", False):
+            if not settings.get("weights_sha256"):
+                raise ValueError("footwear_model.weights_sha256 is required")
+            footwear = Detector(settings["weights"], config["device"],
+                                config["pipeline"]["feet_crop"]["imgsz"],
+                                config["pipeline"]["feet_crop"]["conf"],
+                                weights_sha256=settings["weights_sha256"])
+        return footwear
 
     def __call__(self, image_bgr: np.ndarray) -> FrameResult:
         first = self.detector(image_bgr, imgsz=self.imgsz)
         boxes, total_ms, passes, regions = first.boxes, first.inference_ms, 1, []
+        if self.footwear is not None:
+            boxes = [b for b in boxes if normalize_class_name(b.cls_name) not in self.feet_classes]
 
-        if self.mode == "head_crop":
-            boxes, crop_ms, regions = self._head_crops(image_bgr, first.boxes)
+        if self.mode == "head_crop" or self.footwear is not None:
+            boxes, crop_ms, regions = self._head_crops(image_bgr, boxes)
             total_ms += crop_ms
             passes += len(regions)
 
@@ -170,18 +204,21 @@ class Pipeline:
         return FrameResult(boxes + derived, verdicts, first.image_size, total_ms, passes, regions)
 
     def _crop_pass(
-        self, image: np.ndarray, regions: list[Region], classes: set[str], imgsz: int, conf: float
+        self, image: np.ndarray, regions: list[Region], classes: set[str], imgsz: int, conf: float,
+        detector: Optional[Detector] = None,
     ) -> tuple[list[Box], float]:
         """Run the model on each region; return boxes of `classes` in full-frame coordinates."""
         boxes, elapsed = [], 0.0
         for x0, y0, x1, y1 in regions:
-            result = self.detector(image[y0:y1, x0:x1], imgsz=imgsz, conf=conf)
+            result = (detector or self.detector)(image[y0:y1, x0:x1], imgsz=imgsz, conf=conf)
             elapsed += result.inference_ms
             for b in result.boxes:
                 if normalize_class_name(b.cls_name) in classes:
                     bx1, by1, bx2, by2 = b.xyxy
                     # Rebuild (not model_copy) so the shifted box is re-validated by the schema.
-                    boxes.append(Box(**{**b.model_dump(), "xyxy": (bx1 + x0, by1 + y0, bx2 + x0, by2 + y0)}))
+                    cls_id = b.cls_id + self.footwear_offset if detector is not None else b.cls_id
+                    boxes.append(Box(**{**b.model_dump(), "cls_id": cls_id,
+                                        "xyxy": (bx1 + x0, by1 + y0, bx2 + x0, by2 + y0)}))
         return boxes, elapsed
 
     def _head_crops(self, image: np.ndarray, first: list[Box]) -> tuple[list[Box], float, list[Region]]:
@@ -196,7 +233,7 @@ class Pipeline:
         )
 
         head_regions = []
-        for person in people:
+        for person in people if self.mode == "head_crop" else []:
             head = next((h for h in heads if _inside(h, person.xyxy)), None)
             head_regions.append(head_region(
                 person.xyxy, width, height, self.crop["head_fraction"],
@@ -210,7 +247,8 @@ class Pipeline:
         if self.feet_enabled:
             feet_regions = [feet_region(p.xyxy, width, height, self.feet["fraction"]) for p in people]
             feet_boxes, feet_ms = self._crop_pass(
-                image, feet_regions, self.feet_classes, self.feet["imgsz"], self.feet["conf"]
+                image, feet_regions, self.feet_classes, self.feet["imgsz"], self.feet["conf"],
+                detector=self.footwear,
             )
             crop_boxes, elapsed = crop_boxes + feet_boxes, elapsed + feet_ms
             merge_classes |= self.feet_classes

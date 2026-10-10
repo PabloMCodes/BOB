@@ -1,0 +1,5 @@
+# Experimental reviewed-appearance footwear specialist; see models/footwear-v1.md.
+footwear_model:
+  enabled: true
+  weights: models/footwear_yolov8n_v1.pt
+  weights_sha256: 6fc67e15cddd7619d3e92dd8f61c3bc711c699780f03074622e1dbab34ff269a
