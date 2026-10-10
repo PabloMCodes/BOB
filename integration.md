@@ -38,6 +38,8 @@ These are the only ways other parts may depend on `autoCV`. Anything not listed 
 
 Wire codec (`encode` / `decode`) lives in `vision/schema/wire.py`. **Non-Python consumers** should validate against `schema/*.schema.json` **and** the fixtures: JSON Schema can't express cross-field rules (rigid transform, box bounds, `pose_valid` consistency, `source`↔`cls_id`), the fixtures do.
 
+**Pose validity in C2 (Step 7):** `pose` is the camera pose of the event's **own** ARFrame (`pose_dt_ms = 0`), never a later one. `pose_valid=false` reasons: `session_mismatch` (a newer ARKit session exists — new world origin), `stale` (> `timing.stale_ms` gap on the iPhone clock right before the frame), `tracking_not_normal`, `no_pose` (camera vertical). `dt_exceeded` is reserved. The pose is the **phone's**, not the detected person's position, and is advisory only.
+
 **Schema v2 (Step 3):** `Box.source` added; `cls_id` is null for derived boxes. Derived boxes are **per-frame observations**, not confirmed hazards — consumers apply their own N-frame confirmation. **Absence of a violation box does not mean compliant**: subjects too small/uncertain are not judged.
 
 **Breaking change** = removing/renaming a field, key, class name, or changing units/meaning. Breaking changes require: `schema_version` bump → fixtures updated → every consumer in [§7](#7-branch-registry) notified and its checks ([§5](#5-checks-required-in-other-branches)) run **before** merge.

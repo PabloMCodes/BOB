@@ -16,6 +16,7 @@ class ReceivedFrame:
     packet: FramePacket
     jpeg: bytes
     rx_ts_ns: int  # receiver clock
+    gap_ns: Optional[int] = None  # iPhone-clock gap since the session's previous message (Step 7)
 
 
 class LatestSlot(Generic[T]):

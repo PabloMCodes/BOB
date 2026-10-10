@@ -6,8 +6,8 @@
 Unlike the live server nothing is dropped, so two runs over the same file must give the same boxes
 (Step 6 determinism). It runs the same frame path as `vision.server --detect` (detect_frame).
 
-Pose validity offline: the session is the packet's own (a recording is in order) and the stream counts
-as stale when consecutive messages are > timing.stale_ms apart on the iPhone clock.
+Messages go through the server's own admission step (FrameServer.admit: stream monitor + Step 7
+associator), so pose validity offline is exactly what the live server decides for the same messages.
 
 --segments: seconds from the first frame of the recording, label wearing | not_wearing. Per segment,
 only judged frames count (unverified = no verdict, never a pass). Pass: >= --min-accuracy correct and,
@@ -29,9 +29,9 @@ from tools.replay_client import Record, load
 from vision.config import REPO_ROOT, load_config
 from vision.pipeline import Pipeline
 from vision.ppe import Verdict
-from vision.schema import DetectionEvent, FramePacket
+from vision.schema import DetectionEvent
 from vision.server.detection import detect_frame
-from vision.server.slot import ReceivedFrame
+from vision.server.transport import FrameServer
 
 
 @dataclass(frozen=True)
@@ -63,22 +63,19 @@ class SegmentScore:
 def run(records: Iterable[Record], pipeline: Pipeline, config: dict[str, Any],
         on_frame=None) -> list[FrameOutcome]:
     mount = config["camera"]["mount_orientation"]
-    stale_ns = config["timing"]["stale_ms"] * 1_000_000
+    server = FrameServer(config, clock=time.time_ns)  # admission + association only, no network
     outcomes: list[FrameOutcome] = []
     first_ts: Optional[int] = None
-    last_ts: Optional[int] = None
     for record in records:
-        msg = record.msg
-        stale = last_ts is not None and msg.iphone_frame_ts_ns - last_ts > stale_ns
-        last_ts = msg.iphone_frame_ts_ns
-        if not isinstance(msg, FramePacket):
-            continue
-        frame = ReceivedFrame(msg, record.payload, time.time_ns())
-        detection = detect_frame(frame, pipeline, mount, msg.session_id, stale)
+        frame = server.admit(record.msg, record.payload, time.time_ns())
+        if frame is None:
+            continue  # a pose, or a message the live server would drop (late / old session)
+        detection = detect_frame(frame, pipeline, mount, server.associator)
         if detection is None:
             continue
-        first_ts = msg.iphone_frame_ts_ns if first_ts is None else first_ts
-        outcome = FrameOutcome((msg.iphone_frame_ts_ns - first_ts) / 1e9, detection.event, detection.verdicts)
+        ts = frame.packet.iphone_frame_ts_ns
+        first_ts = ts if first_ts is None else first_ts
+        outcome = FrameOutcome((ts - first_ts) / 1e9, detection.event, detection.verdicts)
         outcomes.append(outcome)
         if on_frame is not None:
             on_frame(outcome, detection)

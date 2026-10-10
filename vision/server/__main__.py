@@ -87,8 +87,7 @@ def main() -> None:
             if frame is not None:
                 lines, image = [], None
                 if pipeline is not None:
-                    state = server.monitor.stats()
-                    detection = detect_frame(frame, pipeline, mount, state.session_id, state.stale)
+                    detection = detect_frame(frame, pipeline, mount, server.associator)
                     if detection is not None:
                         event, result = detection.event, detection.result
                         detections.write(event.model_dump_json() + "\n")

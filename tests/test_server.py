@@ -283,13 +283,14 @@ def test_upright_view_rotates_and_overlays():
     assert image.max() > 0              # overlay text drawn
 
 
-@pytest.mark.parametrize("state,stale,new_session,reason", [
-    ("normal", False, False, None),
-    ("not_available", False, False, "tracking_not_normal"),
-    ("normal", True, False, "stale"),
-    ("normal", False, True, "session_mismatch"),
+@pytest.mark.parametrize("state,gap_ms,new_session,reason", [
+    ("normal", 100, False, None),
+    ("not_available", 100, False, "tracking_not_normal"),
+    ("normal", 300, False, "stale"),
+    ("normal", 100, True, "session_mismatch"),
 ])
-def test_detection_uses_exact_source_frame_pose(state, stale, new_session, reason):
+def test_detection_uses_exact_source_frame_pose(state, gap_ms, new_session, reason):
+    from vision.association import associate
     from vision.pipeline import FrameResult
     from vision.schema import DetectionEvent, ImageSize
     from vision.server.detection import detection_event
@@ -297,11 +298,12 @@ def test_detection_uses_exact_source_frame_pose(state, stale, new_session, reaso
 
     rec = frame(uuid4(), 4, 123000000)
     packet = rec.msg.model_copy(update={"tracking_state": state})
-    received = ReceivedFrame(packet, rec.payload, 999000000)
+    received = ReceivedFrame(packet, rec.payload, 999000000, gap_ms * MS)
     clean = decode_upright(received, "portrait")
     assert clean.max() == clean.min()  # no debug text in inference input
     result = FrameResult([], [], ImageSize(width=48, height=64), 12.0, 1, [])
-    event = detection_event(received, result, "ensemble", uuid4() if new_session else packet.session_id, stale)
+    association = associate(packet, received.gap_ns, uuid4() if new_session else packet.session_id, 250 * MS)
+    event = detection_event(received, result, "ensemble", association)
     assert event.iphone_frame_ts_ns == 123000000 and event.seq_id == 4
     assert event.pose_valid == (reason is None)
     assert event.pose_invalid_reason == reason

@@ -46,7 +46,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 4 | iOS ARKit capture app (Xcode) | 🟡 Built + Simulator-tested — **on-device checklist pending** | Swift unit tests vs shared fixtures, Swift→Python golden recording, on-device recording + `tools/inspect_recording.py` | Swift 11/11 · Python 196/196 · unsigned device build ✅ · golden recording decodes (yaw +90° ✓) |
 | 5 | WebSocket transport + record/replay | 🟡 **Live iPhone stream ✅** — kill tests (a–d) + live latency numbers pending | Replay client in pytest, live FPS/drops/latency, kill test | Python 223/223 · Swift 16/16 (+1 opt-in live) · loopback 1920×1440 @10 Hz (367 KB): **300/300 frames, 0 drops, added latency p50/p95 2.4/2.7 ms**, Mac decode+rotate 17.7/19.1 ms · Swift→Python 30/30 · server SIGKILL mid-stream → sender dropped 16 frames (none queued), reconnected by itself · **live iPhone (IPv6 hotspot): 117.8 s, 1179 frames @ 10.0 Hz, 1920×1440, 259 KB avg (2.66 MB/s), 0 seq gaps, 0 decode errors, tracking normal; upright ✓ for portrait + landscape_left** |
 | 6 | Live inference + bounding boxes | 🟡 Built + replay/loopback-tested — **live PPE on/off test pending** | Replay determinism, live PPE on/off test, p50/p95 latency | 248/248 pass · offline replay deterministic + identical to the direct pipeline · `server --detect` 1920×1440 @10 Hz, 0 drops: rx→event **p95 85.6 ms** (2 people, landscape_left) / **117.7 ms** (5–6 people, portrait) ≤ 150 ✅ · inference p95 78 / 99 ms |
-| 7 | Pose ↔ detection timestamp association | ⬜ | Synthetic timeline unit tests, live occlusion + ARKit reset | — |
+| 7 | Pose ↔ detection timestamp association | 🟡 Built + synthetic-tested — **deliberate live occlusion / Reset / background run pending** | Synthetic timeline unit tests, live occlusion + ARKit reset | 21 timeline tests (mutation-checked) · existing live recordings: 3 session switches, each new session invalid only while ARKit `initializing` (1.0–1.3 s), 0 old-session frames after a switch; mid-session re-init (3.9 s) invalid, origin kept (≤ 3 cm, < 1°) |
 | 8 | CV destructive tests + Jetson handoff prep | ⬜ | Scripted failure suite, `.pt` vs `.onnx` parity | — |
 | 3c | Scene hazards — *inspection findings only* (backlog, after Step 7) | ⬜ | To define: restricted floor zones, open edges / stairs, blocked walkways / debris | — |
 
@@ -252,6 +252,31 @@ Final checkout verification: **250 Python tests passed**; unsigned iOS build pas
 2. One person at **~3 m**. Per item (glasses, helmet, vest): **10 s wearing → 2 s to change → 10 s not wearing**. Say the times out loud or note them (seconds from the start of the recording).
 3. Stop the server (Ctrl-C) → `runs/server/<time>/summary.json`: **pass if `process_p95_ms` ≤ 150** and drops ≈ 0.
 4. Score each item offline: `uv run python -m tools.replay_detect runs/server/<time>/stream.bobrec --rule glasses --segments "wearing:0-10,not_wearing:12-22" --save-images` (same for `helmet`, `vest` with their times). **Pass:** every segment `passed` (≥ 80 % of judged frames correct, 0 `wearing` while not wearing). Check `frames/` for what the model saw.
+
+### Step 7 — Pose ↔ detection timestamp association 🟡 (deliberate live run pending)
+
+- **Decisions:** **no pose buffer** — each frame carries the pose of its own ARFrame, so the association is exact (`pose_dt_ms = 0`) · `stale` = **iPhone-clock gap** > `timing.stale_ms` since the session's previous message, same rule live and offline · each frame judged **alone** (no look-ahead, keeps the Step 6 latency budget) · live acceptance = occlusion + Reset + background.
+- **Built:**
+  - `vision/association.py` — `associate()` (pure rules, first match wins: `session_mismatch` > `stale` > `tracking_not_normal` > `no_pose`; the detection is always emitted, the pose is never guessed) and `Associator` (thread-safe: newest session + iPhone-clock gap per message; `associate` runs at processing time, so a Reset that arrives while the model runs makes that frame `session_mismatch`). `dt_exceeded` stays unused until poses come from a separate source.
+  - `FrameServer.admit()` — the **single admission step**: stream monitor (drops late / old-session / duplicate messages) → associator. The WebSocket handler, `tools/replay_detect` and `tools/pose_timeline` all call it, so live and offline association can't drift. `ReceivedFrame.gap_ns` carries the gap from receive time to processing.
+  - `tools/pose_timeline.py` — model-free check of any recording: sessions, frames per verdict, every invalid stretch with ARKit's reason (`insufficient_features` = lens covered, `initializing`, `excessive_motion`). Runs in seconds on a 1 GB recording.
+- **Test:** `uv run pytest tests/test_association.py` (21) — normal stream valid · the frame's own pose, not a later "latest" pose (yaw 10° kept although a 0° pose arrived after) · `limited` stretch invalid only inside · `not_available` · stale boundary **250 ms valid / 250.001 ms stale** · only the first message after a gap is stale · gap measured on the iPhone clock, arrival time irrelevant · first frame of a new session not stale · Reset then late old-session frame → dropped at admission · frame in flight when a Reset arrives → `session_mismatch` · rule precedence · out-of-order / duplicate seq dropped · timestamps going backwards ≠ stale · camera straight up / down → `no_pose`, still associated · tilted-up rover mount has a valid yaw · timeline tool on a synthetic lens cover + Reset. **Mutation check:** disabling the stale rule fails 5 tests, the session rule 2.
+- **Evidence from existing live recordings** (`uv run python -m tools.pose_timeline runs/server/<time>/stream.bobrec`):
+
+  | Recording | What happened | Pose verdicts |
+  | --- | --- | --- |
+  | `20261010_151221` | 4 sessions (3 Reset / background switches) | each new session invalid only while `initializing` (1.0 / 1.3 / 1.0 s, 11–14 frames), then valid · **0 old-session frames after a switch** |
+  | `20261010_125207` | 375 s, one session | 3 single-frame `stale` after network gaps · **3.9 s mid-session `initializing`** (no new session) · 3 short `excessive_motion` stretches |
+  | `151645` / `151756` | server restarted twice, same phone session `3bcbbd55` | continuous, valid (a server restart doesn't change the world origin) |
+
+- **Finding — ARKit can re-initialise mid-session:** in `125207` tracking went `limited (initializing)` for 3.9 s **without** a new `session_id`. Those frames are invalid by rule; after recovery the pose was within ~3 cm / 0.6° of before (phone still), i.e. ARKit kept the world origin. If a future recording shows a **jump** after such a stretch, the app should start a new session on it (Swift, `CaptureController`).
+- **Not done here:** locating the *person* (needs a distance — LiDAR / box size), phone → rover transform, any safety use (rule 7).
+
+#### 📱 Live checklist (needs you — ~2 min, `--record` is enough, `--detect` optional)
+
+1. `uv run python -m vision.server --record --host ::`, phone streaming in the mount.
+2. 10 s still → **cover the lens ~3 s** → 10 s still → press **Reset** → 10 s → **app to background ~5 s** and back → 10 s → Ctrl-C.
+3. `uv run python -m tools.pose_timeline runs/server/<time>/stream.bobrec`. **Pass:** one `tracking_not_normal (insufficient_features)` stretch of ~3 s, valid before and after · **3 sessions** (start, Reset, background), each new one invalid only while `initializing` · `frames the server would drop` = 0 or only old-session frames.
 
 ## Repository layout
 

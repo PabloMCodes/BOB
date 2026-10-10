@@ -54,6 +54,8 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | `vision/server/` | Step 5 stream server: `slot` (latest-frame-wins), `monitor` (per-session gaps/drops/added latency → StreamHealth), `transport` (websockets `FrameServer` + `ServerThread`), `view`, `__main__` (`python -m vision.server`). Step 6 plugs the pipeline in as the consumer of `server.slot` |
 | `vision/server/detection.py` | Step 6 frame path `detect_frame()` (decode upright → pipeline → C2 + per-rule verdicts) and `detection_event()` (frame-bundled pose). Shared by `server --detect` and `tools/replay_detect.py` — don't fork it |
 | `tools/replay_detect.py` | Offline replay: every frame of a `.bobrec` → detections + on/off segment scoring; determinism check `box_mismatches` |
+| `vision/association.py` | Step 7: `associate()` validity rules (`session_mismatch` > `stale` > `tracking_not_normal` > `no_pose`) + thread-safe `Associator` (newest session, iPhone-clock gaps). Fed only through `FrameServer.admit()` |
+| `tools/pose_timeline.py` | Model-free Step 7 check of a recording: sessions + invalid-pose stretches with ARKit reasons |
 | `tools/replay_client.py` | `.bobrec` → server at original timing (`--speed`), fresh session per `--loops` pass. Use it (never a live phone) in tests |
 | `vision/recording.py`, `tools/inspect_recording.py` | `.bobrec` read/write (Step 5 replay reuses it); on-device recording acceptance report |
 | `tests/` | pytest. Network/phone-dependent tests use the replay client, never a live phone |
@@ -80,6 +82,7 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 - `head_crop` cost grows ~8–10 ms per person (sequential crops on MPS). Batch crops before porting to the Jetson.
 - Never approximate a missing class with a look-alike (e.g. SH17 `shoes` for "not safety boots"): leave the rule inactive.
 - `data/eval/` is test data only — never pre-label, label or train on it.
+- Any new path that consumes phone messages (live, replay, tools) must go through `FrameServer.admit()` — never re-implement session / gap / drop logic, or live and offline pose validity will drift.
 - Latency across devices is **relative** (`added = offset − min offset` per session): the iPhone clock is unrelated to the Mac's. Don't subtract `iphone_frame_ts_ns` from a Mac timestamp and call it network delay.
 - `vision.server` handles SIGTERM/SIGINT once and ignores repeats (`uv run` forwards signals) so `summary.json` and `stream.bobrec` are always complete.
 - Never `uv add roboflow`: it pulls `opencv-python-headless`, which clashes with our `opencv-python` (both provide `cv2`).

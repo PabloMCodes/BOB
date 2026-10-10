@@ -14,6 +14,7 @@ from typing import Any, BinaryIO, Callable, Optional
 from websockets.asyncio.server import ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
+from vision.association import Associator
 from vision.recording import write_record
 from vision.schema import FramePacket, PosePacket, StreamHealth, WireError, decode
 
@@ -35,6 +36,7 @@ class FrameServer:
         self.clock = clock
         self.monitor = StreamMonitor(timing["stale_ms"], timing["latency_window"], clock)
         self.slot: LatestSlot[ReceivedFrame] = LatestSlot()
+        self.associator = Associator(timing["stale_ms"])
         self.health_interval_s = timing["health_interval_ms"] / 1000
         self.max_message_bytes = server["max_message_bytes"]
         self.ping_interval_s = server["ping_interval_s"]
@@ -60,17 +62,27 @@ class FrameServer:
                     continue
                 if self.record is not None:
                     write_record(self.record, data)
-                keep, new_session = self.monitor.accept(msg, rx_ns)
-                if new_session:
-                    self.slot.clear()  # never process a frame from the previous world origin
-                if keep and isinstance(msg, FramePacket):
-                    frame = ReceivedFrame(msg, payload, rx_ns)
-                    if self.slot.put(frame):
-                        self.monitor.slot_drop(frame)
+                frame = self.admit(msg, payload, rx_ns)
+                if frame is not None and self.slot.put(frame):
+                    self.monitor.slot_drop(frame)
         except ConnectionClosed:
             pass
         finally:
             self.monitor.connection(-1)
+
+    def admit(self, msg: FramePacket | PosePacket, payload: bytes, rx_ns: int) -> Optional[ReceivedFrame]:
+        """Book-keep one phone message; return the frame to process, if it is one we keep.
+
+        The single admission step for the live stream and tools/replay_detect: stream monitor (drops
+        late / old-session messages) then the Step 7 associator (iPhone-clock gaps), always in this order.
+        """
+        keep, new_session = self.monitor.accept(msg, rx_ns)
+        if new_session:
+            self.slot.clear()  # never process a frame from the previous world origin
+        if not keep:
+            return None
+        gap_ns = self.associator.observe(msg)
+        return ReceivedFrame(msg, payload, rx_ns, gap_ns) if isinstance(msg, FramePacket) else None
 
     async def health_loop(self) -> None:
         while True:
