@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "TrackingState": {
+      "description": "Mirrors ARCamera.TrackingState.",
+      "enum": [
+        "normal",
+        "limited",
+        "not_available"
+      ],
+      "title": "TrackingState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "C3 \u2014 iPhone stream health as seen by the vision server. Consumers stop on stale=true.",
+  "properties": {
+    "dropped_count": {
+      "minimum": 0,
+      "title": "Dropped Count",
+      "type": "integer"
+    },
+    "emitted_ts_ns": {
+      "minimum": 0,
+      "title": "Emitted Ts Ns",
+      "type": "integer"
+    },
+    "last_rx_ts_ns": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Rx Ts Ns"
+    },
+    "last_seq_id": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Seq Id"
+    },
+    "msg_type": {
+      "const": "stream_health",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Session Id"
+    },
+    "stale": {
+      "title": "Stale",
+      "type": "boolean"
+    },
+    "tracking_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrackingState"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "schema_version",
+    "msg_type",
+    "emitted_ts_ns",
+    "stale",
+    "dropped_count"
+  ],
+  "title": "StreamHealth",
+  "type": "object"
+}

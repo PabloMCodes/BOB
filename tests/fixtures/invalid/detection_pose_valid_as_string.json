@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "msg_type": "detection_event",
+  "event_id": "0b6e1f5e-2c4b-4f7a-9d39-6a1f1d7c8e21",
+  "session_id": "6f9619ff-8b86-4d11-b42d-00c04fc964ff",
+  "seq_id": 42,
+  "iphone_frame_ts_ns": 183456789012345,
+  "jetson_receive_ts_ns": 1760100000123456789,
+  "inference_latency_ms": 18.4,
+  "model_id": "ppe_best@v1",
+  "image_size": {
+    "width": 480,
+    "height": 640
+  },
+  "tracking_state": "normal",
+  "boxes": [
+    {
+      "cls_id": 0,
+      "cls_name": "person",
+      "conf": 0.91,
+      "xyxy": [
+        100.0,
+        50.0,
+        300.0,
+        600.0
+      ]
+    },
+    {
+      "cls_id": 2,
+      "cls_name": "no-hardhat",
+      "conf": 0.77,
+      "xyxy": [
+        150.0,
+        50.0,
+        250.0,
+        140.0
+      ]
+    }
+  ],
+  "pose": {
+    "x_m": 0.5,
+    "y_m": 0.0,
+    "z_m": -1.2,
+    "yaw_rad": 0.0
+  },
+  "pose_valid": "true",
+  "pose_dt_ms": 0.0,
+  "pose_invalid_reason": null
+}

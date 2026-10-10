@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "msg_type": "stream_health",
+  "emitted_ts_ns": 1760100000000000000,
+  "session_id": null,
+  "stale": false,
+  "last_seq_id": null,
+  "last_rx_ts_ns": null,
+  "dropped_count": 0,
+  "tracking_state": null
+}

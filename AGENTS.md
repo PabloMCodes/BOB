@@ -12,7 +12,7 @@ Pipeline: `iPhone ARFrame → WebSocket (JSON header + JPEG) → Python server �
 
 1. **Python owns the logic; Swift stays thin.** The iOS app only captures `ARFrame`, encodes JPEG, attaches pose/tracking/timestamps, and sends. No detection, filtering, or decision logic in Swift.
 2. **`vision/` must be Jetson-portable.** Python 3.10 syntax only. No macOS-only imports. Never hard-code `"mps"` — use `vision.config.resolve_device()`.
-3. **The schema is a contract.** Once Step 1 freezes `FramePacket` / `DetectionEvent`, any change requires bumping `schema_version` and updating both Python and Swift in the same change.
+3. **The schema is a contract (frozen at v1).** Any change to `vision/schema/` requires: bump `schema_version`, update fixtures in `tests/fixtures/`, run `uv run python -m tools.export_schema`, and update the Swift mirror — all in the same change. Each invalid fixture must break exactly one rule.
 4. **Associate by timestamp, never by "latest."** A detection gets the pose nearest to its source frame's `iphone_frame_ts_ns`, within `timing.pose_tolerance_ms`, same `session_id`, with `tracking_state == normal`. Otherwise it is emitted with `pose_valid=false` — never silently dropped, never given a guessed pose.
 5. **A new `session_id` invalidates everything.** ARKit restart/interruption = new world origin; clear pose buffers.
 6. **Latest frame wins.** Never queue frames behind slow inference; drop old frames so latency cannot accumulate.
@@ -33,6 +33,9 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | Path | Contents |
 | ---- | -------- |
 | `vision/` | Importable package: config, schema, detector, render, server, pose buffer, events |
+| `vision/schema/` | Wire contract: `common` (enums/types), `pose`, `phone` (C1), `events` (C2/C3), `wire` (codec). Import from `vision.schema` |
+| `schema/` | Generated JSON Schema — never hand-edit; regenerate with `uv run python -m tools.export_schema` |
+| `tests/fixtures/` | `valid/` and `invalid/` message JSON, shared with Swift tests and consumer branches |
 | `tools/` | CLI scripts: train, record, replay client, ONNX export |
 | `configs/default.yaml` | Device, model weights, server port, timing thresholds. Override in `configs/local.yaml` |
 | `ios/` | Xcode project `BOBCapture` (Step 4+) |

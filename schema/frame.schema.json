@@ -1,0 +1,202 @@
+{
+  "$defs": {
+    "DeviceOrientation": {
+      "description": "Mirrors UIDeviceOrientation. Python decides how to rotate the sensor image upright.",
+      "enum": [
+        "unknown",
+        "portrait",
+        "portrait_upside_down",
+        "landscape_left",
+        "landscape_right",
+        "face_up",
+        "face_down"
+      ],
+      "title": "DeviceOrientation",
+      "type": "string"
+    },
+    "ImageInfo": {
+      "additionalProperties": false,
+      "description": "Describes the JPEG payload that follows the header. Pixels are in sensor orientation.",
+      "properties": {
+        "byte_length": {
+          "exclusiveMinimum": 0,
+          "maximum": 8388608,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "device_orientation": {
+          "$ref": "#/$defs/DeviceOrientation"
+        },
+        "encoding": {
+          "const": "jpeg",
+          "title": "Encoding",
+          "type": "string"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "encoding",
+        "device_orientation",
+        "byte_length"
+      ],
+      "title": "ImageInfo",
+      "type": "object"
+    },
+    "Intrinsics": {
+      "additionalProperties": false,
+      "description": "ARCamera.intrinsics, relative to ARCamera.imageResolution (ref_width x ref_height).\n\nThe JPEG is downscaled, so consumers must scale by image.width / ref_width.",
+      "properties": {
+        "cx": {
+          "minimum": 0,
+          "title": "Cx",
+          "type": "number"
+        },
+        "cy": {
+          "minimum": 0,
+          "title": "Cy",
+          "type": "number"
+        },
+        "fx": {
+          "exclusiveMinimum": 0,
+          "title": "Fx",
+          "type": "number"
+        },
+        "fy": {
+          "exclusiveMinimum": 0,
+          "title": "Fy",
+          "type": "number"
+        },
+        "ref_height": {
+          "exclusiveMinimum": 0,
+          "title": "Ref Height",
+          "type": "integer"
+        },
+        "ref_width": {
+          "exclusiveMinimum": 0,
+          "title": "Ref Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fx",
+        "fy",
+        "cx",
+        "cy",
+        "ref_width",
+        "ref_height"
+      ],
+      "title": "Intrinsics",
+      "type": "object"
+    },
+    "TrackingReason": {
+      "description": "Mirrors ARCamera.TrackingState.Reason. Present only when tracking_state == limited.",
+      "enum": [
+        "initializing",
+        "excessive_motion",
+        "insufficient_features",
+        "relocalizing"
+      ],
+      "title": "TrackingReason",
+      "type": "string"
+    },
+    "TrackingState": {
+      "description": "Mirrors ARCamera.TrackingState.",
+      "enum": [
+        "normal",
+        "limited",
+        "not_available"
+      ],
+      "title": "TrackingState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One ARFrame: pose + tracking + a JPEG payload. Sent at ~10-15 Hz.",
+  "properties": {
+    "camera_transform": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 16,
+      "minItems": 16,
+      "title": "Camera Transform",
+      "type": "array"
+    },
+    "image": {
+      "$ref": "#/$defs/ImageInfo"
+    },
+    "intrinsics": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Intrinsics"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "iphone_frame_ts_ns": {
+      "minimum": 0,
+      "title": "Iphone Frame Ts Ns",
+      "type": "integer"
+    },
+    "msg_type": {
+      "const": "frame",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "seq_id": {
+      "minimum": 0,
+      "title": "Seq Id",
+      "type": "integer"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "tracking_reason": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrackingReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tracking_state": {
+      "$ref": "#/$defs/TrackingState"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "seq_id",
+    "iphone_frame_ts_ns",
+    "tracking_state",
+    "camera_transform",
+    "msg_type",
+    "image"
+  ],
+  "title": "FramePacket",
+  "type": "object"
+}

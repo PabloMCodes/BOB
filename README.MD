@@ -37,8 +37,8 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | Step | Name | Status | Test method | Result |
 | ---- | ---- | ------ | ----------- | ------ |
 | 0 | Environment & repo skeleton | ✅ Done | `uv run pytest` smoke tests | 6/6 pass · Python 3.10.20 · torch 2.14.1 (MPS ✅) · ultralytics 8.3.253 |
-| 1 | Message / event schema contract | ⏳ Next | pytest on valid/invalid JSON fixtures | — |
-| 2 | Detector wrapper + bounding box render (offline) | ⬜ | Unit tests on sample images, visual check, MPS FPS | — |
+| 1 | Message / event schema contract | ✅ Done | pytest on valid/invalid JSON fixtures + wire codec + JSON Schema drift | 74/74 pass · 7 valid / 28 invalid fixtures · 4 message types |
+| 2 | Detector wrapper + bounding box render (offline) | ⏳ Next | Unit tests on sample images, visual check, MPS FPS | — |
 | 3 | PPE dataset + YOLOv8n fine-tune | ⬜ | `yolo val` mAP50 / per-class AP + own photo set | — |
 | 4 | iOS ARKit capture app (Xcode) | ⬜ | On-device debug overlay, cover-lens tracking test | — |
 | 5 | WebSocket transport + record/replay | ⬜ | Replay client in pytest, live FPS/drops/latency, kill test | — |
@@ -52,6 +52,14 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 - **Test:** `uv run pytest` — Python version, core imports, config load/validation, MPS availability, tensor op on resolved device.
 - **Note:** deviated from plan's Python 3.11 → **3.10**, because JetPack 6 (Ubuntu 22.04) ships 3.10 and NVIDIA's Jetson torch wheels target it.
 
+### Step 1 — Message / event schema contract ✅
+
+- **Scope:** `vision/schema/` package — `common.py` (enums, strict types), `pose.py` (yaw/xyz from ARKit 4×4), `phone.py` (C1: `frame`, `pose`), `events.py` (C2/C3: `detection_event`, `stream_health`), `wire.py` (length-prefixed JSON + JPEG codec). Language-neutral JSON Schema exported to `schema/`.
+- **Stack:** pydantic v2 (strict ints, `extra="forbid"`, frozen), stdlib `json` / `struct` / `uuid`, numpy, JSON Schema, pytest fixtures shared with Swift (Step 4).
+- **Decisions:** phone sends raw column-major 4×4 only (Python derives pose) · separate image-less `pose` message · unknown fields rejected · `detection_event` carries boxes only (hazard logic belongs to alerts/safety).
+- **Test:** `uv run pytest` — every valid fixture parses; every invalid fixture fails with **exactly one** error for its intended reason; wire round-trips; framing/payload errors; pose math (identity, ±90°, 180°, sideways mount roll, straight-down); committed `schema/*.json` must match code.
+- **Regenerate after any schema change:** `uv run python -m tools.export_schema`
+
 ## Repository layout
 
 ```
@@ -63,6 +71,8 @@ BOB/
 ├── pyproject.toml     # deps; exact versions locked in uv.lock
 ├── configs/           # default.yaml (+ local.yaml override, gitignored)
 ├── vision/            # Python package — must stay Jetson-portable
+│   └── schema/        # wire contract: common, pose, phone (C1), events (C2/C3), wire
+├── schema/            # generated JSON Schema (language-neutral contract)
 ├── tools/             # training, record/replay, export scripts
 ├── ios/               # Xcode project (Step 4)
 ├── tests/             # pytest

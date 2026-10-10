@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "msg_type": "frame",
+  "session_id": "6F9619FF-8B86-4D11-B42D-00C04FC964FF",
+  "seq_id": 42,
+  "iphone_frame_ts_ns": 183456789012345,
+  "tracking_state": "normal",
+  "tracking_reason": null,
+  "camera_transform": [
+    1.0,
+    0.0,
+    0.0,
+    0.5,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    -1.2,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "intrinsics": {
+    "fx": 1450.2,
+    "fy": 1450.2,
+    "cx": 959.5,
+    "cy": 719.5,
+    "ref_width": 1920,
+    "ref_height": 1440
+  },
+  "image": {
+    "width": 640,
+    "height": 480,
+    "encoding": "jpeg",
+    "device_orientation": "landscape_right",
+    "byte_length": 20480
+  }
+}

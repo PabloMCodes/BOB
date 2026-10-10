@@ -1,0 +1,246 @@
+{
+  "$defs": {
+    "Box": {
+      "additionalProperties": false,
+      "description": "One YOLO detection. xyxy in pixels of the upright (rotated) image.",
+      "properties": {
+        "cls_id": {
+          "minimum": 0,
+          "title": "Cls Id",
+          "type": "integer"
+        },
+        "cls_name": {
+          "minLength": 1,
+          "title": "Cls Name",
+          "type": "string"
+        },
+        "conf": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Conf",
+          "type": "number"
+        },
+        "xyxy": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Xyxy",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cls_id",
+        "cls_name",
+        "conf",
+        "xyxy"
+      ],
+      "title": "Box",
+      "type": "object"
+    },
+    "ImageSize": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "ImageSize",
+      "type": "object"
+    },
+    "Pose": {
+      "additionalProperties": false,
+      "description": "Camera position in the ARKit world frame (right-handed, +Y up, origin = session start).\n\nyaw_rad: rotation about world +Y; 0 = facing the session's initial -Z, positive = turning left.",
+      "properties": {
+        "x_m": {
+          "title": "X M",
+          "type": "number"
+        },
+        "y_m": {
+          "title": "Y M",
+          "type": "number"
+        },
+        "yaw_rad": {
+          "maximum": 3.141592653589793,
+          "minimum": -3.141592653589793,
+          "title": "Yaw Rad",
+          "type": "number"
+        },
+        "z_m": {
+          "title": "Z M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_m",
+        "y_m",
+        "z_m",
+        "yaw_rad"
+      ],
+      "title": "Pose",
+      "type": "object"
+    },
+    "PoseInvalidReason": {
+      "enum": [
+        "tracking_not_normal",
+        "stale",
+        "session_mismatch",
+        "dt_exceeded",
+        "no_pose"
+      ],
+      "title": "PoseInvalidReason",
+      "type": "string"
+    },
+    "TrackingState": {
+      "description": "Mirrors ARCamera.TrackingState.",
+      "enum": [
+        "normal",
+        "limited",
+        "not_available"
+      ],
+      "title": "TrackingState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "C2 \u2014 YOLO result for one source frame, tagged with the pose matched by timestamp.\n\nConsumers MUST check pose_valid before using pose; an invalid event may still carry the\nnearest pose for debugging. Boxes only: hazard decisions belong to the alerts/safety branch.",
+  "properties": {
+    "boxes": {
+      "items": {
+        "$ref": "#/$defs/Box"
+      },
+      "title": "Boxes",
+      "type": "array"
+    },
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "image_size": {
+      "$ref": "#/$defs/ImageSize"
+    },
+    "inference_latency_ms": {
+      "minimum": 0,
+      "title": "Inference Latency Ms",
+      "type": "number"
+    },
+    "iphone_frame_ts_ns": {
+      "minimum": 0,
+      "title": "Iphone Frame Ts Ns",
+      "type": "integer"
+    },
+    "jetson_receive_ts_ns": {
+      "minimum": 0,
+      "title": "Jetson Receive Ts Ns",
+      "type": "integer"
+    },
+    "model_id": {
+      "minLength": 1,
+      "title": "Model Id",
+      "type": "string"
+    },
+    "msg_type": {
+      "const": "detection_event",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "pose": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Pose"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "pose_dt_ms": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pose Dt Ms"
+    },
+    "pose_invalid_reason": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PoseInvalidReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "pose_valid": {
+      "title": "Pose Valid",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "seq_id": {
+      "minimum": 0,
+      "title": "Seq Id",
+      "type": "integer"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "tracking_state": {
+      "$ref": "#/$defs/TrackingState"
+    }
+  },
+  "required": [
+    "schema_version",
+    "msg_type",
+    "event_id",
+    "session_id",
+    "seq_id",
+    "iphone_frame_ts_ns",
+    "jetson_receive_ts_ns",
+    "inference_latency_ms",
+    "model_id",
+    "image_size",
+    "tracking_state",
+    "boxes",
+    "pose_valid"
+  ],
+  "title": "DetectionEvent",
+  "type": "object"
+}

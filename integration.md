@@ -29,9 +29,11 @@ These are the only ways other parts may depend on `autoCV`. Anything not listed 
 
 | # | Interface | Producer | Consumer(s) | Contract lives in | Versioned by |
 | - | --------- | -------- | ----------- | ----------------- | ------------ |
-| C1 | `FramePacket` (WS: length-prefixed JSON header + JPEG) | iOS app | `vision` server | `vision/schema.py` + Swift mirror in `ios/` (Step 1/4) | `schema_version` |
-| C2 | `DetectionEvent` (boxes, pose, `pose_valid`, `pose_dt_ms`, timestamps) | `vision` | Safety supervisor, agent/alerts | `vision/schema.py` + fixtures in `tests/fixtures/` | `schema_version` |
-| C3 | Stream health (`stale`, `tracking_state`, `session_id` change) | `vision` | Safety supervisor | `vision/schema.py` | `schema_version` |
+| C1 | `FramePacket` + `PosePacket` (WS: length-prefixed JSON header + JPEG) | iOS app | `vision` server | `vision/schema/phone.py`, `schema/{frame,pose}.schema.json` + Swift mirror in `ios/` (Step 4) | `schema_version` |
+| C2 | `DetectionEvent` (boxes, pose, `pose_valid`, `pose_dt_ms`, timestamps) | `vision` | Safety supervisor, agent/alerts | `vision/schema/events.py`, `schema/detection_event.schema.json` + fixtures in `tests/fixtures/` | `schema_version` |
+| C3 | `StreamHealth` (`stale`, `tracking_state`, `session_id`, `dropped_count`) | `vision` | Safety supervisor | `vision/schema/events.py`, `schema/stream_health.schema.json` | `schema_version` |
+
+Wire codec (`encode` / `decode`) lives in `vision/schema/wire.py`. **Non-Python consumers** should validate against `schema/*.schema.json` **and** the fixtures: JSON Schema can't express cross-field rules (rigid transform, box bounds, `pose_valid` consistency), the fixtures do.
 | C4 | Runtime config keys (`device`, `model`, `server`, `timing`) | `configs/default.yaml` | Jetson deploy | `configs/default.yaml` | key names (rename = breaking) |
 | C5 | Model artifact (`models/ppe_best.pt`, `.onnx`) + class list | `tools/` training | Jetson deploy, alerts (class names) | `models/*.md` model card | model card version |
 | C6 | Python package `vision` (import path, Python 3.10) | `autoCV` | Jetson deploy | `pyproject.toml`, `uv.lock` | package version |
@@ -44,7 +46,7 @@ Conflicts mostly happen on shared files. Rule: **each branch edits only what it 
 
 | Files | Owner | Rule |
 | ----- | ----- | ---- |
-| `vision/`, `tools/`, `ios/`, `tests/` (CV tests), `models/*.md` | `autoCV` | Other branches import, never edit. Request changes via issue/PR to `autoCV`. |
+| `vision/`, `schema/`, `tools/`, `ios/`, `tests/` (CV tests), `models/*.md` | `autoCV` | Other branches import, never edit. Request changes via issue/PR to `autoCV`. |
 | `pyproject.toml` | shared | Only add your own dependencies; never bump another branch's pin without telling its owner. |
 | `uv.lock` | shared | **Never hand-merge.** On conflict: take `main`'s version, then `uv lock` and commit the regenerated file. |
 | `configs/default.yaml` | shared | Each part owns its own top-level keys. Don't edit another part's keys. New parts should namespace (e.g. `safety:`, `alerts:`). |
@@ -86,7 +88,7 @@ for b in $(git branch -r --format='%(refname:short)' | grep -v -e HEAD -e origin
 done
 ```
 
-Any overlap on a contract file (`vision/schema.py`, `configs/default.yaml`, `pyproject.toml`, `uv.lock`) → coordinate with that branch's owner before merging. Decide who merges first; the second rebases onto the new `main`.
+Any overlap on a contract file (`vision/schema/`, `schema/`, `configs/default.yaml`, `pyproject.toml`, `uv.lock`) → coordinate with that branch's owner before merging. Decide who merges first; the second rebases onto the new `main`.
 
 ### G4 — Tests on the merged result (not just on `autoCV`)
 
@@ -103,8 +105,8 @@ All tests from **every** branch already in `main` must pass, not only CV tests.
 
 ### G5 — Contract checks
 
-- [ ] If `vision/schema.py` changed: `schema_version` bumped, fixtures in `tests/fixtures/` updated, Swift mirror in `ios/` updated in the same PR.
-- [ ] Contract tests pass: `uv run pytest -k schema` (Step 1+).
+- [ ] If `vision/schema/` changed: `schema_version` bumped, fixtures in `tests/fixtures/` updated, `uv run python -m tools.export_schema` re-run, Swift mirror in `ios/` updated in the same PR.
+- [ ] Contract tests pass: `uv run pytest tests/test_schema.py` (includes JSON Schema drift check).
 - [ ] No renamed/removed keys in `configs/default.yaml` (or consumers updated, see [§5](#5-checks-required-in-other-branches)).
 - [ ] Model card in `models/*.md` updated if class names or weights changed.
 
@@ -151,7 +153,7 @@ How to run a consumer's tests against `autoCV` without merging:
 ```bash
 git worktree add ../BOB-consumer origin/<consumer-branch>
 cd ../BOB-consumer
-git checkout origin/autoCV -- vision/schema.py tests/fixtures/   # bring in new contract only
+git checkout origin/autoCV -- vision/schema/ schema/ tests/fixtures/   # bring in new contract only
 uv sync && uv run pytest
 cd - && git worktree remove --force ../BOB-consumer
 ```
@@ -172,7 +174,7 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 
 | Branch | Part | Owner | Interfaces provided | Interfaces consumed | Status |
 | ------ | ---- | ----- | ------------------- | ------------------- | ------ |
-| `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6 | — | Active · Step 0 done |
+| `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6 | — | Active · Step 1 done |
 | `main` | Integration target | — | — | all | **Not created yet** |
 | *(TBD)* | Safety supervisor / navigation | — | motor commands (out of CV scope) | C2, C3 | Not created |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |

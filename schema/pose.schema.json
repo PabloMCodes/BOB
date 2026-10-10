@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "TrackingReason": {
+      "description": "Mirrors ARCamera.TrackingState.Reason. Present only when tracking_state == limited.",
+      "enum": [
+        "initializing",
+        "excessive_motion",
+        "insufficient_features",
+        "relocalizing"
+      ],
+      "title": "TrackingReason",
+      "type": "string"
+    },
+    "TrackingState": {
+      "description": "Mirrors ARCamera.TrackingState.",
+      "enum": [
+        "normal",
+        "limited",
+        "not_available"
+      ],
+      "title": "TrackingState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Pose-only ARFrame (no image). Sent at ~20 Hz so pose history survives dropped frames.",
+  "properties": {
+    "camera_transform": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 16,
+      "minItems": 16,
+      "title": "Camera Transform",
+      "type": "array"
+    },
+    "iphone_frame_ts_ns": {
+      "minimum": 0,
+      "title": "Iphone Frame Ts Ns",
+      "type": "integer"
+    },
+    "msg_type": {
+      "const": "pose",
+      "title": "Msg Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "seq_id": {
+      "minimum": 0,
+      "title": "Seq Id",
+      "type": "integer"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "tracking_reason": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrackingReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tracking_state": {
+      "$ref": "#/$defs/TrackingState"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "seq_id",
+    "iphone_frame_ts_ns",
+    "tracking_state",
+    "camera_transform",
+    "msg_type"
+  ],
+  "title": "PosePacket",
+  "type": "object"
+}
