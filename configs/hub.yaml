@@ -1,0 +1,19 @@
+# Operator laptop hub (dashboard plan §5–6) — application-owned. Override in configs/hub.local.yaml
+# (gitignored) or with --hub-config.
+hub_id: hub-laptop
+edge_url: ws://127.0.0.1:8770      # rover edge API (ws:// for /v1/sync; http:// is derived for blobs)
+token_env: BOB_EDGE_TOKEN          # same pre-shared token as the rover (D8), read from .env
+replica_dir: runs/hub              # <replica_dir>/<hub_id>/replica.sqlite + blobs/ (gitignored)
+
+link:
+  reconnect_min_s: 0.5             # backoff after a lost link, doubling up to the max
+  reconnect_max_s: 5.0
+  stale_after_s: 3.0               # no message for this long: the link is treated as lost
+
+blobs:
+  max_bytes_per_s: 1000000         # evidence prefetch cap; starting value to measure (shared hotspot)
+  retry_s: 5.0                     # retry after a network error (a 404 from the rover is final: missing)
+
+api:                               # Step 6 frontend API (browser -> hub only)
+  host: 127.0.0.1
+  port: 8780

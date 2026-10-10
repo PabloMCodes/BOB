@@ -19,6 +19,7 @@ runs/*
 # Local config overrides and secrets (e.g. ROBOFLOW_API_KEY) — never commit
 configs/local.yaml
 configs/edge.local.yaml
+configs/hub.local.yaml
 .env
 .env.*
 !.env.example
