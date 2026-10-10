@@ -15,6 +15,7 @@ from uuid import uuid4
 
 import cv2
 import numpy as np
+import yaml
 
 from vision.config import load_config
 from vision.pipeline import Pipeline
@@ -28,6 +29,7 @@ def main() -> None:
     choice = parser.add_mutually_exclusive_group(required=True)
     choice.add_argument("--polygon", help="ordered normalized x,y pairs separated by semicolons")
     choice.add_argument("--zone", type=Path, help="existing image-bound zone.json")
+    choice.add_argument("--tape-config", type=Path, help="operator-declared closed yellow floor-tape convention")
     parser.add_argument("--zone-id", default="restricted-1")
     parser.add_argument("--config", type=Path)
     parser.add_argument("--out", type=Path)
@@ -39,18 +41,24 @@ def main() -> None:
     if image is None:
         raise SystemExit("Image cannot be decoded")
     h, w = image.shape[:2]
-    if args.zone:
+    zone = None
+    if args.tape_config:
+        from vision.tape import TapeConfig, detect_tape
+        tape = TapeConfig.model_validate(yaml.safe_load(args.tape_config.read_text()))
+        region = detect_tape(image, tape)
+    elif args.zone:
         zone = ImageZone.model_validate_json(args.zone.read_text())
     else:
         zone = ImageZone(zone_id=args.zone_id, image_sha256=sha, width=w, height=h,
                          polygon=tuple(tuple(map(float, p.split(','))) for p in args.polygon.split(';')))
-    region = zone.region(sha, ImageSize(width=w, height=h))
+    if zone is not None:
+        region = zone.region(sha, ImageSize(width=w, height=h))
     pipeline = Pipeline.from_config(load_config(args.config))
     result = pipeline(image)
     assessment = assess_zone(region, result.boxes, result.image_size)
     out = args.out or Path("runs/zones") / time.strftime("%Y%m%d_%H%M%S")
     out.mkdir(parents=True, exist_ok=False)
-    (out / "zone.json").write_text(zone.model_dump_json(indent=2))
+    (out / "zone.json").write_text((zone or tape).model_dump_json(indent=2))
     report = {"observation_id": str(uuid4()), "source_mode": "STILL", "source_image": args.image.name,
               "image_sha256": sha, "model_id": pipeline.model_id, "model_classes": pipeline.names,
               "image_size": result.image_size.model_dump(), "boxes": [b.model_dump() for b in result.boxes],

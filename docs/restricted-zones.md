@@ -46,12 +46,31 @@ model identity/class mapping, image dimensions, original boxes and a scene asses
 Person/evidence indices refer to that report's original boxes. Evidence and assessment use the
 same decoded image; a separate future live/replay sidecar must correlate to its source C2 event.
 
-## Confirmed physical convention for the next feature
+## Feature 2: closed yellow caution-tape recognition
 
 The user selected **yellow caution tape forming a closed outline on the floor; inside is restricted**.
 Printed markers are not available. Color alone does not establish a real-world restriction:
 the operator must explicitly select this convention for the demonstration. Automatic recognition
 of the word CAUTION, floor-plane validation and protective stop behavior are not implied.
+
+```bash
+uv run python -m tools.inspect_zone path/to/upright.jpg \
+  --tape-config configs/zones-yellow.yaml --out runs/zones/tape-inspection
+```
+
+The opt-in profile explicitly declares that the visible yellow outline is on the floor and its
+inside is restricted. The detector uses a complete enclosed region in the current yellow mask.
+It does not infer a boundary from a yellow blob, connect separated strips, or reuse an old
+outline. Multiple plausible regions, an incomplete loop, a cropped outer boundary or strongly
+nonconvex geometry produce `unverified`. The polygon follows the tape's inner edge, so proximity
+to the tape remains uncertain. A fully visible convex outline is a deliberate first-version limit.
+
+The HSV thresholds in `configs/zones-yellow.yaml` are demo defaults, not lighting calibration.
+Small lettering is tolerated only while the yellow outline remains connected. Wide black print,
+occlusion, shadows or glare may break the loop and therefore prevent assessment. A yellow closed
+object unrelated to tape can still fool this color/shape method; the operator convention and
+controlled setup are necessary. Actual floor tape footage and physical acceptance are pending.
+The separate image-bound polygon mode remains available and unchanged.
 
 ## Acceptance
 

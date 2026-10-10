@@ -1,0 +1,13 @@
+# Explicit demonstration convention, not an automatic restriction inferred from any yellow object.
+# Place a single closed outline on a flat floor; all edges must remain visible in the current frame.
+scene_version: 1
+mode: yellow_closed_outline
+zone_id: restricted-yellow-1
+inside_is_restricted: true
+boundary_is_on_floor: true
+hue_min: 18
+hue_max: 40
+min_saturation: 100
+min_value: 90
+min_area_fraction: 0.01
+max_area_fraction: 0.8
