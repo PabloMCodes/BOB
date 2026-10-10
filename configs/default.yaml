@@ -1,0 +1,21 @@
+# Default runtime config. Copy to configs/local.yaml (gitignored) to override per machine.
+
+# Inference device: auto | mps | cuda | cpu
+#   auto -> cuda (Jetson) if available, else mps (Apple Silicon), else cpu
+device: auto
+
+model:
+  # Stock weights until Step 3 produces models/ppe_best.pt
+  weights: yolov8n.pt
+  imgsz: 640
+  conf: 0.35
+
+server:
+  host: 0.0.0.0
+  port: 8765
+
+timing:
+  # Stream is stale if no valid packet within this window (CV doc: 200–300 ms)
+  stale_ms: 250
+  # Max |frame_ts - pose_ts| for a detection's pose to be considered valid
+  pose_tolerance_ms: 50

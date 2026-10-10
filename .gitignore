@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Large / generated artifacts (keep folder placeholders only)
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+!models/*.md
+runs/*
+!runs/.gitkeep
+*.pt
+*.onnx
+*.engine
+
+# Local config overrides
+configs/local.yaml
+
+# macOS / Xcode
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcuserstate

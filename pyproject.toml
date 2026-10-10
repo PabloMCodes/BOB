@@ -1,0 +1,29 @@
+[project]
+name = "bob-vision"
+version = "0.0.1"
+description = "BOB rover computer vision: YOLOv8 PPE detection + ARKit pose association (Mac stand-in for Jetson)"
+readme = "README.MD"
+# Jetson Orin Nano (JetPack 6 / Ubuntu 22.04) ships Python 3.10 — keep code 3.10-compatible.
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "ultralytics>=8.3,<8.4",
+    "torch>=2.4",
+    "opencv-python>=4.10,<5",
+    "numpy>=1.26,<2.3",
+    "websockets>=13,<16",
+    "pydantic>=2.8,<3",
+    "pyyaml>=6,<7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
