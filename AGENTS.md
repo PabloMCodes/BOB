@@ -49,8 +49,10 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | `tools/` | CLI scripts: train, record, replay client, ONNX export |
 | `configs/default.yaml` | Device, model weights, server port, timing thresholds. Override in `configs/local.yaml` |
 | `ios/project.yml` | XcodeGen spec — **edit this, never the generated `.xcodeproj`**. `cd ios && xcodegen generate` |
-| `ios/BOBCapture/Wire/` | Swift wire contract (Foundation + simd only): `Schema.swift` mirrors `vision/schema` C1, `WireCodec.swift`, `Recorder.swift`. Unit-tested on the Simulator against `tests/fixtures/` |
+| `ios/BOBCapture/Wire/` | Swift wire contract (Foundation + simd only): `Schema.swift` mirrors `vision/schema` C1, `WireCodec.swift`, `Recorder.swift`, `SendGate.swift` + `StreamSender.swift` (WebSocket, 1 frame in flight, reconnect). Unit-tested on the Simulator against `tests/fixtures/` |
 | `ios/BOBCapture/Capture/`, `App/` | ARKit/UIKit → wire types, JPEG encoder, throttled capture controller; SwiftUI debug overlay. No decisions |
+| `vision/server/` | Step 5 stream server: `slot` (latest-frame-wins), `monitor` (per-session gaps/drops/added latency → StreamHealth), `transport` (websockets `FrameServer` + `ServerThread`), `view`, `__main__` (`python -m vision.server`). Step 6 plugs the pipeline in as the consumer of `server.slot` |
+| `tools/replay_client.py` | `.bobrec` → server at original timing (`--speed`), fresh session per `--loops` pass. Use it (never a live phone) in tests |
 | `vision/recording.py`, `tools/inspect_recording.py` | `.bobrec` read/write (Step 5 replay reuses it); on-device recording acceptance report |
 | `tests/` | pytest. Network/phone-dependent tests use the replay client, never a live phone |
 
@@ -76,6 +78,8 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 - `head_crop` cost grows ~8–10 ms per person (sequential crops on MPS). Batch crops before porting to the Jetson.
 - Never approximate a missing class with a look-alike (e.g. SH17 `shoes` for "not safety boots"): leave the rule inactive.
 - `data/eval/` is test data only — never pre-label, label or train on it.
+- Latency across devices is **relative** (`added = offset − min offset` per session): the iPhone clock is unrelated to the Mac's. Don't subtract `iphone_frame_ts_ns` from a Mac timestamp and call it network delay.
+- `vision.server` handles SIGTERM/SIGINT once and ignores repeats (`uv run` forwards signals) so `summary.json` and `stream.bobrec` are always complete.
 - Never `uv add roboflow`: it pulls `opencv-python-headless`, which clashes with our `opencv-python` (both provide `cv2`).
 - Secrets (`ROBOFLOW_API_KEY`) live only in `.env` (gitignored; template `.env.example`). Never print them or write them to files/config.
 - SH17 pseudo-labels on out-of-domain photos are unreliable (sandals → "person"). Use `build_dataset.filter_pseudo`; never pseudo-label PPE classes on external data.

@@ -22,16 +22,27 @@ struct CaptureStats {
     var encodeMs = 0.0
     var imageSize = "-"
     var recordedMessages = 0
+    var stream = StreamSender.State.off
+    var streamSentHz = 0.0
+    var streamDropped = 0
+    var streamReconnects = 0
     var error: String?
 }
 
-/// ARSession -> throttled frame/pose wire messages -> recorder (Step 5: also the WebSocket sender).
+/// ARSession -> throttled frame/pose wire messages -> recorder and WebSocket sender.
 /// Copies Apple values into wire types and nothing more (AGENTS.md rule 1).
 final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
     @Published private(set) var stats = CaptureStats()
     @Published var settings = CaptureSettings() { didSet { settingsBox.set(settings) } }
     @Published private(set) var isRecording = false
     @Published private(set) var lastRecording: URL?
+    @Published private(set) var isStreaming = false
+    @Published var serverURL = UserDefaults.standard.string(forKey: "serverURL") ?? "ws://192.168.1.10:8765" {
+        didSet {
+            UserDefaults.standard.set(serverURL, forKey: "serverURL")
+            if isStreaming { sender.configure(url: URL(string: serverURL)) }
+        }
+    }
     let lidarAvailable = ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh)
 
     private var session: ARSession?
@@ -43,6 +54,7 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
     private let encodeQueue = DispatchQueue(label: "bob.encode", qos: .userInitiated)
     private let encoderBusy = Locked(false)
     private let recorder = Recorder()
+    private let sender = StreamSender()
 
     // Touched only on `queue`.
     private var sessionId = UUID()
@@ -50,6 +62,7 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
     private var lastFrameTs: TimeInterval = -.infinity
     private var lastPoseTs: TimeInterval = -.infinity
     private var window = StatsWindow()
+    private var lastSentFrames = 0
 
     func start(session: ARSession) {
         self.session = session
@@ -100,6 +113,11 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
         }
     }
 
+    func toggleStreaming() {
+        isStreaming.toggle()
+        sender.configure(url: isStreaming ? URL(string: serverURL) : nil)
+    }
+
     @objc private func orientationChanged() {
         orientationBox.set(DeviceOrientationWire(UIDevice.current.orientation))
     }
@@ -143,7 +161,7 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
         )
         window.poses += 1
         do {
-            emit(try WireCodec.message(packet), state: state, reason: reason)
+            emit(try WireCodec.message(packet), isFrame: false, state: state, reason: reason)
         } catch {
             publishError("encode failed: \(error)")
         }
@@ -170,7 +188,8 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
             )
             self.window.addFrame(bytes: jpeg.data.count, encodeMs: encodeMs, size: "\(jpeg.width)x\(jpeg.height)")
             do {
-                self.emit(try WireCodec.message(packet, payload: jpeg.data), state: job.state, reason: job.reason)
+                self.emit(try WireCodec.message(packet, payload: jpeg.data), isFrame: true,
+                          state: job.state, reason: job.reason)
             } catch {
                 self.publishError("encode failed: \(error)")
             }
@@ -193,11 +212,11 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
         return seq
     }
 
-    private func emit(_ message: Data, state: TrackingStateWire, reason: TrackingReasonWire?) {
+    private func emit(_ message: Data, isFrame: Bool, state: TrackingStateWire, reason: TrackingReasonWire?) {
         if recordingBox.get() {
             recorder.write(message)
         }
-        // Step 5: hand `message` to the WebSocket sender here (latest-frame-wins, never queue).
+        sender.send(message, isFrame: isFrame)  // sent now or dropped, never queued
         window.bytes += message.count
         let now = CACurrentMediaTime()
         guard now - window.start >= 0.5 else { return }
@@ -216,6 +235,12 @@ final class CaptureController: NSObject, ObservableObject, ARSessionDelegate {
         snapshot.encodeMs = window.frames > 0 ? window.encodeMs / Double(window.frames) : 0
         snapshot.imageSize = window.size
         snapshot.recordedMessages = recorder.messageCount
+        let stream = sender.snapshot()
+        snapshot.stream = stream.state
+        snapshot.streamSentHz = Double(max(0, stream.sentFrames - lastSentFrames)) / elapsed
+        snapshot.streamDropped = stream.droppedFrames
+        snapshot.streamReconnects = stream.reconnects
+        lastSentFrames = stream.sentFrames
         window = StatsWindow(start: now, size: window.size)
         DispatchQueue.main.async { self.stats = snapshot }
     }

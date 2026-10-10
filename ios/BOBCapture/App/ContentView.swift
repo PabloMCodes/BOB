@@ -12,7 +12,8 @@ struct ContentView: View {
                 .ignoresSafeArea()
             VStack(alignment: .leading, spacing: 12) {
                 StatsPanel(stats: controller.stats, lidar: controller.lidarAvailable,
-                           recording: controller.isRecording)
+                           recording: controller.isRecording, streaming: controller.isStreaming,
+                           serverURL: controller.serverURL)
                 Spacer()
                 Controls()
             }
@@ -37,6 +38,16 @@ private struct StatsPanel: View {
     let stats: CaptureStats
     let lidar: Bool
     let recording: Bool
+    let streaming: Bool
+    let serverURL: String
+
+    private var streamColor: Color {
+        switch stats.stream {
+        case .connected: return .green
+        case .connecting: return .orange
+        case .off: return .gray
+        }
+    }
 
     private var trackingColor: Color {
         switch stats.trackingState {
@@ -53,6 +64,11 @@ private struct StatsPanel: View {
             Text(String(format: "frames    %.1f Hz  %@  %.0f KB  enc %.1f ms", stats.frameHz, stats.imageSize, stats.jpegKB, stats.encodeMs))
             Text(String(format: "poses     %.1f Hz   stream %.2f MB/s", stats.poseHz, stats.megabytesPerSecond))
             Text("orient    \(stats.orientation.rawValue)   LiDAR \(lidar ? "yes" : "no")")
+            if streaming {
+                Text("ws        \(stats.stream.rawValue)  \(serverURL)").foregroundColor(streamColor)
+                Text(String(format: "sent      %.1f Hz  drop %d  reconnects %d",
+                            stats.streamSentHz, stats.streamDropped, stats.streamReconnects))
+            }
             if recording {
                 Text("● REC     \(stats.recordedMessages) messages").foregroundColor(.red)
             }
@@ -70,13 +86,18 @@ private struct StatsPanel: View {
 
 private struct Controls: View {
     @EnvironmentObject var controller: CaptureController
+    @State private var editingServer = false
+    @State private var draftURL = ""
 
     var body: some View {
         HStack(spacing: 12) {
+            Button(controller.isStreaming ? "Stop WS" : "Stream") { controller.toggleStreaming() }
+                .buttonStyle(.borderedProminent)
+                .tint(controller.isStreaming ? .orange : .green)
             Button(controller.isRecording ? "Stop" : "Record") { controller.toggleRecording() }
                 .buttonStyle(.borderedProminent)
                 .tint(controller.isRecording ? .red : .blue)
-            Button("Reset session") { controller.resetSession() }
+            Button("Reset") { controller.resetSession() }
                 .buttonStyle(.bordered)
             Menu("Settings") {
                 Picker("Resolution", selection: $controller.settings.longSide) {
@@ -89,6 +110,10 @@ private struct Controls: View {
                     Text("10 Hz").tag(10.0)
                     Text("15 Hz").tag(15.0)
                 }
+                Button("Server…") {
+                    draftURL = controller.serverURL
+                    editingServer = true
+                }
             }
             .buttonStyle(.bordered)
             if let url = controller.lastRecording {
@@ -97,5 +122,15 @@ private struct Controls: View {
             }
         }
         .tint(.white)
+        .alert("Vision server", isPresented: $editingServer) {
+            TextField("ws://<mac-ip>:8765", text: $draftURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Save") { controller.serverURL = draftURL.trimmingCharacters(in: .whitespaces) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The Mac/Jetson running `python -m vision.server`, same Wi-Fi.")
+        }
     }
 }

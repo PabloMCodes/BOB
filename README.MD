@@ -44,7 +44,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 3a | Hi-vis vest rule | 🟡 Built — **own-photo eval pending** | Rule unit tests, real-model regression on bundled images, `tools/eval_ppe.py --rule vest` | 204/204 pass · `bus.jpg` 4/4 and `zidane.jpg` 2/2 people → `not_wearing` (no vests in either) · positive case unmeasured |
 | 3b | Gloves + safety boots + one fine-tune (glasses/gloves/boots) | 🟡 Rules, pre-labeller, foot crop, boots review + dataset builder built — **boots review + own photos pending** | Rule/prelabel unit tests; eval on own photos after fine-tune | 190/190 pass · glasses baseline **4/11** (SH17) · YOLO-World 8/11 · Roboflow footwear: 2,758 imgs, 2,562 boots CLIP-scored |
 | 4 | iOS ARKit capture app (Xcode) | 🟡 Built + Simulator-tested — **on-device checklist pending** | Swift unit tests vs shared fixtures, Swift→Python golden recording, on-device recording + `tools/inspect_recording.py` | Swift 11/11 · Python 196/196 · unsigned device build ✅ · golden recording decodes (yaw +90° ✓) |
-| 5 | WebSocket transport + record/replay | ⬜ | Replay client in pytest, live FPS/drops/latency, kill test | — |
+| 5 | WebSocket transport + record/replay | 🟡 Built + loopback/Simulator-tested — **live iPhone run pending** | Replay client in pytest, live FPS/drops/latency, kill test | Python 223/223 · Swift 16/16 (+1 opt-in live) · loopback 1920×1440 @10 Hz (367 KB): **300/300 frames, 0 drops, added latency p50/p95 2.4/2.7 ms**, Mac decode+rotate 17.7/19.1 ms · Swift→Python 30/30 · server SIGKILL mid-stream → sender dropped 16 frames (none queued), reconnected by itself |
 | 6 | Live inference + bounding boxes | ⬜ | Replay determinism, live PPE on/off test, p50/p95 latency | — |
 | 7 | Pose ↔ detection timestamp association | ⬜ | Synthetic timeline unit tests, live occlusion + ARKit reset | — |
 | 8 | CV destructive tests + Jetson handoff prep | ⬜ | Scripted failure suite, `.pt` vs `.onnx` parity | — |
@@ -182,9 +182,31 @@ On the dataset page → **Download Dataset → format "YOLOv8" → download zip*
 
 1. One-time: create `ios/Signing.local.xcconfig` with `DEVELOPMENT_TEAM = <your team id>` (Xcode → Settings → Accounts) and optionally `BOB_BUNDLE_PREFIX = com.<you>`. Enable **Developer Mode** on the iPhone.
 2. `cd ios && xcodegen generate && open BOBCapture.xcodeproj` → select the iPhone → Run.
-3. Record ~60 s doing, in order: hold still 5 s · **turn left ~90°** · turn right back · cover the lens 3 s · rotate phone to landscape and back · press **Reset session** · send the app to background and return.
+3. Record ~60 s doing, in order: hold still 5 s · **turn left ~90°** · turn right back · cover the lens 3 s · rotate phone to landscape and back · press **Reset** · send the app to background and return.
 4. Share the `.bobrec` (AirDrop) → `uv run python -m tools.inspect_recording <file>`.
 5. **Pass:** 0 decode errors · 0 header/JPEG mismatches · frames ≈ 10 Hz, poses ≈ 10 Hz (+ frames = 20 Hz total) · seq gaps 0 · yaw change **positive** while turning left · cover-lens shows `limited` · Reset + background each start a **new session** · saved frames in `runs/inspect/<file>/` are **upright** for every reported orientation (this is the first real check of the Step 2 rotation mapping).
+
+### Step 5 — WebSocket transport + record/replay 🟡 (live iPhone run pending)
+
+- **Decisions:** Swift client included · latency measured **relative, no schema change** · the Mac shows upright frames + stats only (inference is Step 6).
+- **Python — `vision/server/`** (package, one file per area):
+  - `slot.py` — one-item **latest-frame-wins** slot between the receiver thread and the consumer. A frame nobody took is replaced and counted, never queued (rule 6).
+  - `monitor.py` — per session: frames/poses, **seq gaps** (= frames the phone skipped), out-of-order (dropped), slot drops, rates, **added latency** and Mac processing time p50/p95, staleness → C3 `StreamHealth` (`dropped_count` = seq gaps + slot drops). A **new `session_id` retires the old one**: its counters reset, the slot is cleared, and its late messages are dropped (rule 5).
+  - `transport.py` — `FrameServer` (websockets, binary only, no compression, 8 MiB max message, 2 s keepalive ping). Bad framing, text messages and C2/C3 sent the wrong way are counted as `bad`, and the connection stays open. `ServerThread` runs it off the main thread.
+  - `view.py` / `__main__.py` — `uv run python -m vision.server [--record] [--no-view]` → OpenCV window (upright frame + stats). Writes `runs/server/<time>/stream_health.jsonl` (10 Hz), `summary.json` on exit, and `stream.bobrec` with `--record`. Clean shutdown on SIGTERM/SIGINT, even when signalled twice (`uv run` forwards signals).
+- **`tools/replay_client.py`** — `.bobrec` → server with the original timing (`--speed 1`), faster, or as fast as possible (`--speed 0`). `--loops N` gives every pass a fresh session (like an ARKit restart).
+- **Swift:** `Wire/SendGate.swift` (pure flow control: 1 frame in flight, ≤ 4 poses, a frame stalled > 2 s → reconnect) + `Wire/StreamSender.swift` (URLSessionWebSocketTask, reconnect with backoff 0.5 → 2 s, Foundation only so it runs in the test target). The app has a **Stream** button, **Settings → Server…** (URL saved), and overlay lines `ws <state> <url>` / `sent Hz · drop · reconnects`. The `Reset session` button is now `Reset`.
+- **Added latency:** the iPhone clock is unrelated to the Mac's, so the absolute network delay is unknown. Per session, `added = (rx − iphone_ts) − min(rx − iphone_ts)`: 0 for the fastest frame, and growing if latency builds up. Clock drift adds a few ms per minute.
+- **Test:** `uv run pytest` (19 in `tests/test_server.py`) — slot, gaps/out-of-order, new session retires the old one, stale at exactly `stale_ms`, added-latency math, Swift golden replay, 30 frames with no consumer → 29 drops and the newest survives, **slow 100 ms consumer at 20 Hz → rx→done p95 < 250 ms (no accumulation)**, original timing, bad/oversized messages (1009, server survives), stale ≤ 250 + 100 ms after the client vanishes, abrupt client death, **SIGKILL server mid-stream → client fails in < 1 s**, double SIGTERM still writes the summary + a complete recording, recording == bytes received. Swift: `SendGateTests` (5) + opt-in `StreamSenderLiveTests` against a running server (`TEST_RUNNER_BOB_SERVER_URL=ws://127.0.0.1:<port>`, optional `TEST_RUNNER_BOB_STREAM_SECONDS`, `TEST_RUNNER_BOB_EXPECT_RECONNECT=1`).
+- **Measured:** see the progression row. In the Simulator live test, "added latency" (56/106 ms) is an artifact: the test makes up its timestamps at exactly 100 ms steps while `sleep` drifts. Only the iPhone run counts.
+
+#### 📱 Live checklist (needs you — iPhone + Mac on the same Wi-Fi)
+
+1. Mac: `uv run python -m vision.server --record` (macOS asks to allow incoming connections → Allow). Find the Mac IP: `ipconfig getifaddr en0`.
+2. iPhone: rebuild (`cd ios && xcodegen generate`, Run). **Settings → Server…** → `ws://<mac-ip>:8765` → **Stream**. First time, iOS asks for **Local Network** access → Allow (if denied: Settings → Privacy → Local Network → BOB Capture).
+3. Stream 60 s at 1920 / 10 Hz with the rover mount pose. **Pass:** overlay `ws connected`, Mac window upright, Mac `frames ≈ 10 Hz`, `drops: phone/server` stay ~0, **added latency p95 < 100 ms and not growing** (record p50/p95 and `mac` p50/p95 here).
+4. **Kill tests:** (a) Ctrl-C the server, wait 5 s, restart → phone shows `connecting`, then `connected` again within ~2 s, and `reconnects` goes up. (b) Swipe the app away while streaming → Mac shows `STALE` within ~0.35 s (`stream_health.jsonl`). (c) Wi-Fi off on the phone for 5 s → Mac `STALE`; phone reconnects after Wi-Fi returns. (d) Press **Reset** → Mac shows a new session and the counters reset.
+5. Replay the recorded session: `uv run python -m tools.replay_client runs/server/<time>/stream.bobrec` into a second server and compare the summaries; also run `tools/inspect_recording` on it (this re-checks the Step 4 rotation on ARKit frames).
 
 ## Repository layout
 
@@ -199,6 +221,7 @@ BOB/
 ├── vision/            # Python package — must stay Jetson-portable
 │   ├── pipeline.py    # frame → model boxes (single | head_crop) → PPE rules
 │   ├── ppe.py         # face↔glasses, head↔helmet pairing → derived violation boxes
+│   ├── server/        # WebSocket stream server: slot, monitor, transport, view, CLI
 │   └── schema/        # wire contract: common, pose, phone (C1), events (C2/C3), wire
 ├── schema/            # generated JSON Schema (language-neutral contract)
 ├── tools/             # training, record/replay, export scripts
