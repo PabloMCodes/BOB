@@ -52,6 +52,8 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | `ios/BOBCapture/Wire/` | Swift wire contract (Foundation + simd only): `Schema.swift` mirrors `vision/schema` C1, `WireCodec.swift`, `Recorder.swift`, `SendGate.swift` + `StreamSender.swift` (WebSocket, 1 frame in flight, reconnect). Unit-tested on the Simulator against `tests/fixtures/` |
 | `ios/BOBCapture/Capture/`, `App/` | ARKit/UIKit → wire types, JPEG encoder, throttled capture controller; SwiftUI debug overlay. No decisions |
 | `vision/server/` | Step 5 stream server: `slot` (latest-frame-wins), `monitor` (per-session gaps/drops/added latency → StreamHealth), `transport` (websockets `FrameServer` + `ServerThread`), `view`, `__main__` (`python -m vision.server`). Step 6 plugs the pipeline in as the consumer of `server.slot` |
+| `vision/server/detection.py` | Step 6 frame path `detect_frame()` (decode upright → pipeline → C2 + per-rule verdicts) and `detection_event()` (frame-bundled pose). Shared by `server --detect` and `tools/replay_detect.py` — don't fork it |
+| `tools/replay_detect.py` | Offline replay: every frame of a `.bobrec` → detections + on/off segment scoring; determinism check `box_mismatches` |
 | `tools/replay_client.py` | `.bobrec` → server at original timing (`--speed`), fresh session per `--loops` pass. Use it (never a live phone) in tests |
 | `vision/recording.py`, `tools/inspect_recording.py` | `.bobrec` read/write (Step 5 replay reuses it); on-device recording acceptance report |
 | `tests/` | pytest. Network/phone-dependent tests use the replay client, never a live phone |

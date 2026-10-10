@@ -209,6 +209,16 @@ def apply_rule(rule: AnyRule, boxes: Iterable[Box]) -> list[SubjectVerdict]:
     return verdicts
 
 
+def frame_verdict(verdicts: Iterable[SubjectVerdict], rule: str) -> Verdict:
+    """One verdict per frame and rule: any judged subject not wearing -> NOT_WEARING (e.g. one bare
+    hand of two); else any wearing -> WEARING; else UNVERIFIED (nobody judged)."""
+    found = {v.verdict for v in verdicts if v.rule == rule}
+    for verdict in (Verdict.NOT_WEARING, Verdict.WEARING):
+        if verdict in found:
+            return verdict
+    return Verdict.UNVERIFIED
+
+
 def apply_rules(rules: Iterable[AnyRule], boxes: Iterable[Box]) -> tuple[list[Box], list[SubjectVerdict]]:
     """Return (derived violation boxes, all verdicts) across rules."""
     boxes = list(boxes)

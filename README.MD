@@ -45,7 +45,7 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 3b | Gloves + safety boots + fine-tune | 🟡 **Footwear v1 trained and wired into the shared pipeline**; own-photo/worksite eval pending | Grouped held-out footwear test; shared-pipeline regression tests | 20 epochs; test boots precision **76.9%**, recall **66.7%**, AP50 **75.1%** (39 boxes); opt-in `configs/footwear.yaml`; [model card](models/footwear-v1.md) |
 | 4 | iOS ARKit capture app (Xcode) | 🟡 Built + Simulator-tested — **on-device checklist pending** | Swift unit tests vs shared fixtures, Swift→Python golden recording, on-device recording + `tools/inspect_recording.py` | Swift 11/11 · Python 196/196 · unsigned device build ✅ · golden recording decodes (yaw +90° ✓) |
 | 5 | WebSocket transport + record/replay | 🟡 **Live iPhone stream ✅** — kill tests (a–d) + live latency numbers pending | Replay client in pytest, live FPS/drops/latency, kill test | Python 223/223 · Swift 16/16 (+1 opt-in live) · loopback 1920×1440 @10 Hz (367 KB): **300/300 frames, 0 drops, added latency p50/p95 2.4/2.7 ms**, Mac decode+rotate 17.7/19.1 ms · Swift→Python 30/30 · server SIGKILL mid-stream → sender dropped 16 frames (none queued), reconnected by itself · **live iPhone (IPv6 hotspot): 117.8 s, 1179 frames @ 10.0 Hz, 1920×1440, 259 KB avg (2.66 MB/s), 0 seq gaps, 0 decode errors, tracking normal; upright ✓ for portrait + landscape_left** |
-| 6 | Live inference + bounding boxes | ⬜ | Replay determinism, live PPE on/off test, p50/p95 latency | — |
+| 6 | Live inference + bounding boxes | 🟡 Built + replay/loopback-tested — **live PPE on/off test pending** | Replay determinism, live PPE on/off test, p50/p95 latency | 248/248 pass · offline replay deterministic + identical to the direct pipeline · `server --detect` 1920×1440 @10 Hz, 0 drops: rx→event **p95 85.6 ms** (2 people, landscape_left) / **117.7 ms** (5–6 people, portrait) ≤ 150 ✅ · inference p95 78 / 99 ms |
 | 7 | Pose ↔ detection timestamp association | ⬜ | Synthetic timeline unit tests, live occlusion + ARKit reset | — |
 | 8 | CV destructive tests + Jetson handoff prep | ⬜ | Scripted failure suite, `.pt` vs `.onnx` parity | — |
 | 3c | Scene hazards — *inspection findings only* (backlog, after Step 7) | ⬜ | To define: restricted floor zones, open edges / stairs, blocked walkways / debris | — |
@@ -227,6 +227,31 @@ Final checkout verification: **250 Python tests passed**; unsigned iOS build pas
 3. Stream 60 s at 1920 / 10 Hz with the rover mount pose. **Pass:** overlay `ws connected`, Mac window upright, Mac `frames ≈ 10 Hz`, `drops: phone/server` stay ~0, **added latency p95 < 100 ms and not growing** (record p50/p95 and `mac` p50/p95 here).
 4. **Kill tests:** (a) Ctrl-C the server, wait 5 s, restart → phone shows `connecting`, then `connected` again within ~2 s, and `reconnects` goes up. (b) Swipe the app away while streaming → Mac shows `STALE` within ~0.35 s (`stream_health.jsonl`). (c) Wi-Fi off on the phone for 5 s → Mac `STALE`; phone reconnects after Wi-Fi returns. (d) Press **Reset** → Mac shows a new session and the counters reset.
 5. Replay the recorded session: `uv run python -m tools.replay_client runs/server/<time>/stream.bobrec` into a second server and compare the summaries; also run `tools/inspect_recording` on it (this re-checks the Step 4 rotation on ARKit frames).
+
+### Step 6 — Live inference + bounding boxes 🟡 (live PPE on/off test pending)
+
+- **Decisions:** builds on the existing `--detect` work · on/off test = **glasses + helmet + vest** · target **rx → event p95 ≤ 150 ms at 10 Hz** · determinism tested **offline, every frame**.
+- **One frame path:** `vision/server/detection.py` `detect_frame()` = JPEG → upright (`decode_upright`, no overlay text) → `Pipeline` → C2 `DetectionEvent` + one verdict per active rule (`vision.ppe.frame_verdict`, now also used by `tools/eval_ppe.py`). The live server and the offline replay both call it, so they can't drift apart.
+- **Pose in C2:** each event takes the pose **from its own frame** (`pose_dt_ms = 0`). `pose_valid=false` (detection still emitted) when the stream is stale, the session changed, tracking isn't `normal`, or yaw is undefined. Standalone pose packets are health inputs only. This already meets rule 4, so Step 7 is left with the synthetic-timeline tests and the live ARKit reset / occlusion checks.
+- **Live:** `uv run python -m vision.server --detect [--record] [--config configs/footwear.yaml]` → boxes drawn in the window, overlay `CV <ms> | <n> boxes | pose <valid>` + per-rule verdicts, `detections.jsonl` (C2), `model.json`, and in `summary.json` `detected_frames`, `inference_p50/p95_ms` and `process_p50/p95_ms` (= rx → event written, **the Step 6 latency**).
+- **Offline:** `uv run python -m tools.replay_detect <file.bobrec> [--save-images] [--rule glasses --segments "wearing:0-10,not_wearing:12-22"]` → every frame (no drops), `runs/replay_detect/<name>_<time>/{detections.jsonl,summary.json,frames/}`. Pose validity offline: the packet's own session; stale = > `stale_ms` between messages on the iPhone clock.
+- **Test:** `uv run pytest` (12 in `tests/test_replay_detect.py`) — every frame processed and poses skipped · **two replays → same boxes / verdicts (≤ 1e-3)** · replay == pipeline on the same decoded image · stream frames in real sensor orientation (`landscape_left` unrotated, `portrait` rotated) → zidane not wearing glasses/helmet, bus sunglasses found only if upright · boots stays inactive · stale gap → `pose_valid=false`, boxes kept · on/off scoring (unverified ignored, any false `wearing` fails, nothing judged ≠ pass, bad segments rejected) · **`server --detect` end to end** (one valid C2 per frame, latency summary).
+- **Measured (Mac MPS, SH17 yolov8s head_crop, loopback, JPEG q70 like the phone, 300 frames @ 10 Hz):**
+
+  | Scene | rx → event p50 / p95 | inference p50 / p95 | drops |
+  | --- | --- | --- | --- |
+  | 2 people, `landscape_left` (rover mount) | 79.8 / **85.6 ms** | 70.0 / 78.2 ms | 0 |
+  | 5–6 people (`bus.jpg`), `portrait` | 96.3 / **117.7 ms** | 80.0 / 98.6 ms | 0 |
+
+  Inference is higher than Step 3's 53 ms. Possible reasons: 1920×1440 input and the WebSocket thread competing for the CPU. Each extra person adds a head crop (see AGENTS: batch crops before the Jetson port).
+- **Finding — JPEG noise flips borderline glasses:** on `bus.jpg` sent the way the phone does (sensor orientation → JPEG → upright), the 2nd man's sunglasses are found at q98 / 95 / 85 / 80 but **lost at q90 and q70** (conf swings 0.32–0.62), turning one frame into a false `no-safety-glasses`. Not monotonic in quality, so there is no "safe" setting. Per-frame verdicts are noisy near the threshold, which is why the on/off test scores ≥ 80 % over many frames and N-frame confirmation belongs to alerts. The phone stays at JPEG 0.7 until the live test says otherwise.
+
+#### 📱 Live PPE on/off test (needs the team)
+
+1. Mac: `uv run python -m vision.server --detect --record --host ::` (hotspot) · phone in the rover mount (**landscape left**, ~20 cm, tilted up ~15°) → **Stream**.
+2. One person at **~3 m**. Per item (glasses, helmet, vest): **10 s wearing → 2 s to change → 10 s not wearing**. Say the times out loud or note them (seconds from the start of the recording).
+3. Stop the server (Ctrl-C) → `runs/server/<time>/summary.json`: **pass if `process_p95_ms` ≤ 150** and drops ≈ 0.
+4. Score each item offline: `uv run python -m tools.replay_detect runs/server/<time>/stream.bobrec --rule glasses --segments "wearing:0-10,not_wearing:12-22" --save-images` (same for `helmet`, `vest` with their times). **Pass:** every segment `passed` (≥ 80 % of judged frames correct, 0 `wearing` while not wearing). Check `frames/` for what the model saw.
 
 ## Repository layout
 

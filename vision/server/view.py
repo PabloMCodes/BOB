@@ -30,10 +30,19 @@ def stats_lines(s: StreamStats) -> list[str]:
 
 def upright_view(frame: ReceivedFrame, mount: str, lines: list[str]) -> Optional[np.ndarray]:
     """Decode the JPEG, rotate sensor -> upright, draw `lines`. None if the JPEG doesn't decode."""
+    image = decode_upright(frame, mount)
+    return overlay_stats(image, lines) if image is not None else None
+
+
+def decode_upright(frame: ReceivedFrame, mount: str) -> Optional[np.ndarray]:
+    """Decode before inference: debug text must never become model input."""
     image = cv2.imdecode(np.frombuffer(frame.jpeg, np.uint8), cv2.IMREAD_COLOR)
     if image is None:
         return None
-    image = to_upright(image, frame.packet.image.device_orientation, mount)
+    return to_upright(image, frame.packet.image.device_orientation, mount)
+
+
+def overlay_stats(image: np.ndarray, lines: list[str]) -> np.ndarray:
     scale = max(image.shape[0] / 1000, 0.6)
     for i, line in enumerate(lines):
         y = int((30 + 32 * i) * scale)

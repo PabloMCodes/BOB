@@ -28,7 +28,7 @@ import numpy as np
 from vision.config import REPO_ROOT, load_config
 from vision.detector import Detector
 from vision.pipeline import Pipeline
-from vision.ppe import Verdict
+from vision.ppe import Verdict, frame_verdict
 from vision.render import draw
 
 LABELS = ("wearing", "not_wearing")
@@ -108,14 +108,9 @@ def resize_long_side(image: np.ndarray, long_side: int) -> np.ndarray:
 
 
 def predict(pipeline: Pipeline, image: np.ndarray, rule: str):
-    """Image verdict for one person: any judged subject not wearing -> NOT_WEARING (e.g. one bare
-    hand of two); else any wearing -> WEARING; else UNVERIFIED."""
+    """Image verdict for one person (see vision.ppe.frame_verdict)."""
     result = pipeline(image)
-    verdicts = {v.verdict for v in result.verdicts if v.rule == rule}
-    for verdict in (Verdict.NOT_WEARING, Verdict.WEARING):
-        if verdict in verdicts:
-            return verdict, result
-    return Verdict.UNVERIFIED, result
+    return frame_verdict(result.verdicts, rule), result
 
 
 def evaluate(
