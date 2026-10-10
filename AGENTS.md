@@ -12,12 +12,14 @@ Pipeline: `iPhone ARFrame → WebSocket (JSON header + JPEG) → Python server �
 
 1. **Python owns the logic; Swift stays thin.** The iOS app only captures `ARFrame`, encodes JPEG, attaches pose/tracking/timestamps, and sends. No detection, filtering, or decision logic in Swift.
 2. **`vision/` must be Jetson-portable.** Python 3.10 syntax only. No macOS-only imports. Never hard-code `"mps"` — use `vision.config.resolve_device()`.
-3. **The schema is a contract (frozen at v1).** Any change to `vision/schema/` requires: bump `schema_version`, update fixtures in `tests/fixtures/`, run `uv run python -m tools.export_schema`, and update the Swift mirror — all in the same change. Each invalid fixture must break exactly one rule.
+3. **The schema is a contract (frozen at v2).** Any change to `vision/schema/` requires: bump `SCHEMA_VERSION` + `SchemaVersion` in `common.py`, update fixtures in `tests/fixtures/`, run `uv run python -m tools.export_schema`, and update the Swift mirror — all in the same change. Each invalid fixture must break exactly one rule.
 4. **Associate by timestamp, never by "latest."** A detection gets the pose nearest to its source frame's `iphone_frame_ts_ns`, within `timing.pose_tolerance_ms`, same `session_id`, with `tracking_state == normal`. Otherwise it is emitted with `pose_valid=false` — never silently dropped, never given a guessed pose.
 5. **A new `session_id` invalidates everything.** ARKit restart/interruption = new world origin; clear pose buffers.
 6. **Latest frame wins.** Never queue frames behind slow inference; drop old frames so latency cannot accumulate.
 7. **ARKit is advisory, not safety.** Do not write code that treats pose or detections as collision/obstacle safety. Motor control, safety supervisor, alerts are out of scope for this branch.
 8. **No large artifacts in git.** Datasets → `data/`, weights → `models/`, outputs → `runs/` (all gitignored). Record dataset version + metrics in a model card under `models/*.md`.
+9. **Third-party weights are code.** `.pt` files are pickles. Only load weights with a pinned `weights_sha256` in config (verified by `ensure_weights`).
+10. **"No violation" ≠ "compliant".** PPE rules emit derived boxes (`source="derived"`) only for confident, large-enough subjects; everything else is UNVERIFIED. Never turn an unverified subject into a pass or a violation.
 
 ## Commands
 
@@ -33,12 +35,23 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | Path | Contents |
 | ---- | -------- |
 | `vision/` | Importable package: config, schema, detector, render, server, pose buffer, events |
+| `vision/detector.py`, `render.py`, `orientation.py`, `detect.py` | YOLO wrapper → `schema.Box`, safety-color drawing, sensor→upright rotation, webcam CLI |
+| `vision/pipeline.py` | **Single entry point** for frames: `single` or `head_crop` (people → full-res head crops) → PPE rules. Webcam, eval and server must all go through it |
+| `vision/ppe.py` | Rules → derived violation boxes + per-subject verdicts. `kind: pair` (face↔glasses, head↔helmet, hands↔gloves) and `kind: class` (safety-boots vs shoes). Rules whose classes the model lacks are inactive (`split_active`) |
+| `tools/prelabel.py` | Draft YOLO labels (SH17 + YOLO-World) in `training.classes` for hand correction. Needs `uv run --group labeling` for YOLO-World |
+| `tools/review_boots.py` | CLIP-sorted hand review of Roboflow `boots` boxes → `data/labeling/boots_review.json` (`score` needs the labeling group; `review` is an OpenCV window) |
+| `tools/build_dataset.py` | External dataset + review decisions + filtered SH17 pseudo-labels → `data/datasets/<name>/` YOLO training set |
+| `data/external/` | Downloaded third-party datasets (gitignored). Roboflow downloads run in a throwaway env: `uv run --no-project --with roboflow …` |
+| `models/sh17.md` | Model card: source, SHA-256, license, classes, measurements |
 | `vision/schema/` | Wire contract: `common` (enums/types), `pose`, `phone` (C1), `events` (C2/C3), `wire` (codec). Import from `vision.schema` |
 | `schema/` | Generated JSON Schema — never hand-edit; regenerate with `uv run python -m tools.export_schema` |
 | `tests/fixtures/` | `valid/` and `invalid/` message JSON, shared with Swift tests and consumer branches |
 | `tools/` | CLI scripts: train, record, replay client, ONNX export |
 | `configs/default.yaml` | Device, model weights, server port, timing thresholds. Override in `configs/local.yaml` |
-| `ios/` | Xcode project `BOBCapture` (Step 4+) |
+| `ios/project.yml` | XcodeGen spec — **edit this, never the generated `.xcodeproj`**. `cd ios && xcodegen generate` |
+| `ios/BOBCapture/Wire/` | Swift wire contract (Foundation + simd only): `Schema.swift` mirrors `vision/schema` C1, `WireCodec.swift`, `Recorder.swift`. Unit-tested on the Simulator against `tests/fixtures/` |
+| `ios/BOBCapture/Capture/`, `App/` | ARKit/UIKit → wire types, JPEG encoder, throttled capture controller; SwiftUI debug overlay. No decisions |
+| `vision/recording.py`, `tools/inspect_recording.py` | `.bobrec` read/write (Step 5 replay reuses it); on-device recording acceptance report |
 | `tests/` | pytest. Network/phone-dependent tests use the replay client, never a live phone |
 
 ## Integration with other branches
@@ -57,7 +70,21 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 - `ARFrame.timestamp` is seconds since iPhone boot — unrelated to the Mac clock. Use it only for association; Mac receive time is only for latency metrics.
 - iOS needs `NSCameraUsageDescription`, `NSLocalNetworkUsageDescription`, and ATS `NSAllowsLocalNetworking` for `ws://`.
 - On the Jetson, torch comes from NVIDIA's JetPack wheels, not PyPI; TensorRT engines must be built on the Jetson.
-- Ultralytics is AGPL-3.0.
+- Ultralytics is AGPL-3.0. SH17 data/weights are CC BY-NC-SA 4.0 (non-commercial).
+- SH17 `glasses` = any eyewear (sunglasses count as compliant). Its class IDs differ from its README order — always use names from the weights.
+- The rover camera sits ~20 cm high looking **up** at faces 3 m+ away: glasses are ~5–6 px at 640. Don't "simplify" `head_crop` back to a single pass without re-running `tools/eval_ppe.py`.
+- `head_crop` cost grows ~8–10 ms per person (sequential crops on MPS). Batch crops before porting to the Jetson.
+- Never approximate a missing class with a look-alike (e.g. SH17 `shoes` for "not safety boots"): leave the rule inactive.
+- `data/eval/` is test data only — never pre-label, label or train on it.
+- Never `uv add roboflow`: it pulls `opencv-python-headless`, which clashes with our `opencv-python` (both provide `cv2`).
+- Secrets (`ROBOFLOW_API_KEY`) live only in `.env` (gitignored; template `.env.example`). Never print them or write them to files/config.
+- SH17 pseudo-labels on out-of-domain photos are unreliable (sandals → "person"). Use `build_dataset.filter_pseudo`; never pseudo-label PPE classes on external data.
+- Roboflow footwear data is CC BY 4.0 — credit it in the model card of any model trained on it.
+- Boots labels: human decisions (`boots_review.json`) always override assistant ones (`boots_review_assisted.json`); use `merged_decisions`, never edit the human file.
+- Swift: only `Wire/` may be compiled into the test target (no ARKit/UIKit there). Map unknown future Apple enum cases to the *conservative* wire value (e.g. tracking `not_available`), never a guess.
+- `xcodebuild -destination 'name=…'` can fail to match the Simulator; use `id=<UDID>` from `xcrun simctl list devices available`.
+- Signing lives in the gitignored `ios/Signing.local.xcconfig` (`DEVELOPMENT_TEAM`, `BOB_BUNDLE_PREFIX`) — never commit team IDs into `project.yml`.
+- CLIP (for YOLO-World) lives in the optional `labeling` dependency group; ultralytics would otherwise auto-install it outside `uv.lock`. Run with `YOLO_AUTOINSTALL=false` when experimenting.
 
 ## Team Git workflow
 

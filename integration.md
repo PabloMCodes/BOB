@@ -29,14 +29,16 @@ These are the only ways other parts may depend on `autoCV`. Anything not listed 
 
 | # | Interface | Producer | Consumer(s) | Contract lives in | Versioned by |
 | - | --------- | -------- | ----------- | ----------------- | ------------ |
-| C1 | `FramePacket` + `PosePacket` (WS: length-prefixed JSON header + JPEG) | iOS app | `vision` server | `vision/schema/phone.py`, `schema/{frame,pose}.schema.json` + Swift mirror in `ios/` (Step 4) | `schema_version` |
-| C2 | `DetectionEvent` (boxes, pose, `pose_valid`, `pose_dt_ms`, timestamps) | `vision` | Safety supervisor, agent/alerts | `vision/schema/events.py`, `schema/detection_event.schema.json` + fixtures in `tests/fixtures/` | `schema_version` |
+| C1 | `FramePacket` + `PosePacket` (WS: length-prefixed JSON header + JPEG) | iOS app | `vision` server | `vision/schema/phone.py`, `schema/{frame,pose}.schema.json` + Swift mirror `ios/BOBCapture/Wire/Schema.swift`; Swift→Python golden `tests/fixtures/recordings/swift_golden.bobrec` | `schema_version` |
+| C2 | `DetectionEvent` (boxes with `source: model \| derived`, pose, `pose_valid`, `pose_dt_ms`, timestamps) | `vision` | Safety supervisor, agent/alerts | `vision/schema/events.py`, `schema/detection_event.schema.json` + fixtures in `tests/fixtures/` | `schema_version` (**v2**) |
 | C3 | `StreamHealth` (`stale`, `tracking_state`, `session_id`, `dropped_count`) | `vision` | Safety supervisor | `vision/schema/events.py`, `schema/stream_health.schema.json` | `schema_version` |
-
-Wire codec (`encode` / `decode`) lives in `vision/schema/wire.py`. **Non-Python consumers** should validate against `schema/*.schema.json` **and** the fixtures: JSON Schema can't express cross-field rules (rigid transform, box bounds, `pose_valid` consistency), the fixtures do.
-| C4 | Runtime config keys (`device`, `model`, `server`, `timing`) | `configs/default.yaml` | Jetson deploy | `configs/default.yaml` | key names (rename = breaking) |
-| C5 | Model artifact (`models/ppe_best.pt`, `.onnx`) + class list | `tools/` training | Jetson deploy, alerts (class names) | `models/*.md` model card | model card version |
+| C4 | Runtime config keys (`device`, `model`, `pipeline` incl. `feet_crop`, `ppe`, `training`, `server`, `timing`, `camera`, `render`) | `configs/default.yaml` | Jetson deploy | `configs/default.yaml` | key names (rename = breaking) |
+| C5 | Model weights (SH17 YOLOv8, SHA-256 pinned) + class names, incl. derived `no-safety-glasses`, `no-helmet`, `no-gloves`, `no-safety-boots` (boots only with a model that has `safety-boots`) | `configs/default.yaml` → `models/` | Jetson deploy, alerts (class names) | `models/sh17.md` model card | model card |
 | C6 | Python package `vision` (import path, Python 3.10) | `autoCV` | Jetson deploy | `pyproject.toml`, `uv.lock` | package version |
+
+Wire codec (`encode` / `decode`) lives in `vision/schema/wire.py`. **Non-Python consumers** should validate against `schema/*.schema.json` **and** the fixtures: JSON Schema can't express cross-field rules (rigid transform, box bounds, `pose_valid` consistency, `source`↔`cls_id`), the fixtures do.
+
+**Schema v2 (Step 3):** `Box.source` added; `cls_id` is null for derived boxes. Derived boxes are **per-frame observations**, not confirmed hazards — consumers apply their own N-frame confirmation. **Absence of a violation box does not mean compliant**: subjects too small/uncertain are not judged.
 
 **Breaking change** = removing/renaming a field, key, class name, or changing units/meaning. Breaking changes require: `schema_version` bump → fixtures updated → every consumer in [§7](#7-branch-registry) notified and its checks ([§5](#5-checks-required-in-other-branches)) run **before** merge.
 
@@ -120,12 +122,18 @@ uv run python -c "import sys; assert sys.version_info[:2]==(3,10)"
 - [ ] No macOS-only imports in `vision/`.
 - [ ] (Step 8+) `.pt` vs `.onnx` parity test passes.
 
-### G7 — iOS build (once `ios/` exists, Step 4+)
+### G7 — iOS build + Swift contract tests (Step 4+)
 
 ```bash
-xcodebuild -project ios/BOBCapture/BOBCapture.xcodeproj -scheme BOBCapture \
-  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+cd ios && xcodegen generate                       # .xcodeproj is generated from project.yml (gitignored)
+xcodebuild -project BOBCapture.xcodeproj -scheme BOBCapture \
+  -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project BOBCapture.xcodeproj -scheme BOBCapture \
+  -destination "id=$(xcrun simctl list devices available | grep -m1 'iPhone' | grep -oE '[0-9A-F-]{36}')" \
+  -derivedDataPath build test                     # Swift decodes the shared tests/fixtures
 ```
+
+If the schema changed: regenerate the Swift → Python golden recording (`TEST_RUNNER_BOB_GOLDEN_PATH=$PWD/../tests/fixtures/recordings/swift_golden.bobrec` on the test command) and re-run `uv run pytest tests/test_recording.py`.
 
 ### G8 — Docs and PR
 
@@ -174,7 +182,7 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 
 | Branch | Part | Owner | Interfaces provided | Interfaces consumed | Status |
 | ------ | ---- | ----- | ------------------- | ------------------- | ------ |
-| `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6 | — | Active · Step 1 done |
+| `autoCV` | Computer vision (YOLOv8 PPE + ARKit pose) | Humbertxx | C1, C2, C3, C4, C5, C6 | — | Active · Step 4 built (on-device check pending); Step 3b boots review in progress |
 | `main` | Integration target | — | — | all | **Not created yet** |
 | *(TBD)* | Safety supervisor / navigation | — | motor commands (out of CV scope) | C2, C3 | Not created |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |
