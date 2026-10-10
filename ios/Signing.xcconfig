@@ -1,0 +1,6 @@
+// Committed defaults. Personal values go in Signing.local.xcconfig (gitignored), e.g.:
+//   DEVELOPMENT_TEAM = ABCDE12345
+//   BOB_BUNDLE_PREFIX = com.yourname
+BOB_BUNDLE_PREFIX = dev.bob
+DEVELOPMENT_TEAM =
+#include? "Signing.local.xcconfig"
