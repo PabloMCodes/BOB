@@ -55,3 +55,12 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 - iOS needs `NSCameraUsageDescription`, `NSLocalNetworkUsageDescription`, and ATS `NSAllowsLocalNetworking` for `ws://`.
 - On the Jetson, torch comes from NVIDIA's JetPack wheels, not PyPI; TensorRT engines must be built on the Jetson.
 - Ultralytics is AGPL-3.0.
+
+## Team Git workflow
+
+This hackathon moves quickly with multiple teammates. Keep changes small and synchronize frequently to minimize merge conflicts.
+
+- **Before implementing every new feature:** check the current branch and working tree, preserve any existing work, then run `git pull --ff-only` from the branch's upstream before editing. Work on `autoCV` unless instructed otherwise. If local changes or divergent history prevent the pull, reconcile them without discarding teammates' work or rewriting published history before proceeding.
+- **After completing every new feature:** run the required tests, review the diff, commit only the feature's changes with a descriptive message, and push the commit to the branch's GitHub upstream. Routine feature pushes are authorized by this workflow; no additional confirmation is needed unless the user explicitly requests it.
+- If a push is rejected because teammates pushed first, fetch and integrate their changes, resolve conflicts, rerun the relevant tests, and retry the push. Never force-push. Report authentication or other blockers rather than claiming synchronization succeeded.
+- Merges into `main` still follow `integration.md` and use a PR; do not push directly to `main`.
