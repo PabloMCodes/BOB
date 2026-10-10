@@ -39,6 +39,7 @@
     },
     "EdgeStatus": {
       "additionalProperties": false,
+      "description": "Writer fields are null when no vision.server run is publishing (unknown, not zero).",
       "properties": {
         "disk_free_bytes": {
           "anyOf": [
@@ -71,26 +72,47 @@
           "type": "integer"
         },
         "writer_dropped": {
-          "minimum": 0,
-          "title": "Writer Dropped",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Writer Dropped"
         },
         "writer_errors": {
-          "minimum": 0,
-          "title": "Writer Errors",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Writer Errors"
         },
         "writer_queued": {
-          "minimum": 0,
-          "title": "Writer Queued",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Writer Queued"
         }
       },
       "required": [
-        "store_bytes",
-        "writer_queued",
-        "writer_dropped",
-        "writer_errors"
+        "store_bytes"
       ],
       "title": "EdgeStatus",
       "type": "object"

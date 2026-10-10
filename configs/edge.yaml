@@ -28,8 +28,8 @@ track:                         # plan §7 — proposed downsampling, to measure
   min_turn_deg: 2.0
   max_interval_s: 1.0
 
-api:                           # Step 4 edge API (dual-stack: "::" also accepts IPv4 on macOS/Linux)
-  host: "::"
+api:                           # Step 4 edge API
+  host: ""                     # "" = every interface, IPv4 and IPv6 sockets ("::" alone is IPv6-only)
   port: 8770
   token_env: BOB_EDGE_TOKEN    # pre-shared token (D8), read from .env — never printed
 

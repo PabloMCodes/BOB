@@ -74,11 +74,12 @@ class Capabilities(_Model):
 
 
 class EdgeStatus(_Model):
+    """Writer fields are null when no vision.server run is publishing (unknown, not zero)."""
     store_bytes: NonNegInt
     disk_free_bytes: Optional[NonNegInt] = None
-    writer_queued: NonNegInt
-    writer_dropped: NonNegInt
-    writer_errors: NonNegInt
+    writer_queued: Optional[NonNegInt] = None
+    writer_dropped: Optional[NonNegInt] = None
+    writer_errors: Optional[NonNegInt] = None
     last_error: Optional[str] = None
 
 

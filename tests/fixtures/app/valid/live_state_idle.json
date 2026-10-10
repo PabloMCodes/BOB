@@ -66,9 +66,9 @@
   "edge": {
     "store_bytes": 1048576,
     "disk_free_bytes": 50000000000,
-    "writer_queued": 0,
-    "writer_dropped": 0,
-    "writer_errors": 0,
+    "writer_queued": null,
+    "writer_dropped": null,
+    "writer_errors": null,
     "last_error": null
   }
 }

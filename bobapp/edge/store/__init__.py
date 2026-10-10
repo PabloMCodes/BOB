@@ -9,18 +9,20 @@ Layout:
   core.py       open (epoch, edge identity), transactions, appends, reads
   blobs.py      evidence blob files
   retention.py  acknowledgments, retention and disk-pressure pruning (gap records)
+  inspections.py  profile revisions + inspection lifecycle (one active at a time)
   live.py       single-row live snapshot + preview (latest wins, never a lane record)
 """
 
 from .blobs import BlobsMixin
 from .core import StoreCore
+from .inspections import ActiveInspection, CommandRefused, InspectionsMixin, NotFound
 from .live import LiveMixin
 from .retention import RetentionMixin
 from .types import RawRecord, StoreError, rover_clock
 
 
-class EdgeStore(LiveMixin, RetentionMixin, BlobsMixin, StoreCore):
+class EdgeStore(InspectionsMixin, LiveMixin, RetentionMixin, BlobsMixin, StoreCore):
     """One connection per thread/process. `path` is the store directory."""
 
 
-__all__ = ["EdgeStore", "RawRecord", "StoreError", "rover_clock"]
+__all__ = ["ActiveInspection", "CommandRefused", "EdgeStore", "NotFound", "RawRecord", "StoreError", "rover_clock"]
