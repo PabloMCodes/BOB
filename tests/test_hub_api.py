@@ -19,7 +19,7 @@ from websockets.asyncio.client import connect
 from bobapp.contracts import Delivery, Lane, Record, SourceMode
 from bobapp.edge.api.live import build_live_state
 from bobapp.edge.store import EdgeStore
-from bobapp.hub.api import HUB_ROUTES, create_hub_app
+from bobapp.hub.api import HUB_ROUTES, create_hub_app, route_table
 from bobapp.hub.config import load_hub_config
 from bobapp.hub.replica import Replica
 from bobapp.sample.builder import SESSION, build
@@ -77,8 +77,7 @@ def get(client, path, **params):
 
 
 def test_route_list_is_exact_and_has_no_motion_authority(hub):
-    routes = {(("WEBSOCKET",) if not getattr(r, "methods", None) else tuple(sorted(r.methods - {"HEAD"})))[0] + "|" + r.path
-              for r in hub["client"].app.routes if r.path.startswith("/v1")}
+    routes = {f"{m}|{p}" for m, p in route_table(hub["client"].app)}
     assert routes == {f"{m}|{p}" for m, p in HUB_ROUTES}
     forbidden = ("move", "drive", "motor", "arm", "stop", "fault", "clear", "throttle", "esp32", "ble", "speed")
     assert not [r for r in routes if any(w in r.lower() for w in forbidden)]
@@ -87,7 +86,8 @@ def test_route_list_is_exact_and_has_no_motion_authority(hub):
 def test_committed_openapi_matches_the_code():
     assert json.loads(OPENAPI_FILE.read_text()) == hub_openapi(), "run uv run python -m tools.export_hub_openapi"
     for path, methods in hub_openapi()["paths"].items():
-        assert "200" in methods["get"]["responses"], path
+        for method, spec in methods.items():
+            assert {"200", "201"} & set(spec["responses"]), f"{method} {path} documents no success response"
 
 
 def test_token_by_header_or_query(hub):
@@ -159,7 +159,7 @@ def test_evidence_states(hub):
     assert pending.status_code == 202 and pending.json()["status"] == "pending_sync"
     unknown = client.get(f"/v1/evidence/{'1' * 64}", headers=AUTH)
     assert unknown.status_code == 404 and unknown.json()["status"] == "missing"
-    assert client.get(f"/v1/preview/latest", params={"workspace": "sample"}, headers=AUTH).status_code == 200
+    assert client.get("/v1/preview/latest", params={"workspace": "sample"}, headers=AUTH).status_code == 200
 
 
 def test_disconnected_link_means_last_known_not_current(hub):

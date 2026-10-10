@@ -85,7 +85,8 @@ def cmd_serve(config: dict[str, Any]) -> None:
                    for name, (url, token_env, path) in edges.items()]
         await asyncio.gather(*(c.run(stop) for c in clients))
 
-    app = create_hub_app(config, token, {name: path for name, (_, _, path) in edges.items()}, background)
+    app = create_hub_app(config, token, {name: path for name, (_, _, path) in edges.items()}, background,
+                         edge=(http_base(config["edge_url"]), load_token(config["token_env"])))
     print(f"[hub] API on {host or 'all interfaces'}:{config['api']['port']} — workspaces {list(edges)}", flush=True)
     uvicorn.run(app, host=host, port=config["api"]["port"], log_level="warning", ws="websockets-sansio")
 

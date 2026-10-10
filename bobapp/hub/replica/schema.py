@@ -1,5 +1,6 @@
 """SQLite tables of the hub replica. Every row of rover data belongs to one workspace =
-(edge_id, store_epoch); workspaces are never merged."""
+(edge_id, store_epoch); workspaces are never merged. Worksite profiles are authored on the hub
+and are not rover data: they belong to no workspace."""
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS workspaces (ws_id INTEGER PRIMARY KEY AUTOINCREMENT, edge_id TEXT NOT NULL,
@@ -19,4 +20,6 @@ CREATE TABLE IF NOT EXISTS blobs (sha256 TEXT PRIMARY KEY, status TEXT NOT NULL,
 CREATE TABLE IF NOT EXISTS link (id INTEGER PRIMARY KEY CHECK (id = 1), json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS live (id INTEGER PRIMARY KEY CHECK (id = 1), json TEXT NOT NULL,
     hub_rx_wall_ns INTEGER NOT NULL, preview BLOB, preview_sha256 TEXT);
+CREATE TABLE IF NOT EXISTS worksite_revisions (worksite_id TEXT NOT NULL, revision INTEGER NOT NULL,
+    sha256 TEXT NOT NULL, json TEXT NOT NULL, saved_wall_ns INTEGER NOT NULL, PRIMARY KEY (worksite_id, revision));
 """

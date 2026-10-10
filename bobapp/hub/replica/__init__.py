@@ -5,15 +5,17 @@ Layout:
   core.py    workspaces, idempotent commits, contiguous cursors, gap rows, reads
   blobs.py   evidence copies: hash-verified, atomic, explicit status
   state.py   link state + latest live state and preview
+  profiles.py  worksite profile authoring: immutable revisions, optimistic concurrency
 """
 
 from .blobs import BlobsMixin
 from .core import PRUNED_BEFORE_SYNC, CommitResult, ReplicaCore, Workspace
+from .profiles import ProfilesMixin, RevisionConflict
 from .state import StateMixin
 
 
-class Replica(StateMixin, BlobsMixin, ReplicaCore):
+class Replica(ProfilesMixin, StateMixin, BlobsMixin, ReplicaCore):
     """One connection per thread."""
 
 
-__all__ = ["PRUNED_BEFORE_SYNC", "CommitResult", "Replica", "Workspace"]
+__all__ = ["PRUNED_BEFORE_SYNC", "CommitResult", "Replica", "RevisionConflict", "Workspace"]

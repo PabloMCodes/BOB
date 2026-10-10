@@ -4,6 +4,11 @@ Called on CV threads, every method only stamps a time and enqueues (bounded, nev
 runs); hashing, JPEG encoding, association of standalone poses and disk I/O happen on the writer thread.
 A frame that triggers evidence travels with its observation in one control item, so an observation is
 never stored before the evidence it references.
+
+Inspection binding (plan §4): the writer thread re-reads the rover's active inspection with every live
+flush (≤ `sync.live_interval_s`) and the frame consumer stamps each frame with the inspection known at
+that moment, so a frame is assessed under exactly one revision, and only one that was explicitly
+started. A run whose declared source mode differs from the inspection's is never assessed under it.
 """
 from __future__ import annotations
 
@@ -11,12 +16,13 @@ import hashlib
 import time
 from typing import Any, Optional
 
-from bobapp.contracts import SourceMode
-from bobapp.edge.store import EdgeStore
+from bobapp.contracts import NoticeBody, SourceMode
+from bobapp.edge.store import ActiveInspection, EdgeStore
 from bobapp.edge.writer import EdgeWriter
 from vision.association import associate
 from vision.schema import FramePacket, PosePacket, StreamHealth
 
+from .assessment import assess, unavailable_requirements
 from .evidence import EvidenceGate, encode_jpeg, evidence_body, evidence_triggers
 from .live import LiveSnapshot, render_preview
 from .observation import observation_body, rule_statuses
@@ -43,9 +49,11 @@ class EdgePublisher:
         self.sampler = TrackSampler(**edge_config["track"])           # writer thread only
         self.counts = {"observations": 0, "track_points": 0, "evidence": 0, "previews": 0}  # writer thread
         self._last_preview_ns = self._last_flush_ns = 0
+        self.inspection: Optional[ActiveInspection] = None  # written by the writer thread only
+        self._noticed: set = set()
         # The store connection belongs to the writer thread alone; announce the run (source mode,
-        # capabilities) through it before the first frame.
-        self.writer.submit_control(lambda store: self._flush())
+        # capabilities) and pick up an inspection that was already active through it.
+        self.writer.submit_control(lambda store: self._flush(run_start=True))
 
     # --- CV threads: stamp + enqueue only -------------------------------------------------------
     def on_admit(self, msg: FramePacket | PosePacket, gap_ns: Optional[int], rx_ns: int) -> None:
@@ -61,13 +69,13 @@ class EdgePublisher:
         """Frame consumer: one processed frame (C2) and its optional C7 record."""
         now = time.monotonic_ns()
         self.live.mark("results", now)
-        event = detection.event
+        event, inspection = detection.event, self.inspection  # the inspection known at processing time
         reason, keys = evidence_triggers(detection, scene)
         due = self.gate.admit(event.session_id, keys, event.iphone_frame_ts_ns) if keys else []
         if due:
-            self.writer.submit_control(lambda store: self._observe(store, detection, scene, (reason, due)))
+            self.writer.submit_control(lambda store: self._observe(store, detection, scene, (reason, due), inspection))
         else:
-            self.writer.submit_data(lambda store: self._observe(store, detection, scene, None))
+            self.writer.submit_data(lambda store: self._observe(store, detection, scene, None, inspection))
         if now - self._last_preview_ns >= self.preview_interval_ns:
             self._last_preview_ns = self._last_flush_ns = now
             self.writer.submit_data(lambda store: self._preview(detection))
@@ -98,7 +106,7 @@ class EdgePublisher:
             self.counts["track_points"] += 1
 
     def _observe(self, store: EdgeStore, detection: Any, scene: Optional[dict],
-                 evidence: Optional[tuple[Any, list[str]]]) -> None:
+                 evidence: Optional[tuple[Any, list[str]]], inspection: Optional[ActiveInspection] = None) -> None:
         pixels = hashlib.sha256(detection.image.tobytes()).hexdigest()
         evidence_sha = None
         if evidence is not None:
@@ -107,7 +115,10 @@ class EdgePublisher:
             store.append(evidence_body(detection, evidence_sha, len(data), pixels, *evidence),
                          self.source_mode, self.run_id)
             self.counts["evidence"] += 1
-        store.append(observation_body(detection, self.rules, pixels, evidence_sha, scene),
+        assessment = None
+        if inspection is not None and inspection.source_mode == self.source_mode:
+            assessment = assess(detection.verdicts, self.rules, inspection)
+        store.append(observation_body(detection, self.rules, pixels, evidence_sha, scene, assessment),
                      self.source_mode, self.run_id)
         self.counts["observations"] += 1
 
@@ -117,7 +128,32 @@ class EdgePublisher:
         self._flush(data, ref["sha256"])
         self.counts["previews"] += 1
 
-    def _flush(self, preview: Optional[bytes] = None, preview_sha256: Optional[str] = None) -> None:
+    def _notice(self, code: str, message: str, **details: Any) -> None:
+        self.store.append(NoticeBody(kind="notice", code=code, message=message, details=details),
+                          self.source_mode, self.run_id)
+
+    def _refresh_inspection(self, run_start: bool) -> None:
+        active = self.store.active_inspection()
+        if active is not None and active.inspection_id not in self._noticed:
+            self._noticed.add(active.inspection_id)
+            iid = str(active.inspection_id)
+            if run_start:
+                self._notice("source_restarted_during_inspection", "vision.server (re)started while this inspection "
+                             "was active; frames before this run's first observation were not assessed",
+                             inspection_id=iid, run_id=self.run_id)
+            if active.source_mode != self.source_mode:
+                self._notice("source_mode_mismatch", f"inspection is {active.source_mode.value} but this run is "
+                             f"{self.source_mode.value}: its frames are not assessed under the inspection",
+                             inspection_id=iid, run_id=self.run_id)
+            else:
+                for requirement, reason in unavailable_requirements(active.profile, self.rules).items():
+                    self._notice("assessment_unavailable", f"Required — assessment unavailable: {requirement} ({reason})",
+                                 inspection_id=iid, requirement=requirement, reason=reason)
+        self.inspection = active
+
+    def _flush(self, preview: Optional[bytes] = None, preview_sha256: Optional[str] = None,
+               run_start: bool = False) -> None:
+        self._refresh_inspection(run_start)
         stats = self.writer.stats()
         self.live.set("edge", {
             "store_bytes": self.store.size_bytes(), "disk_free_bytes": self.store.disk_free_bytes(),

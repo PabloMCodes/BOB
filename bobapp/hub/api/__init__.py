@@ -3,9 +3,10 @@
 Layout:
   app.py     FastAPI app, routes, auth (bearer header or ?token=), WS /v1/live
   views.py   replica -> response models
+  worksites.py  profile authoring + inspection start/end forwarded to the rover
   models/    response models by area (they generate the OpenAPI description)
 """
 
-from .app import HUB_ROUTES, create_hub_app
+from .app import HUB_ROUTES, create_hub_app, route_table
 
-__all__ = ["HUB_ROUTES", "create_hub_app"]
+__all__ = ["HUB_ROUTES", "create_hub_app", "route_table"]

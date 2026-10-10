@@ -1,5 +1,5 @@
 """Hub frontend API (C10): the only service a browser talks to. It reads the hub replicas; it never
-contacts the rover on a browser's behalf except to forward inspection commands (Step 7).
+contacts the rover on a browser's behalf except to forward inspection start/end (worksites.py).
 
 `?workspace=rover` (default) is the rover's data; `?workspace=sample` is the SAMPLE edge's, held in a
 separate database, so sample records can never enter rover counts or be drawn on a real pose.
@@ -23,17 +23,23 @@ from bobapp.edge.api.auth import token_ok
 
 from ..replica import Replica
 from . import views
+from .worksites import worksite_router
 from .models import AssessmentPage, InspectionPage, Page, StatusResponse, WorkspaceName
 
 HUB_ROUTES = {
     ("GET", "/v1/status"), ("WEBSOCKET", "/v1/live"), ("GET", "/v1/preview/latest"), ("GET", "/v1/observations"),
     ("GET", "/v1/incidents"), ("GET", "/v1/assessments"), ("GET", "/v1/inspections"), ("GET", "/v1/evidence/{sha256}"),
+    ("GET", "/v1/worksites"), ("GET", "/v1/worksites/{worksite_id}"), ("PUT", "/v1/worksites/{worksite_id}"),
+    ("GET", "/v1/worksites/{worksite_id}/revisions/{revision}"), ("POST", "/v1/inspections"),
+    ("POST", "/v1/inspections/{inspection_id}/end"),
 }
 Limit = Query(100, ge=1, le=1000)
 
 
 def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: dict[str, Path],
-                   background: Optional[Callable[[asyncio.Event], Any]] = None) -> FastAPI:
+                   background: Optional[Callable[[asyncio.Event], Any]] = None,
+                   edge: Optional[tuple[str, Optional[str]]] = None) -> FastAPI:
+    """`edge` = (rover edge API http base, its token) for inspection commands; None = no rover configured."""
     local = threading.local()
     stale_after_s = config["link"]["stale_after_s"]
     api = config["api"]
@@ -72,6 +78,7 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
             raise HTTPException(401, "missing or wrong token (Authorization: Bearer … or ?token=)")
 
     deps = [Depends(auth)]
+    app.include_router(worksite_router(lambda: replica("rover"), edge, deps))
 
     @app.get("/v1/status", response_model=StatusResponse, dependencies=deps)
     def get_status(workspace: WorkspaceName = "rover") -> StatusResponse:
@@ -161,6 +168,21 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
                 await ws.close()
 
     return app
+
+
+def route_table(app: FastAPI) -> set[tuple[str, str]]:
+    """(method, path) of every route, included routers flattened — for the route-list test."""
+    table: set[tuple[str, str]] = set()
+
+    def walk(routes: Any) -> None:
+        for route in routes:
+            if hasattr(route, "original_router"):
+                walk(route.original_router.routes)
+            elif route.path.startswith("/v1"):
+                methods = getattr(route, "methods", None)
+                table.update({(m, route.path) for m in methods - {"HEAD"}} if methods else {("WEBSOCKET", route.path)})
+    walk(app.routes)
+    return table
 
 
 def _summary(text: str) -> dict[str, Any]:

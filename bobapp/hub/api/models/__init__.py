@@ -9,12 +9,15 @@ Layout:
   status.py       StatusResponse, LaneStatus, WorkspaceInfo
   inspections.py  InspectionItem, InspectionPage
   assessments.py  AssessmentItem, AssessmentPage
+  worksites.py    profile authoring and inspection command bodies
 """
 
 from .assessments import AssessmentItem, AssessmentPage
 from .common import CLOCK_DOMAINS, Item, Page, WorkspaceName
 from .inspections import InspectionItem, InspectionPage
 from .status import LaneStatus, StatusResponse, WorkspaceInfo
+from .worksites import SaveProfileRequest, StartInspectionRequest, WorksiteList, WorksiteView
 
 __all__ = ["CLOCK_DOMAINS", "AssessmentItem", "AssessmentPage", "InspectionItem", "InspectionPage", "Item",
-           "LaneStatus", "Page", "StatusResponse", "WorkspaceInfo", "WorkspaceName"]
+           "LaneStatus", "Page", "SaveProfileRequest", "StartInspectionRequest", "StatusResponse", "WorkspaceInfo",
+           "WorkspaceName", "WorksiteList", "WorksiteView"]
