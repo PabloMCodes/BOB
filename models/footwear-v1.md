@@ -118,3 +118,10 @@ Training a new checkpoint does not automatically replace the pinned runtime arti
 copy the chosen checkpoint to `models/`, and update the hash and this card together.
 The existing live server was not restarted during this footwear handoff; another session owns
 the server integration. Boxes are rendered on the Mac, not returned to the iPhone preview.
+
+## ONNX export (Step 8)
+
+`models/footwear_yolov8n_v1.onnx` — written by `tools/export_onnx.py` (dynamic batch / H / W, opset 17, fp32), SHA-256 pinned in
+`configs/onnx.yaml`; re-exporting the same `.pt` gives the same bytes. Parity vs the `.pt` on 92 images
+(2 bundled + 90 live rover frames): every box matched, max |Δconf| 1.7e-6, PPE verdicts identical.
+TensorRT engines are built on the Jetson (`docs/jetson-handoff.md`).

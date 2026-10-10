@@ -207,10 +207,21 @@ class Pipeline:
         self, image: np.ndarray, regions: list[Region], classes: set[str], imgsz: int, conf: float,
         detector: Optional[Detector] = None,
     ) -> tuple[list[Box], float]:
-        """Run the model on each region; return boxes of `classes` in full-frame coordinates."""
+        """Run the model on each region; return boxes of `classes` in full-frame coordinates.
+
+        pipeline.crop.batch: all regions in one model call (Step 8; ~8-10 ms per person saved on MPS,
+        verified equal to the sequential pass by tests/test_handoff.py), else one call per region.
+        """
+        model = detector or self.detector
+        crops = [image[y0:y1, x0:x1] for x0, y0, x1, y1 in regions]
+        # Calling a detector is its contract; detect_batch is an optional speed-up (test fakes lack it).
+        detect_batch = getattr(model, "detect_batch", None) if self.crop.get("batch", False) else None
+        if detect_batch is not None:
+            results = detect_batch(crops, imgsz=imgsz, conf=conf)
+        else:
+            results = [model(c, imgsz=imgsz, conf=conf) for c in crops]
         boxes, elapsed = [], 0.0
-        for x0, y0, x1, y1 in regions:
-            result = (detector or self.detector)(image[y0:y1, x0:x1], imgsz=imgsz, conf=conf)
+        for (x0, y0, _, _), result in zip(regions, results):
             elapsed += result.inference_ms
             for b in result.boxes:
                 if normalize_class_name(b.cls_name) in classes:

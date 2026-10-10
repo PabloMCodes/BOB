@@ -56,6 +56,8 @@ uv add <pkg>                # add a dependency (updates uv.lock)
 | `tools/replay_detect.py` | Offline replay: every frame of a `.bobrec` → detections + on/off segment scoring; determinism check `box_mismatches` |
 | `vision/association.py` | Step 7: `associate()` validity rules (`session_mismatch` > `stale` > `tracking_not_normal` > `no_pose`) + thread-safe `Associator` (newest session, iPhone-clock gaps). Fed only through `FrameServer.admit()` |
 | `tools/pose_timeline.py` | Model-free Step 7 check of a recording: sessions + invalid-pose stretches with ARKit reasons |
+| `tools/export_onnx.py`, `tools/parity.py`, `configs/onnx.yaml` | Step 8: reproducible ONNX export (pins in `configs/onnx.yaml`, needs `uv run --group export`); parity of two pipeline variants (`batch` / `onnx` / `config --b-config`) = boxes + identical verdicts |
+| `tests/test_destructive.py`, `docs/jetson-handoff.md` | Failure suite (invariants I1–I6) and the Jetson team's install / engine build / acceptance J1–J6 |
 | `tools/replay_client.py` | `.bobrec` → server at original timing (`--speed`), fresh session per `--loops` pass. Use it (never a live phone) in tests |
 | `vision/recording.py`, `tools/inspect_recording.py` | `.bobrec` read/write (Step 5 replay reuses it); on-device recording acceptance report |
 | `tests/` | pytest. Network/phone-dependent tests use the replay client, never a live phone |
@@ -83,6 +85,8 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 - Never approximate a missing class with a look-alike (e.g. SH17 `shoes` for "not safety boots"): leave the rule inactive.
 - `data/eval/` is test data only — never pre-label, label or train on it.
 - Any new path that consumes phone messages (live, replay, tools) must go through `FrameServer.admit()` — never re-implement session / gap / drop logic, or live and offline pose validity will drift.
+- Any model / backend change (ONNX, TensorRT, batching, new weights) must pass `tools/parity.py` on real recordings: verdicts identical, not just mAP. Batching crops (`pipeline.crop.batch`) is the default — a detector only *needs* `__call__`; `detect_batch` is an optional speed-up.
+- On the Mac, ONNX must run on CPU (onnxruntime's CoreML provider crashes on the dynamic crop batch). Exports are reproducible only because `export_onnx` overwrites ultralytics' `date` metadata — don't export by hand.
 - Latency across devices is **relative** (`added = offset − min offset` per session): the iPhone clock is unrelated to the Mac's. Don't subtract `iphone_frame_ts_ns` from a Mac timestamp and call it network delay.
 - `vision.server` handles SIGTERM/SIGINT once and ignores repeats (`uv run` forwards signals) so `summary.json` and `stream.bobrec` are always complete.
 - Never `uv add roboflow`: it pulls `opencv-python-headless`, which clashes with our `opencv-python` (both provide `cv2`).

@@ -100,23 +100,38 @@ class Detector:
     def __call__(
         self, image_bgr: np.ndarray, imgsz: Optional[int] = None, conf: Optional[float] = None
     ) -> Detections:
-        if image_bgr.ndim != 3 or image_bgr.shape[2] != 3 or image_bgr.dtype != np.uint8:
-            raise ValueError(f"expected HxWx3 uint8 BGR image, got {image_bgr.shape} {image_bgr.dtype}")
-        height, width = image_bgr.shape[:2]
+        return self.detect_batch([image_bgr], imgsz, conf)[0]
 
+    def detect_batch(
+        self, images_bgr: list[np.ndarray], imgsz: Optional[int] = None, conf: Optional[float] = None
+    ) -> list[Detections]:
+        """One model call for several images (e.g. all head crops of a frame).
+
+        Each Detections.inference_ms is the batch's wall time split evenly, so summing them over the
+        batch gives the real cost.
+        """
+        if not images_bgr:
+            return []
+        for image in images_bgr:
+            if image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
+                raise ValueError(f"expected HxWx3 uint8 BGR image, got {image.shape} {image.dtype}")
         start = time.perf_counter()
-        result = self.model.predict(
-            image_bgr,
+        results = self.model.predict(
+            list(images_bgr),
             device=self.device,
             imgsz=imgsz or self.imgsz,
             conf=self.conf if conf is None else conf,
             verbose=False,
-        )[0]
-        xyxy = result.boxes.xyxy.cpu().numpy()  # .cpu() forces device sync before timing stops
-        cls_ids = result.boxes.cls.cpu().numpy().astype(int)
-        confs = result.boxes.conf.cpu().numpy()
-        inference_ms = (time.perf_counter() - start) * 1000.0
+        )
+        # .cpu() forces device sync before timing stops
+        raw = [(r.boxes.xyxy.cpu().numpy(), r.boxes.cls.cpu().numpy().astype(int), r.boxes.conf.cpu().numpy())
+               for r in results]
+        each_ms = (time.perf_counter() - start) * 1000.0 / len(images_bgr)
+        return [self._detections(image, *r, each_ms) for image, r in zip(images_bgr, raw)]
 
+    def _detections(self, image_bgr: np.ndarray, xyxy: np.ndarray, cls_ids: np.ndarray, confs: np.ndarray,
+                    inference_ms: float) -> Detections:
+        height, width = image_bgr.shape[:2]
         boxes = []
         for (x1, y1, x2, y2), cls_id, conf in zip(xyxy, cls_ids, confs):
             x1, x2 = np.clip([x1, x2], 0, width)

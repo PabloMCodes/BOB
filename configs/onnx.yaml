@@ -1,0 +1,10 @@
+# ONNX exports of the PPE models (Step 8), written by tools/export_onnx.py — do not hand-edit.
+# Dynamic batch/height/width, opset 17. The .onnx files are not in git (models/ is ignored):
+# hand them to the Jetson team as files; the loader refuses any whose SHA-256 differs.
+model:
+  weights: models/sh17_yolov8s.onnx
+  weights_url: null
+  weights_sha256: 8e3ae61e7db0db37ff7c5bb03c25d7c001a0e9b136deeb3cf3f752037c6a5c9e
+footwear_model:
+  weights: models/footwear_yolov8n_v1.onnx
+  weights_sha256: 6cfed99922b6b63693888fba49dac08840898e678020226c844fbecdff30f85e

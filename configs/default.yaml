@@ -33,6 +33,7 @@ pipeline:
     head_scale: 2.0       # crop side = this x the pass-1 head box's longest edge (preferred)
     head_fraction: 0.35   # fallback when pass 1 found no head: side = fraction of person height
     max_crops: 8
+    batch: true           # all crops of a frame in one model call (Step 8: identical boxes, ~40 % faster)
     classes: [face, glasses, head, helmet]  # pass-1 + pass-2 boxes merged, deduplicated per class
     nms_iou: 0.5
   feet_crop:
