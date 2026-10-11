@@ -13,7 +13,7 @@ from navigation.preview import Preview, Settings
 class StepSettings:
     seconds: float = 60.
     max_steps: int = 20
-    pulse_ms: int = 100
+    pulse_ms: int = 500
     settle_s: float = 1.
 
     def __post_init__(self):
@@ -22,8 +22,8 @@ class StepSettings:
             raise ValueError("seconds must be finite, in 1..120")
         if type(self.max_steps) is not int or not 1 <= self.max_steps <= 30:
             raise ValueError("max_steps must be an integer in 1..30")
-        if type(self.pulse_ms) is not int or not 100 <= self.pulse_ms <= 150:
-            raise ValueError("pulse_ms must be an integer in 100..150")
+        if type(self.pulse_ms) is not int or not 100 <= self.pulse_ms <= 500:
+            raise ValueError("pulse_ms must be an integer in 100..500")
         if (type(self.settle_s) not in (int, float) or not math.isfinite(self.settle_s)
                 or not 1 <= self.settle_s <= 10):
             raise ValueError("settle_s must be finite, in 1..10")
@@ -137,10 +137,14 @@ class StepSupervisor:
         self.attempts += 1
         return request
 
-    def allowed(self, request, now):
+    def allowed(self, request, now, *, continuing=False):
+        # Dispatch must use the original fresh-observation deadline. Monitoring
+        # an in-flight lease uses its bounded duration plus current observations;
+        # otherwise the dispatch deadline would truncate longer motor pulses.
         return bool(
             self.active is request and not self.fault and not self.paused
-            and now < request.deadline and now < self.started + self.settings.seconds
+            and now < request.deadline + (request.pulse_ms / 1000 if continuing else 0)
+            and now < self.started + self.settings.seconds
             and self.decision.state == "EXPLORE"
             and self.decision.session_id == request.session_id
             and self.decision.suggested_direction == request.direction

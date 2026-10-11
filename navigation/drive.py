@@ -72,7 +72,7 @@ class PulseLink:
 
     async def pulse(self, request, allowed, abort):
         targets = {"forward": (200, 0), "turn_left": (0, 500), "turn_right": (0, -500)}
-        if request.direction not in targets or not 100 <= request.pulse_ms <= 150:
+        if request.direction not in targets or not 100 <= request.pulse_ms <= 500:
             raise ValueError("unsupported step direction or lease")
 
         def permitted():

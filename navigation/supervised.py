@@ -168,7 +168,7 @@ async def run(args):
                     supervisor.pause(f"invalid camera input: {exc}")
                 mono, wall = time.monotonic(), time.time_ns()
                 decision = supervisor.update(event, health, wall, mono)
-                if supervisor.active and not supervisor.allowed(supervisor.active, mono):
+                if supervisor.active and not supervisor.allowed(supervisor.active, mono, continuing=True):
                     abort.set()
                 if supervisor.paused or supervisor.fault or decision.state in {"STOPPED", "FAULT", "COMPLETE"}:
                     abort.set()
@@ -220,7 +220,7 @@ def main():
     p.add_argument("--speech", action="store_true", help="speak confirmed Missing PPE while stopped")
     p.add_argument("--seconds", type=float, default=60.)
     p.add_argument("--steps", type=int, default=20)
-    p.add_argument("--pulse-ms", type=int, default=100)
+    p.add_argument("--pulse-ms", type=int, default=500)
     p.add_argument("--ble-name", default="BOB-ControllerBench")
     p.add_argument("--output-dir", type=Path)
     args = p.parse_args()

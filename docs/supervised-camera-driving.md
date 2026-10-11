@@ -127,8 +127,8 @@ service: terminal loss/SIGHUP is intended to end it.
 
 ## Actual limits and behavior
 
-- Default 100 ms **single** motion packet, then STOP/disarm and at least one
-  second stationary. `--pulse-ms` accepts only 100–150 ms. There is no continuous
+- Default 500 ms **single** motion packet, then STOP/disarm and at least one
+  second stationary. `--pulse-ms` accepts only 100–500 ms. There is no continuous
   lease refresher. The firmware expires the command independently after its
   receive-time lease if the host stalls. Actual wheel coast is unmeasured.
 - The existing working firmware maps the command to at most **85/255 PWM**.
@@ -186,3 +186,13 @@ step/stop/announcement boundary. Any richer firmware status requires an explicit
 protocol revision; do not silently reinterpret C11 v1. Encoders improve speed and
 odometry but do not detect obstacles or drop-offs. Hands-free exploration needs
 an evaluated obstacle-stop path and new physical acceptance tests.
+
+### Motor-duration check
+
+The operator confirmed manual 0.5-second forward and pivot trials work, while
+100–150 ms supervised pulses only twitch. The default is now one 500 ms lease,
+without refresh, followed by STOP and the existing settle interval. Startup
+authorization still expires within 350 ms; an already dispatched step is monitored
+against current camera observations throughout its bounded duration. Person, stale
+feed, operator stop and mission expiry can interrupt it. Verify first with wheels
+raised; floor travel and stopping distance remain unmeasured. No firmware update.

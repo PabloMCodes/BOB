@@ -23,7 +23,7 @@ from navigation.step import StepSettings, StepSupervisor
 from navigation.supervised import input_action
 
 
-def ready(settings=StepSettings()):
+def ready(settings=StepSettings(pulse_ms=100)):
     supervisor = StepSupervisor(settings, started=0.)
     for seq, t in enumerate((0., .15, .3)):
         supervisor.update(*observation(seq, t))
@@ -35,12 +35,38 @@ def ready(settings=StepSettings()):
 @pytest.mark.parametrize("field,value", [
     ("seconds", float("nan")), ("seconds", float("inf")), ("seconds", 121),
     ("seconds", True), ("max_steps", 0), ("max_steps", 31), ("max_steps", 1.5),
-    ("pulse_ms", 99), ("pulse_ms", 151), ("pulse_ms", True),
+    ("pulse_ms", 99), ("pulse_ms", 501), ("pulse_ms", True),
     ("settle_s", .9), ("settle_s", float("nan")),
 ])
 def test_limits_reject_unbounded_runs(field, value):
     with pytest.raises(ValueError):
         StepSettings(**{field: value})
+
+
+def test_half_second_step_keeps_monitoring_after_dispatch_deadline():
+    s = ready(StepSettings())
+    req = s.request()
+    assert req.pulse_ms == 500
+    s.update(*observation(3, .7))
+    assert not s.allowed(req, .7)  # Too late to dispatch a new packet.
+    assert s.allowed(req, .7, continuing=True)
+    s.update(*observation(4, .75, boxes=(PERSON,)))
+    assert not s.allowed(req, .75, continuing=True)
+
+
+def test_half_second_transport_sends_one_lease_and_stops():
+    async def scenario():
+        c = FakeClient()
+        link = PulseLink(c, clock=lambda: .3)
+        await link.stop()
+        req = ready(StepSettings()).request()
+        assert await link.pulse(req, lambda: True, asyncio.Event())
+        motions = [p for p in c.writes if p[1] == PacketType.MOTION]
+        assert len(motions) == 1
+        assert struct.unpack("<BBIIHhh", motions[0])[4] == 500
+        assert c.writes[-1][1] == PacketType.STOP
+        assert not c.armed and not c.moving
+    asyncio.run(scenario())
 
 
 def test_no_automatic_movement_and_no_queued_permission():
