@@ -91,6 +91,34 @@ rules were active and nine passes ran; two tan footwear boxes were labeled safet
 one shoes box was unverified. `zidane.jpg` produced no footwear verdict. This confirms wiring,
 not boot accuracy or certification. Other PPE detections remain provided by SH17.
 
+## Public download
+
+The weights stay out of git (`*.pt` / `*.onnx` are ignored). They are distributed as assets of the
+GitHub Release `footwear-v1` on `PabloMCodes/BOB`. **Status: not yet published** — update this line
+when the release exists.
+
+| File | SHA-256 |
+| --- | --- |
+| [`footwear_yolov8n_v1.pt`](https://github.com/PabloMCodes/BOB/releases/download/footwear-v1/footwear_yolov8n_v1.pt) | `6fc67e15cddd7619d3e92dd8f61c3bc711c699780f03074622e1dbab34ff269a` |
+| [`footwear_yolov8n_v1.onnx`](https://github.com/PabloMCodes/BOB/releases/download/footwear-v1/footwear_yolov8n_v1.onnx) | `6cfed99922b6b63693888fba49dac08840898e678020226c844fbecdff30f85e` |
+
+```bash
+mkdir -p models
+curl -L -o models/footwear_yolov8n_v1.pt \
+  https://github.com/PabloMCodes/BOB/releases/download/footwear-v1/footwear_yolov8n_v1.pt
+shasum -a 256 models/footwear_yolov8n_v1.pt   # must equal the pinned hash
+```
+
+`configs/footwear.yaml` and `configs/onnx.yaml` pin these hashes; the loader refuses a mismatched
+file. The footwear loader does not use `weights_url`, so download manually.
+
+**License of the released weights: CC BY-NC-SA 4.0, non-commercial.** They are a fine-tune of
+SH17 YOLOv8n weights (CC BY-NC-SA 4.0, [SH17](https://github.com/ahmadmughees/SH17dataset)) on
+the Roboflow Universe dataset [pe3-kxttv / footwear-w1uf6 v2](https://universe.roboflow.com/pe3-kxttv/footwear-w1uf6)
+(CC BY 4.0; credit its contributors). Running them uses Ultralytics (AGPL-3.0). The repository's
+top-level license does not apply to these weights. Experimental: the `safety-boots` class follows a
+visual convention and is not evidence of certified protective footwear.
+
 ## Reproduce and use
 
 Validation on the completed checkout: **250 Python tests passed** (one existing Torch
