@@ -3,7 +3,7 @@ import { workerPolicy } from './privacy.ts'
 export const serviceTerms = {
   title: 'Terms of Service.',
   organization: 'Building-site Observation Bot .INC',
-  contactEmail: 'thisisnotarealemail67@knighhacks.com',
+  contactEmail: 'thisisnotarealemail67@knighthacks.com',
   updated: 'October 11, 2026',
   updatedDate: '2026-10-11',
   introduction:
