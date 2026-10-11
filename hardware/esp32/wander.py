@@ -16,13 +16,14 @@ from hardware.controller_protocol import STATUS_UUID, decode_status, encode_tone
 from hardware.esp32.remote import Remote
 
 MAX_AGE_S = 1.0
-PULSE_S = 0.25
+PULSE_S = 0.35
 REST_S = 0.2
-TURN_S = 0.8
-INSPECT_S = 2.0
+TURN_S = 0.6
+INSPECT_S = 4.0
 TURN_AWAY_S = 4.0
-SPEECH_COOLDOWN_S = 30.0
-MISSION_S = 30.0
+SPEECH_COOLDOWN_S = 10.0
+RECOVERY_S = 2.0
+RECHECK_S = 3.0
 
 
 @dataclass(frozen=True)
@@ -112,12 +113,15 @@ def same_subject(a, b):
 class Wander:
     """Turn-led search -> brief inspection -> speech if confirmed -> turn away."""
     def __init__(self, rng=None):
-        self.turn = (rng or random.Random()).choice(['L', 'R'])
+        self.rng = rng or random.Random()
+        self.turn = self.rng.choice(['L', 'R'])
+        self.enabled = False
+        self.recover_since = None
         self.active = False
-        self.reason = 'Press R to start a 30-second search'
+        self.reason = 'Press R once to start; Space pauses'
         self.identity = None
         self.command = None
-        self.until = self.rest_until = self.deadline = 0.0
+        self.until = self.rest_until = 0.0
         self.used_key = self.latest_key = None
         self.key_since = 0.0
         self.phase = 'SEARCH'
@@ -130,11 +134,15 @@ class Wander:
         self.subject = None
         self.clear_since = None
 
-    def stop(self, reason):
+    def stop(self, reason, *, manual=True):
+        if manual:
+            self.enabled = False
+        self.recover_since = None
         self.active = False
         self.command = None
         self.phase = 'SEARCH'
-        self.reason = reason
+        self.reason = (reason if self.enabled or manual else
+                       reason.split(';')[0] + ' — press R to enable')
 
     def turn_away(self, now):
         self.phase = 'TURN_AWAY'
@@ -151,32 +159,40 @@ class Wander:
         if stop:
             self.stop('Paused — R to restart')
             return None
+        if start:
+            self.enabled = True
         if obs is None or now >= obs.expires:
-            self.stop('Waiting for fresh Jetson detections — R to restart')
+            self.stop('Waiting for feed; resumes after 2 healthy seconds', manual=False)
             return None
         fresh = obs.key != self.latest_key
         if fresh:
             self.latest_key, self.key_since = obs.key, now
         elif now - self.key_since >= MAX_AGE_S:
-            self.stop('Frozen detection feed — R to restart')
+            self.stop('Frozen feed; resumes after 2 healthy seconds', manual=False)
             return None
         if self.identity is not None and obs.identity != self.identity:
             self.identity = obs.identity
-            self.stop('Vision run/session changed — R to restart')
+            self.stop('Camera session changed; waiting for healthy feed', manual=False)
             return None
         self.identity = obs.identity
-        if start and not self.active:
+        if self.enabled and not self.active:
+            if self.recover_since is None:
+                self.recover_since = now
+            if not start and now - self.recover_since < RECOVERY_S:
+                self.reason = 'Feed recovering — resuming automatically'
+                return None
             self.active = True
-            self.deadline = now + MISSION_S
             self.rest_until = now
             self.used_key = None
             self.phase = 'SEARCH'
             self.turn_count = 0
         if not self.active:
             return None
-        if now >= self.deadline:
-            self.stop('30-second demo complete — R to restart')
-            return None
+        if self.phase == 'RECHECK':
+            if now < self.rest_until:
+                self.reason = 'Stopped briefly; automatically checking again'
+                return None
+            self.phase = 'SEARCH'
         if self.phase == 'SPEAK':
             if now < self.until:
                 self.reason = 'Missing PPE — stopped for announcement'
@@ -194,7 +210,10 @@ class Wander:
                 self.rest_until = now + REST_S
                 self.used_key = obs.key
             elif now >= self.until:
-                self.stop('Person still in view after turning — Space/R to retry')
+                self.command = None
+                self.phase = 'RECHECK'
+                self.rest_until = now + RECHECK_S
+                self.reason = 'View still occupied; pausing before automatic recheck'
                 return None
             else:
                 self.reason = 'Turning away; waiting for person to leave view'
@@ -218,11 +237,18 @@ class Wander:
                 self.subject = obs.subject
                 if obs.person and obs.photo_sha:
                     self.photo = obs
-                self.evidence = {rule: (self.evidence.get(rule, (0, now))[0] + 1,
-                                       self.evidence.get(rule, (0, now))[1])
-                                 for rule in obs.missing if obs.person}
-                confirmed = tuple(rule for rule, (count, since) in self.evidence.items()
-                                  if count >= 3 and now - since >= .4)
+                # A brief UNVERIFIED gap may occur between real positives. Keep at
+                # most 0.75 s of same-subject evidence; never announce on that gap.
+                self.evidence = {rule: evidence for rule, evidence in self.evidence.items()
+                                 if now - evidence[2] <= .75}
+                for rule in obs.missing if obs.person else ():
+                    count, since, _ = self.evidence.get(rule, (0, now, now))
+                    self.evidence[rule] = (count + 1, since, now)
+                confirmed = tuple(rule for rule in obs.missing if rule in self.evidence
+                                  and self.evidence[rule][0] >= 2
+                                  and now - self.evidence[rule][1] >= .25)
+            self.reason = ('Confirming Missing PPE: ' + ', '.join(obs.missing)
+                           if obs.missing else 'PPE unverified — waiting for clearer evidence')
             if confirmed or now - self.inspect_started >= INSPECT_S:
                 # Keep IDs/hashes pointing to the existing Jetson image and website record.
                 evidence = obs if confirmed else (self.photo or obs)
@@ -231,10 +257,12 @@ class Wander:
                                'source_mode': 'LIVE', 'delivery': 'realtime',
                                'confirmed_missing': list(confirmed),
                                'result': 'missing_ppe' if confirmed else 'unverified',
-                               'speech_requested': False}
+                               'speech_requested': False,
+                               'speech_reason': 'cooldown' if confirmed else 'unverified'}
                 if confirmed and now - self.last_speech >= SPEECH_COOLDOWN_S:
                     self.announce = True
                     self.report['speech_requested'] = True
+                    self.report['speech_reason'] = 'confirmed'
                     self.last_speech = now
                     self.phase = 'SPEAK'
                     self.until = now + 1.5
@@ -249,9 +277,11 @@ class Wander:
             self.rest_until = now + REST_S
             self.used_key = obs.key
         if now >= self.rest_until and obs.key != self.used_key:
-            # Same-direction turns explore the surrounding view instead of undoing each other.
-            self.command = self.turn if self.turn_count < 6 else 'F'
-            self.turn_count = self.turn_count + 1 if self.command != 'F' else 0
+            # Two short forward steps, then one turn; avoid endless in-place sweeps.
+            if self.turn_count == 0:
+                self.turn = self.rng.choice(['L', 'R'])
+            self.command = 'F' if self.turn_count < 2 else self.turn
+            self.turn_count = (self.turn_count + 1) % 3
             self.until = now + (TURN_S if self.command != 'F' else PULSE_S)
             self.reason = f'Scanning: {self.command}'
             return self.command
@@ -409,7 +439,7 @@ async def run(url):
                     screen.fill((22, 27, 34))
                     lines = ['Mac Bluetooth + existing Jetson detections',
                              'Cleared floor / supervised demo — no obstacle avoidance',
-                             'R: start search     Space: STOP     Esc: quit', wander.reason,
+                             'R: start once     Space: PAUSE     Esc: quit', wander.reason,
                              feed.error or last_result or 'Live Jetson feed connected',
                              (feed.current.ppe if feed.current else 'PPE: waiting')[:100]]
                     for i, line in enumerate(lines):

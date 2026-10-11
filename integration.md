@@ -249,3 +249,9 @@ new wire/config field, phone consumer, or second inference pipeline.
 Mac scan follow-up: existing per-subject verdicts and JPEG hashes drive repeated
 PPE confirmation and local inspection-log references. C11 TONE reuses speech-1;
 no website, frame identity, model result, API or wire schema changes.
+
+Mac continuous demo follow-up: one R enables ongoing operation; manual/focus
+pauses remain latched. Camera outages stop motion and require two seconds of
+healthy progressing observations before automatic recovery. Speech still uses
+existing derived verdicts; uncertain PPE never becomes a violation. No wire,
+model, firmware, or website changes.

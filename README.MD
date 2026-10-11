@@ -25,7 +25,7 @@ stops, Esc quits. It detects either existing BOB firmware; no camera, server,
 phone, or firmware upload is needed. Close other BLE clients first.
 [Remote setup](docs/remote-control.md). Point driving has been removed.
 
-**Mac wander demo:** turn-led scanning, brief person/PPE inspection, existing Missing PPE
+**Mac wander demo:** continuous roaming, brief person/PPE inspection, existing Missing PPE
 speech, archived frame references and bounded turn-away. Start/pause locally;
 no obstacle avoidance. [Two-terminal setup](docs/mac-wander-demo.md).
 

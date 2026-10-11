@@ -1,4 +1,4 @@
-# Mac wander-until-person demo
+# Mac continuous roaming and PPE demo
 
 The Mac owns Bluetooth, using the same `Remote` adapter as the working arrow-key
 remote. The iPhone still streams to the Jetson; the existing Mac hub relays its
@@ -25,34 +25,35 @@ validate the existing hub/detection contracts. It reads the existing
 `BOB_EDGE_TOKEN` from the environment or gitignored `.env`. Do not paste tokens
 into commands or chat. Hub connection settings remain in the existing hub config.
 
-Click the window and press **R** to start a 30-second search. The robot now
-makes six 800 ms turns in the same direction, with 200 ms observation gaps, then
-one 250 ms forward step and repeats. Speed is unchanged. This favors looking
-around rather than driving straight or undoing each turn. These are timed turns,
-not a measured 360° sweep: there is no wheel/heading feedback in this demo.
+Click the window and press **R once**. It keeps operating until you pause or
+quit; there is no 30-second run timeout. The pattern is two 350 ms forward steps,
+then one 600 ms randomly chosen left/right turn, with 200 ms observation gaps.
+Speed is unchanged. This replaces repeated in-place sweeps with more forward
+travel. There is no measured angle, obstacle avoidance or coverage guarantee.
 
 A person must be a full `person` class box at confidence >= 0.75, at least 2% of
 image area and 20% of image height to interrupt scanning. Isolated head/face,
 small or low-confidence detections no longer cause repeated stops. These are
 inspection filters, not obstacle clearance or a fix for detector accuracy.
 
-Inspection lasts at most two seconds. A missing-PPE announcement requires the
-same rule on three distinct frames spanning at least 0.4 seconds, associated with
+Inspection lasts at most four seconds. A missing-PPE announcement requires the
+same rule on two distinct positive frames spanning at least 0.25 seconds, associated with
 a continuously overlapping person box. Only one visible person is eligible for
 speech; per-subject derived violation verdicts are used, not the frame summary.
-Unverified results never become a pass or violation. Three consistent model
-mistakes can still produce a false warning.
+Evidence tolerates at most a 0.75-second gap for the same person; an unverified
+frame never triggers speech or counts as positive. Unverified results never
+become a pass or violation. Repeated model mistakes can still cause a warning.
 
 Confirmed missing PPE plays the existing **Missing PPE** clip on the working
 ControllerBench speech-1 firmware while stopped. Allow 1.5 seconds after BLE
-acknowledgement for the clip, with a global 30-second speech cooldown. Original
+acknowledgement for the clip, with a global 10-second speech cooldown. Original
 MotorTest firmware cannot speak; it logs unsupported instead of playing a beep.
 
 After inspection (including unverified results), the robot turns away in place
 for at least one second, until the person has been absent for 0.4 seconds, then
 resumes scanning automatically. A persistent person detection does not interrupt
-this bounded turn. If the view has not cleared after four seconds, it pauses for
-the operator. This does not identify or track a person across visits.
+this bounded turn. If the view has not cleared after four seconds, it stops for three seconds,
+then automatically inspects again. It does not keep turning indefinitely. This does not identify or track a person across visits.
 
 The existing Jetson archive already saves processed-frame JPEGs and syncs them
 to the website's full frame gallery. The demo reuses those photos; it does not
@@ -63,9 +64,12 @@ means saved on Jetson, not confirmed downloaded by the website. If no hash is
 present, the UI/log says no saved photo; it never claims capture succeeded.
 Use the full frames view rather than the selected-site-photo filter for PPE frames.
 
-**Space/S** stops; **Esc/Q** quits. Losing window focus pauses. Feed loss, stale or
-frozen detections, session/run changes, and the time limit stop the search; none
-resume automatically. A restored feed needs another R press. BLE errors exit.
+**Space/S** pauses until another R press; **Esc/Q** quits. Losing window focus
+also pauses until R. Camera loss, stale/frozen detections and session changes
+stop movement immediately. Once enabled, the demo automatically resumes after
+two seconds of healthy, advancing detections. Explicit pauses are never undone
+by an idle timer or feed recovery. BLE errors still exit instead of reconnecting
+and moving unattended.
 
 This is a supervised demonstration on a cleared, level floor with a reachable
 motor power switch. It has no obstacle/drop-off sensing. An empty person-detection
@@ -146,3 +150,12 @@ actual pygame loop passed with fake BLE. Full suite **752 passed, 4 optional
 skips**, 92.58 s. The preceding run hit the existing server-shutdown timing
 assertion; the full rerun passed. No physical motion or speech was triggered
 by these checks.
+
+Continuous-operation validation (2026-10-11): **38 wander tests + 8 remote
+tests passed**; pygame-loop simulation passes. Full suite **758 passed,
+4 optional skips**, 81.34 s, after integrating current main. A subsequent
+main update changed website speaker wording only. Tests cover ongoing operation
+past 30 seconds, feed recovery, frozen-feed blocking, persistent manual pauses,
+automatic rechecks, short uncertain gaps, stale evidence and 10-second speech
+cooldown. Latest 30 queried Jetson observations reported only UNVERIFIED PPE;
+this change does not relabel them as violations. Physical acceptance pending.
