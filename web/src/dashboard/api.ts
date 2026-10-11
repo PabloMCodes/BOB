@@ -34,22 +34,22 @@ export async function request<T>(connection: Connection, path: string, signal?: 
   const controller = signal ? null : new AbortController()
   const timeout = controller ? setTimeout(() => controller.abort(), 6000) : null
   try {
-  const response = await fetch(`${hubBase(connection.url)}${path}`, {
-    signal: signal || controller?.signal, method, credentials: 'omit', cache: 'no-store',
-    headers: { ...(connection.token ? { Authorization: `Bearer ${connection.token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  })
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    const detail = typeof payload.detail === 'string' ? payload.detail : ''
-    const message = response.status === 401 ? 'Hub authentication required. Enter your hub token in Connection settings.' :
-      response.status === 409 ? `Conflict: ${detail || 'the worksite revision or active inspection changed'}. Refresh before trying again.` :
-      response.status === 503 ? detail || 'Rover unavailable. The inspection command could not be completed.' :
-      response.status === 404 ? 'This endpoint or workspace is unavailable. Check that the hub is running the current backend.' :
-      detail || `Hub request failed (HTTP ${response.status}).`
-    throw new HubError(response.status, message)
-  }
-  return response.json() as Promise<T>
+    const response = await fetch(`${hubBase(connection.url)}${path}`, {
+      signal: signal || controller?.signal, method, credentials: 'omit', cache: 'no-store',
+      headers: { ...(connection.token ? { Authorization: `Bearer ${connection.token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      const detail = typeof payload.detail === 'string' ? payload.detail : ''
+      const message = response.status === 401 ? 'Hub authentication required. Enter your hub token in Connection settings.' :
+        response.status === 409 ? `Conflict: ${detail || 'the worksite revision or active inspection changed'}. Refresh before trying again.` :
+        response.status === 503 ? detail || 'Rover unavailable. The inspection command could not be completed.' :
+        response.status === 404 ? 'This endpoint or workspace is unavailable. Check that the hub is running the current backend.' :
+        detail || `Hub request failed (HTTP ${response.status}).`
+      throw new HubError(response.status, message)
+    }
+    return await response.json() as T
   } finally { if (timeout) clearTimeout(timeout) }
 }
 

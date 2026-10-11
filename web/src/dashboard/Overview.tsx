@@ -55,7 +55,7 @@ export function Preview({ connection, status, stale }: { connection: Connection;
     return () => { stopped = true; controller.abort(); clearTimeout(timeout); if (objectUrl) URL.revokeObjectURL(objectUrl) }
   }, [connection, ref?.sha256])
   return <section className="dashboard-panel dashboard-preview" aria-label="Camera preview">
-    <div className="dashboard-panel-heading"><h2 className="eyebrow">Camera preview</h2><span className="status-tag">{connection.workspace === 'sample' ? 'SAMPLE' : stale || !status?.live_is_current || (status?.live?.freshness.video.age_ms ?? Infinity) > 3000 ? 'Last known' : 'Current stream'}</span></div>
+    <div className="dashboard-panel-heading"><h2 className="eyebrow">Camera preview</h2><span className="status-tag">{connection.workspace === 'sample' ? 'SAMPLE' : stale || !status?.live_is_current || (status?.live?.freshness.video.age_ms ?? Infinity) + (status?.live_received_age_ms ?? Infinity) >= 3000 ? 'Last known' : 'Current stream'}</span></div>
     <div className="dashboard-preview-image">{url ? <img src={url} alt={connection.workspace === 'sample' ? 'Clearly labelled sample preview' : 'Latest annotated phone camera frame'} /> : <p>{note}</p>}</div>
     <p className="dashboard-note">{ref ? `Frame ${ref.seq_id} · ${ref.event_id.slice(0, 8)}` : 'Preview frames come from the vision publisher.'} {note && url ? note : ''}</p>
   </section>
