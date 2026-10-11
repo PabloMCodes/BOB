@@ -6,7 +6,7 @@ import './frames.css'
 
 type Frame = Item<Observation & { event: Observation['event'] & {
   jetson_receive_ts_ns: number; image_size: { width: number; height: number }
-} }> & { image_status: 'available' | 'pending_sync' | 'missing' | 'hash_mismatch' }
+} }> & { image_status: 'available' | 'pending_sync' | 'missing' | 'hash_mismatch'; site_photo?: { reason: string } | null }
 type FramePage = { workspace: Connection['workspace']; items: Frame[]; next_after: number }
 
 function FrameImage({ connection, frame }: { connection: Connection; frame: Frame }) {
@@ -52,9 +52,10 @@ export function Frames({ connection, status, stale, selected }: {
   connection: Connection; status: Status | null; stale: boolean; selected: string
 }) {
   const [recovered, setRecovered] = useState(true)
+  const [siteOnly, setSiteOnly] = useState(false)
   const [before, setBefore] = useState<number | null>(null)
   const load = useCallback((signal: AbortSignal) => scoped<FramePage>(connection,
-    `/v1/frames?limit=12${recovered ? '&delivery=backfilled' : ''}${before ? `&before=${before}` : ''}${selected ? `&session_id=${encodeURIComponent(selected)}` : ''}`, signal), [connection, recovered, before, selected])
+    `/v1/frames?limit=12${siteOnly ? '&site_only=true' : recovered ? '&delivery=backfilled' : ''}${before ? `&before=${before}` : ''}${selected ? `&session_id=${encodeURIComponent(selected)}` : ''}`, signal), [connection, recovered, siteOnly, before, selected])
   const state = usePoll(load, 1000)
   const frames = state.data?.items || []
   const counts = status?.frames
@@ -65,14 +66,15 @@ export function Frames({ connection, status, stale, selected }: {
     <p className="dashboard-note">{counts ? `${counts.available} / ${counts.total} saved frames on this laptop · ${counts.backfilled} history frames received through catch-up` : 'Waiting for saved-frame counts.'}{stale ? ' · Last known counts' : ''}</p>
     {lost && <p className="twin-notice">Previously received frames remain visible. Saved frames will resume transferring when the connection returns.</p>}
     {!!counts && counts.missing + counts.hash_mismatch > 0 && <p className="twin-notice">{counts.missing + counts.hash_mismatch} frame image(s) unavailable. These are not counted as downloaded.</p>}
-    <div className="dashboard-actions"><button className="cursor-target dashboard-button" aria-pressed={recovered} onClick={() => { setRecovered(true); setBefore(null) }}>Recovered history</button><button className="cursor-target dashboard-button" aria-pressed={!recovered} onClick={() => { setRecovered(false); setBefore(null) }}>All saved frames</button>{before != null && <button className="cursor-target dashboard-button" onClick={() => setBefore(null)}>Return to newest</button>}</div>
+    <div className="dashboard-actions"><button className="cursor-target dashboard-button" aria-pressed={recovered && !siteOnly} onClick={() => { setSiteOnly(false); setRecovered(true); setBefore(null) }}>Recovered history</button><button className="cursor-target dashboard-button" aria-pressed={!recovered && !siteOnly} onClick={() => { setSiteOnly(false); setRecovered(false); setBefore(null) }}>All saved frames</button><button className="cursor-target dashboard-button" aria-pressed={siteOnly} onClick={() => { setSiteOnly(true); setBefore(null) }}>Site photos</button>{before != null && <button className="cursor-target dashboard-button" onClick={() => setBefore(null)}>Return to newest</button>}</div>
+    {siteOnly && <p className="dashboard-note">Selected general site views, including scenes without people. Some overlap is intentional. Selection does not establish hazards or complete coverage.</p>}
     {state.error && <p className="twin-notice" role="alert">{state.error}</p>}
     <div className="dashboard-frames">{[...frames].reverse().map((frame) => <article key={`${frame.cursor}-${frame.record.body.event.event_id}`} className="dashboard-frame">
       <FrameImage connection={connection} frame={frame} />
-      <div><span className="status-tag">{frame.record.source_mode} · {frame.delivery === 'backfilled' ? 'Recovered history' : 'Streamed'}</span><strong>Frame {frame.record.body.event.seq_id}</strong>
+      <div><span className="status-tag">{frame.record.source_mode} · {frame.delivery === 'backfilled' ? 'Recovered history' : 'Streamed'}</span><strong>Frame {frame.record.body.event.seq_id}</strong>{frame.site_photo && <span className="status-tag">Site photo</span>}
         <p>Captured on BOB: {new Date(frame.record.body.event.jetson_receive_ts_ns / 1e6).toLocaleTimeString()}</p><p>Received on laptop: {new Date(frame.hub_rx_wall_ns / 1e6).toLocaleTimeString()}</p><small>{frame.record.body.event.model_id} · {frame.record.body.event.boxes.length} boxes · session {frame.record.body.event.session_id.slice(0, 8)}</small></div>
     </article>)}</div>
-    {!frames.length && <p className="dashboard-note">{recovered ? 'No recovered frames in this selection yet. They appear as saved history arrives after connection.' : 'No saved model frames in this selection yet.'}</p>}
+    {!frames.length && <p className="dashboard-note">{siteOnly ? 'No site photos in this selection yet. New clear views are selected as BOB explores.' : recovered ? 'No recovered frames in this selection yet. They appear as saved history arrives after connection.' : 'No saved model frames in this selection yet.'}</p>}
     <button className="cursor-target dashboard-button" disabled={frames.length < 12} onClick={() => setBefore(frames[0]?.cursor || null)}>Older frames</button>
     <p className="dashboard-note">These are recorded observations, not current conditions. Capture and receipt times use their respective devices’ clocks. Boxes belong to each image’s original model result.</p>
   </section>

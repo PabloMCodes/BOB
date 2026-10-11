@@ -47,7 +47,7 @@ try {
     }
     let body = { workspace, items: [], next_after: 0 }
     if (url.pathname === '/v1/status') body = { workspace, link: { state: 'CONNECTED' }, source_mode: 'SAMPLE', live: null, live_is_current: true, lanes: {}, gaps: [], evidence: {}, frames: { total: frames.length, available: frames.length, pending_sync: 0, missing: 0, hash_mismatch: 0, backfilled: frames.length } }
-    if (url.pathname === '/v1/frames') body = { workspace, items: workspace === 'sample' ? frames : [], next_after: frames.length }
+    if (url.pathname === '/v1/frames') body = { workspace, items: workspace === 'sample' ? (url.searchParams.get('site_only') === 'true' ? frames.slice(0, 1).map(f => ({ ...f, site_photo: { reason: 'first_view' } })) : frames) : [], next_after: frames.length }
     if (url.pathname === '/v1/twin/sessions') body = { workspace, sessions: [] }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body), headers: cors })
   })
@@ -67,12 +67,17 @@ try {
   await context.setOffline(false)
   await page.waitForFunction(() => document.querySelectorAll('.dashboard-frame').length === 2)
   await page.waitForFunction(() => [...document.querySelectorAll('.dashboard-frame img')].every((i) => i.complete && i.naturalWidth > 0))
+  await page.getByRole('button', { name: 'Site photos', exact: true }).click()
+  await page.waitForFunction(() => document.querySelectorAll('.dashboard-frame').length === 1)
+  await page.getByText('Selected general site views', { exact: false }).waitFor()
+  await page.getByRole('button', { name: 'All saved frames', exact: true }).click()
+  await page.waitForFunction(() => document.querySelectorAll('.dashboard-frame').length === 2)
   await sleep(1600)
   assert.equal(await page.locator('.dashboard-frame').count(), 2)
   assert.deepEqual(errors, [])
   await mkdir('/tmp/bob-offline-browser', { recursive: true })
   await page.getByRole('region', { name: 'Saved camera frames' }).screenshot({ path: '/tmp/bob-offline-browser/recovered-frames.png' })
-  console.log('Browser acceptance passed: cached frame stayed visible offline; new SAMPLE history appeared automatically after reconnect; no duplicates or page errors.')
+  console.log('Browser acceptance passed: Site photos filter and All saved frames toggled correctly; cached frame stayed visible offline; new SAMPLE history appeared automatically after reconnect; no duplicates or page errors.')
 } finally {
   await browser?.close()
   server.kill('SIGTERM')
