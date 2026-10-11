@@ -139,7 +139,7 @@ def test_bad_segments_rejected(text):
 @pytest.mark.parametrize("zones", [False, True])
 def test_server_detect_end_to_end(tmp_path, recording, zones):
     """Replay -> vision.server --detect: one valid C2 event per processed frame + latency summary."""
-    from tests.test_server import _free_port, run as run_async
+    from tests.test_server import _free_port, run as run_async, wait_for
 
     port = _free_port()
     proc = subprocess.Popen(
@@ -153,11 +153,15 @@ def test_server_detect_end_to_end(tmp_path, recording, zones):
             if "listening" in line:
                 break
         run_async(replay(recording[:3], f"ws://127.0.0.1:{port}", speed=1.0))
-        deadline = 0
-        while deadline < 100 and len((tmp_path / "detections.jsonl").read_text().splitlines()) < 2:
-            import time
-            time.sleep(0.05)
-            deadline += 1
+        # C2 is flushed before zone processing and its asynchronous writer. Wait for
+        # every expected output before SIGTERM, which can interrupt a frame in progress.
+        outputs = [tmp_path / "detections.jsonl"]
+        if zones:
+            outputs.append(tmp_path / "scene_findings.jsonl")
+        assert wait_for(
+            lambda: all(len(path.read_text().splitlines()) >= 2 for path in outputs),
+            timeout=5.0,
+        ), "server did not finish the expected frame outputs"
         proc.send_signal(signal.SIGTERM)
         assert proc.wait(timeout=10) == 0
     finally:

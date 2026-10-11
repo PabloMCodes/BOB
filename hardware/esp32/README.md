@@ -3,6 +3,10 @@
 Standalone hardware test requested alongside the CV work. It does not consume
 computer vision detections or control the rover autonomously.
 
+The proposed off-board navigation architecture, initial BLE choice, and
+encoder-ready controller boundary are recorded in
+[the autonomous-driving context](../../docs/plans/autonomous-driving-context.md).
+
 See [CONTEXT.md](../../CONTEXT.md) for the full hardware session handoff,
 decisions, observed failures, and the ground connection fix.
 
@@ -107,3 +111,56 @@ The BLE service and command UUIDs match the previous WALL-Y sketch.
 References: [Espressif I2S API](https://docs.espressif.com/projects/arduino-esp32/en/latest/api/i2s.html),
 [ESP32 GPIO restrictions](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/gpio.html),
 [MAX98357A pinout](https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/pinouts).
+
+## Autonomous controller bench (experimental)
+
+Keep `BOB_MotorTest` as the known-good recovery sketch. After its motor directions,
+one-second timeout, disconnect stop, explicit stop and tone pass with the reorganized
+wiring, upload `BOB_ControllerBench/BOB_ControllerBench.ino`. It uses the same pins
+and motor polarity but advertises **BOB-ControllerBench**. This code has not yet been
+compiled in Arduino IDE or exercised on the physical ESP32.
+
+The controller-bench protocol uses binary packets that fit within the default
+20-byte BLE ATT payload. Its source of truth is `hardware/controller_protocol.py`:
+
+| Packet | Behavior |
+| --- | --- |
+| `STOP` | Always neutralize outputs and disarm; no session needed |
+| `ARM(session)` | Arm only for the ESP32 session reported after this connection |
+| `MOTION(session, sequence, lease, linear, angular)` | Accept a fresh, in-range request while armed |
+| `TONE(session)` | Stop and disarm, then request the five-second speaker tone |
+| status | Report state, fault, session, last sequence and commanded PWM |
+
+The ESP32 generates a new random session on every connection. Motion sequences must
+strictly increase. A motion lease is 100–500 ms and begins when the ESP32 receives
+the packet, so no Jetson/ESP32 clock synchronization is assumed. Expiry, malformed
+packets, session mismatch, replay, limits, and disconnect all neutralize the outputs
+and disarm. A new motion packet cannot clear a fault; the operator must explicitly arm.
+Status says encoder feedback is unavailable. Requested mm/s and mrad/s are bounded
+motion intents mapped to open-loop PWM and are not measured physical velocities.
+
+The bench sketch limits output to `85/255`, approximately digit `3` in the original
+sketch. Its client sends only bounded manual trials of at most two seconds and sends
+`STOP` after every trial. With the wheels raised, run from the repository root:
+
+```bash
+python3 -m venv /tmp/bob-ble-env
+source /tmp/bob-ble-env/bin/activate
+python -m pip install -r hardware/esp32/requirements.txt
+python -m hardware.esp32.bob_controller
+```
+
+Use `STATUS`, then `ARM`, then `F`, `B`, `L`, or `R`. A duration may follow, such as
+`F 0.5`; the default is 0.5 seconds. Each completed trial disarms, so enter `ARM`
+again before the next. `STOP` neutralizes immediately, `TONE` tests the speaker, and
+`Q` stops before disconnecting. Also test process interruption and ESP32 power-cycle;
+neither should cause startup or resumed movement.
+
+Python verification:
+
+```bash
+.venv/bin/python -m pytest -q tests/test_controller_protocol.py tests/test_control_sim.py
+```
+
+These tests validate host packet encoding and the controller-state simulation. They
+do not execute the Arduino firmware or measure physical stopping time.

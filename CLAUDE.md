@@ -15,6 +15,7 @@ This file supplies durable product context and Claude's collaboration workflow. 
 | [AGENTS.md](AGENTS.md) | CV architecture, schema discipline, data handling, platform constraints and team workflow |
 | [integration.md](integration.md) | Interface contracts, ownership, branch registry and integration gates |
 | [Dashboard/Twin plan](docs/plans/dashboard-twin-integration-plan.md) | Confirmed product decisions, planned application boundaries and acceptance criteria |
+| [Autonomous-driving context](docs/plans/autonomous-driving-context.md) | Planned exploration behavior, off-board BLE prototype, safety boundary and encoder-ready interfaces |
 | [SH17 model card](models/sh17.md), [footwear model card](models/footwear-v1.md) | Model provenance, class meanings, limitations, licenses and evaluation evidence |
 | [Runtime defaults](configs/default.yaml), [footwear override](configs/footwear.yaml) | Actual configuration and optional specialist activation |
 
@@ -28,7 +29,7 @@ Do not copy milestone counts, latency measurements or training scores into this 
 - Before a new milestone, establish the intended outcome, affected components, constraints and test method. Ask focused questions for material knowledge gaps. Reuse answers already given; do not repeatedly ask about settled decisions or require approval for each routine edit within an authorized task.
 - Distinguish user-confirmed decisions, implementation recommendations and unresolved assumptions. Explain material tradeoffs in plain language. Do not invent deadlines, team capacity, hardware readiness or acceptance thresholds.
 - Unless the user requests otherwise, make authorized implementation demonstrable: a reproducible command or scenario, understandable output, honest empty/error states and a clear path to inspect results. Prefer a small complete demonstration over unrelated feature expansion.
-- Check the branch and working tree, and follow the synchronization workflow in AGENTS.md before implementation. Work on `autoCV` unless instructed otherwise. Preserve other sessions' changes; coordinate or isolate overlapping work instead of overwriting it. Never restart a teammate-owned server merely to demonstrate a documentation change.
+- Check the branch and working tree, and follow the synchronization workflow in AGENTS.md before implementation. Start feature branches from `main` unless instructed otherwise. Preserve other sessions' changes; coordinate or isolate overlapping work instead of overwriting it. Never restart a teammate-owned server merely to demonstrate a documentation change.
 - Commit and push only when requested. Explain what changed, how it was checked, and what remains unvalidated. A successful build is not proof of correct physical-device behavior.
 
 ## Whole-project scope and branch boundaries
@@ -38,7 +39,7 @@ The intended progression is **CV dashboard first, evidence and inspection workfl
 | Responsibility | Boundary |
 | --- | --- |
 | iPhone capture | Swift captures and streams image, timestamp, session and tracking/pose metadata. Python owns detection and inspection logic. A phone preview is not evidence that server inference or returned boxes are enabled. |
-| CV on `autoCV` | Python ingestion, shared inference pipeline, model/derived boxes, per-subject verdicts, frame/pose association, recording/replay and observation outputs. The Mac is the development stand-in for the Jetson. |
+| CV on `main` | Python ingestion, shared inference pipeline, model/derived boxes, per-subject verdicts, frame/pose association, recording/replay and observation outputs. The Mac is the development stand-in for the Jetson. |
 | Dashboard and inspection application | Planned consumers of CV observations: worksite profiles, inspection lifecycle, presentation, incident confirmation and evidence. Establish ownership and contracts before implementing them; the CV branch context alone does not authorize these features. |
 | Read-only Twin | Presents session-local position, heading, path and appropriately located observations. No motion authority or actuator endpoints. |
 | Future hardware/control | Navigation, motor commands, safety supervisor, interlocks and ESP32 control belong to their own workstream. CV observations and ARKit pose do not establish that movement is safe. |

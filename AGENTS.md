@@ -1,4 +1,4 @@
-# AGENTS.md — BOB Computer Vision (`autoCV` branch)
+# AGENTS.md — BOB Computer Vision and Rover Platform (`main` branch)
 
 Context and rules for any coding agent working in this repo. Read this fully before changing code.
 
@@ -103,7 +103,7 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 
 This hackathon moves quickly with multiple teammates. Keep changes small and synchronize frequently to minimize merge conflicts.
 
-- **Before implementing every new feature:** check the current branch and working tree, preserve any existing work, then run `git pull --ff-only` from the branch's upstream before editing. Work on `autoCV` unless instructed otherwise. If local changes or divergent history prevent the pull, reconcile them without discarding teammates' work or rewriting published history before proceeding.
+- **Before implementing every new feature:** check the current branch and working tree, preserve any existing work, then run `git pull --ff-only` from the branch's upstream before editing. Start feature branches from `main` unless instructed otherwise. If local changes or divergent history prevent the pull, reconcile them without discarding teammates' work or rewriting published history before proceeding.
 - **After completing every new feature:** run the required tests and review the diff. Commit or push only when the user asks.
 - When asked to push and it is rejected because teammates pushed first, fetch and integrate their changes, resolve conflicts, rerun the relevant tests, and retry. Never force-push. Report authentication or other blockers rather than claiming synchronization succeeded.
 - Merges into `main` still follow `integration.md` and use a PR; do not push directly to `main`.
