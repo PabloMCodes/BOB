@@ -240,7 +240,7 @@ def main():
     except KeyboardInterrupt:
         pass
     except Exception as exc:
-        p.exit(1, f"Supervised test stopped: {exc}\n")
+        p.exit(1, f"Supervised test stopped: {type(exc).__name__}: {exc}\n")
 
 
 if __name__ == "__main__":

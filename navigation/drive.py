@@ -34,19 +34,26 @@ class PulseLink:
         if device is None:
             raise RuntimeError(f"{name} not found")
         link = cls(BleakClient(device))
+        stage = "BLE connection"
         try:
             await asyncio.wait_for(link.client.connect(), 15)
-            await link.stop()
+            stage = "startup STOP write"
+            await link._write(encode_stop(), timeout=3)
+            stage = "startup neutral-status read"
+            await link._status(timeout=3)
             return link
+        except asyncio.TimeoutError as exc:
+            await link.client.disconnect()
+            raise RuntimeError(f"{stage} timed out; no ARM command sent") from exc
         except BaseException:
             await link.client.disconnect()
             raise
 
-    async def _write(self, packet):
-        await asyncio.wait_for(self.client.write_gatt_char(COMMAND_UUID, packet, response=True), .3)
+    async def _write(self, packet, timeout=.3):
+        await asyncio.wait_for(self.client.write_gatt_char(COMMAND_UUID, packet, response=True), timeout)
 
-    async def _status(self, armed=False):
-        status = decode_status(await asyncio.wait_for(self.client.read_gatt_char(STATUS_UUID), .3))
+    async def _status(self, armed=False, timeout=.3):
+        status = decode_status(await asyncio.wait_for(self.client.read_gatt_char(STATUS_UUID), timeout))
         if (not status.connected or status.fault != Fault.NONE
                 or status.armed != armed or status.left_pwm or status.right_pwm
                 or status.state != (ControllerState.ARMED if armed else ControllerState.DISARMED)):

@@ -198,6 +198,35 @@ class FakeClient:
         self.is_connected = False
 
 
+def test_startup_accepts_slow_stop_without_relaxing_runtime_timeout(monkeypatch):
+    class SlowClient(FakeClient):
+        async def connect(self):
+            pass
+
+        async def write_gatt_char(self, *args, **kwargs):
+            await asyncio.sleep(.4)
+            await super().write_gatt_char(*args, **kwargs)
+
+    client = SlowClient()
+
+    async def find(*args, **kwargs):
+        return object()
+
+    monkeypatch.setitem(sys.modules, "bleak", SimpleNamespace(
+        BleakClient=lambda device: client,
+        BleakScanner=SimpleNamespace(find_device_by_name=find)))
+
+    async def scenario():
+        link = await PulseLink.connect()
+        assert [p[1] for p in client.writes] == [PacketType.STOP]
+        assert not client.armed and link.last_status.left_pwm == 0
+        with pytest.raises(asyncio.TimeoutError):
+            await link.stop()
+        await client.disconnect()
+
+    asyncio.run(scenario())
+
+
 def test_transport_sends_one_short_lease_and_verifies_stop_and_sequence():
     async def scenario():
         s, c = ready(), FakeClient()
