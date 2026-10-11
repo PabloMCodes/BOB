@@ -80,7 +80,7 @@ Before merging to `main` or changing any interface (schema, config keys, model c
 - On the Jetson, torch comes from NVIDIA's JetPack wheels, not PyPI; TensorRT engines must be built on the Jetson.
 - Ultralytics is AGPL-3.0. SH17 data/weights are CC BY-NC-SA 4.0 (non-commercial).
 - SH17 `glasses` = any eyewear (sunglasses count as compliant). Its class IDs differ from its README order — always use names from the weights.
-- SH17 does not see clear safety glasses, so `ppe.rules.glasses.absence` is `unverified`: no `no-safety-glasses` is derived. Don't switch it back to `violation` without an `eval_ppe` run on a model that sees them.
+- SH17 does not see clear safety glasses, so `ppe.rules.glasses.absence` is `unverified`: no `no-safety-glasses` is derived. Don't switch it back to `violation` without an `eval_ppe` run on a model that sees them. Subjects touching the image edge (`ppe.edge_margin`) are unverified for every rule.
 - The rover camera sits ~20 cm high looking **up** at faces 3 m+ away: glasses are ~5–6 px at 640. Don't "simplify" `head_crop` back to a single pass without re-running `tools/eval_ppe.py`.
 - `head_crop` cost grows ~8–10 ms per person (sequential crops on MPS). Batch crops before porting to the Jetson.
 - Never approximate a missing class with a look-alike (e.g. SH17 `shoes` for "not safety boots"): leave the rule inactive.

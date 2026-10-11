@@ -8,8 +8,9 @@ No public dataset labels "not wearing safety glasses", so absence is derived:
   a confident, large-enough face with no glasses box in its eye band -> a "no-safety-glasses"
   box (source="derived") drawn on that eye band.
 Subjects too small or uncertain get UNVERIFIED and no box: "no violation seen" != "compliant".
-A rule with absence "unverified" never derives a violation, for PPE the model cannot reliably
-see (e.g. SH17 and clear safety glasses).
+Absence is only a violation when it can be seen: a subject cut off by the image edge (its band
+can't be located) stays UNVERIFIED, and a rule with absence "unverified" never derives a
+violation, for PPE the model cannot reliably see (e.g. SH17 and clear safety glasses).
 These are per-frame observations; confirming a hazard over N frames belongs to the alerts branch.
 """
 
@@ -20,7 +21,7 @@ from enum import Enum
 from typing import Any, Iterable, Optional, Union
 
 from vision.render import normalize_class_name
-from vision.schema import Box
+from vision.schema import Box, ImageSize
 
 XYXY = tuple[float, float, float, float]
 ABSENCE = ("violation", "unverified")
@@ -159,6 +160,15 @@ def _matches(rule: Rule, subject: XYXY, ppe: XYXY) -> float:
     return overlap if overlap >= rule.min_overlap else 0.0
 
 
+def touches_edge(xyxy: XYXY, image_size: Optional[ImageSize], margin: float) -> bool:
+    """True if the box reaches within `margin` (fraction of each side) of the image border."""
+    if image_size is None:
+        return False
+    mx, my = margin * image_size.width, margin * image_size.height
+    x1, y1, x2, y2 = xyxy
+    return x1 <= mx or y1 <= my or x2 >= image_size.width - mx or y2 >= image_size.height - my
+
+
 def _too_small_or_uncertain(rule: AnyRule, subject: Box) -> bool:
     height = subject.xyxy[3] - subject.xyxy[1]
     return height < rule.min_subject_px or subject.conf < rule.min_subject_conf
@@ -183,7 +193,13 @@ def _apply_class_rule(rule: ClassRule, boxes: list[Box]) -> list[SubjectVerdict]
     return verdicts
 
 
-def apply_rule(rule: AnyRule, boxes: Iterable[Box]) -> list[SubjectVerdict]:
+def apply_rule(
+    rule: AnyRule,
+    boxes: Iterable[Box],
+    image_size: Optional[ImageSize] = None,
+    edge_margin: float = 0.0,
+) -> list[SubjectVerdict]:
+    """`image_size` enables the edge check: an unmatched subject touching the border is UNVERIFIED."""
     boxes = list(boxes)
     if isinstance(rule, ClassRule):
         return _apply_class_rule(rule, boxes)
@@ -207,7 +223,7 @@ def apply_rule(rule: AnyRule, boxes: Iterable[Box]) -> list[SubjectVerdict]:
             verdicts.append(SubjectVerdict(rule.name, Verdict.WEARING, subject, best, None))
             continue
 
-        if rule.absence == "unverified":
+        if rule.absence == "unverified" or touches_edge(subject.xyxy, image_size, edge_margin):
             verdicts.append(SubjectVerdict(rule.name, Verdict.UNVERIFIED, subject, None, None))
             continue
 
@@ -231,8 +247,13 @@ def frame_verdict(verdicts: Iterable[SubjectVerdict], rule: str) -> Verdict:
     return Verdict.UNVERIFIED
 
 
-def apply_rules(rules: Iterable[AnyRule], boxes: Iterable[Box]) -> tuple[list[Box], list[SubjectVerdict]]:
+def apply_rules(
+    rules: Iterable[AnyRule],
+    boxes: Iterable[Box],
+    image_size: Optional[ImageSize] = None,
+    edge_margin: float = 0.0,
+) -> tuple[list[Box], list[SubjectVerdict]]:
     """Return (derived violation boxes, all verdicts) across rules."""
     boxes = list(boxes)
-    verdicts = [v for rule in rules for v in apply_rule(rule, boxes)]
+    verdicts = [v for rule in rules for v in apply_rule(rule, boxes, image_size, edge_margin)]
     return [v.violation for v in verdicts if v.violation is not None], verdicts

@@ -51,6 +51,9 @@ ppe:
   #         where the PPE box centre must lie. The violation box is that band clipped to the subject.
   # absence: violation (default) | unverified. "unverified": a missing PPE box is never treated as
   #          missing PPE — for PPE this model can't reliably see.
+  # edge_margin: a subject box within this fraction of the image border is cut off by the frame, so
+  #          its band can't be located; without a matched PPE box it stays unverified, never a violation.
+  edge_margin: 0.005
   rules:
     glasses:
       subject: face

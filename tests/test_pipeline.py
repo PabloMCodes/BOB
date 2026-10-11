@@ -99,10 +99,16 @@ def test_zidane_no_glasses_when_absence_is_a_violation(detector):
     assert _verdicts(result, "glasses") == ["not_wearing", "not_wearing"]
 
 
-@pytest.mark.parametrize("name", ["bus.jpg", "zidane.jpg"])
-def test_nobody_without_vest_judged_wearing(detector, name):
-    verdicts = _verdicts(_run(detector, "head_crop", name), "vest")
+def test_bus_people_without_vest_are_violations(detector):
+    verdicts = _verdicts(_run(detector, "head_crop", "bus.jpg"), "vest")
     assert "not_wearing" in verdicts and "wearing" not in verdicts
+
+
+def test_people_cut_off_by_frame_get_no_vest_violation(detector):
+    # Both men in zidane.jpg are cut off at the bottom edge, so their torso band can't be located.
+    result = _run(detector, "head_crop", "zidane.jpg")
+    assert _verdicts(result, "vest") == ["unverified", "unverified"]
+    assert not any(b.cls_name == "no-safety-vest" for b in result.boxes)
 
 
 def test_violation_box_lies_on_face(detector):
