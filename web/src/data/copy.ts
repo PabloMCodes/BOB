@@ -11,6 +11,8 @@ export const copy = {
   nav: {
     product: 'Product',
     dashboard: 'Dashboard',
+    /** Nav labels sit on one row — keep this short; the page itself is titled in full. */
+    status: 'Status',
     inspiration: 'Inspiration',
     github: 'GitHub',
   },
@@ -29,10 +31,55 @@ export const copy = {
     title: 'B.O.B on a worksite',
     empty: 'Video coming soon',
   },
+  why: {
+    eyebrow: 'Why B.O.B',
+    title: 'The sites that most need watching are the hardest ones to reach.',
+    lead: 'Almost every AI safety inspection system on the market assumes two things: a steady connection, and a forgiving environment. A construction site offers neither.',
+    paragraphs: [
+      'Dust, noise, half-finished floors and the dead zones between them are exactly where cloud-dependent monitoring stops being an option — and exactly where the hazards are.',
+      'The few systems that do hold up offline are built for a different customer. A Spot unit walking a NextEra energy site is a remarkable machine, and a deliberately generalized one, priced for owners with a fleet, a budget line and a site large enough to justify both. For a smaller contractor, it was never a difficult decision. It was never a decision at all.',
+      'One of us, Pablo, has a father who works in construction. Talking with him made the gap concrete. The hazards that matter most are the ordinary, repeating ones, and PPE sits at the top of that list. A shift leader answers for every worker on site at once, and nobody can look in every direction for an entire shift. The checks that slip are not the complicated ones — they are the constant ones.',
+      'He confirmed the other constraint too, the one we had already run into: whatever watches a site has to keep working when the connection does not.',
+    ],
+  },
+  targets: {
+    eyebrow: 'What we aim to target',
+    title: 'Three gaps to close, to make construction robots accessible.',
+    items: [
+      {
+        index: '01',
+        title: 'AI safety and inspection where there is no connectivity.',
+        body: 'B.O.B logs continuously on the Jetson it carries — findings, frames and timestamps held on the robot itself. The moment a connection returns, the photographs and the full record are delivered straight to the shift supervisor, with nothing lost to the gap.',
+      },
+      {
+        index: '02',
+        title: 'Lower cost, because the cost is measured in lives.',
+        body: 'B.O.B is built around the NVIDIA Jetson Orin Nano dev kit, the most affordable supercomputer available. Our prototype came to under $900 in total — every piece of hardware and software, Jetson included. Against generalized offline inspection platforms such as Spot, which are built for far larger customers and far larger sites, that is roughly a 99.5% reduction. At that price, meaningful safety monitoring comes within reach of the companies that could never before consider it.',
+      },
+      {
+        index: '03',
+        title: 'Covering the gaps a person cannot.',
+        body: 'A second set of eyes on the crew, because a shift supervisor cannot be everywhere at once. And for the conditions no visual check can catch, a hazardous-gas sensing payload is next on the roadmap — inspection for places it is not safe to send someone to look.',
+      },
+    ],
+  },
   overview: {
     eyebrow: 'What it is',
     statement:
       'An iPhone on the mast streams what B.O.B sees to the computer it carries. Vision models find people and the gear on them, check only what that worksite requires, and keep every finding with the frame it came from. Nothing unseen is reported as safe.',
+    rolesLead: 'B.O.B does two jobs on a site, and the shift is what separates them.',
+    roles: [
+      {
+        label: 'Before the shift',
+        title: 'A pre-shift inspection robot.',
+        body: 'It walks the site ahead of the crew, finding obstacles and obstructions in the walkways and recognizing the taped-off areas that are meant to stay empty — so the hazards are on record before anyone is standing next to them.',
+      },
+      {
+        label: 'During the shift',
+        title: 'A supervisor’s sidekick.',
+        body: 'Once the crew is working, it keeps watching how PPE is actually being worn, person by person, and speaks up on the spot. It is the second set of eyes a shift supervisor cannot be.',
+      },
+    ],
   },
   skills: {
     eyebrow: 'Skills',
@@ -54,7 +101,7 @@ export const copy = {
         id: 'zones',
         status: 'built',
         title: 'Watches taped restricted zones.',
-        body: 'Yellow floor tape is recognized, and a person standing inside it becomes a finding.',
+        body: 'A closed yellow floor outline is recognized, and feet inside it become a finding. Anything less stays unverified.',
       },
       {
         id: 'alerts',
@@ -174,6 +221,27 @@ export const copy = {
     ] as Array<{ name: string; firstName: string; role?: string; linkedin?: string }>,
     license:
       'Detections come from SH17 weights (CC BY-NC-SA 4.0) running on Ultralytics YOLOv8 (AGPL-3.0). Original project code is MIT licensed.',
+    /**
+     * Stock photographs the skills cards run on. Both are share-alike, so the annotated versions
+     * carry the same licence as the photograph they are derived from. Full provenance and what
+     * each detector run returned: public/media/skills/sources.json.
+     */
+    photos: [
+      {
+        title: 'Construction on Erwin Rd in Durham',
+        author: 'Ildar Sagdejev (Specious)',
+        href: 'https://commons.wikimedia.org/wiki/File:2008-07-15_Construction_on_Erwin_Rd_in_Durham.jpg',
+        license: 'CC BY-SA 4.0',
+        licenseHref: 'https://creativecommons.org/licenses/by-sa/4.0/',
+      },
+      {
+        title: '5S Door-range line',
+        author: 'Adrian Grycuk',
+        href: 'https://commons.wikimedia.org/wiki/File:5S_Door-range_line.jpg',
+        license: 'CC BY-SA 3.0 PL',
+        licenseHref: 'https://creativecommons.org/licenses/by-sa/3.0/pl/deed.en',
+      },
+    ],
   },
   dashboard: {
     eyebrow: 'Dashboard / Site manager',

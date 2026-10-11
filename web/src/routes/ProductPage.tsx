@@ -6,7 +6,9 @@ import { Hero } from '../components/Hero.tsx'
 import { Overview } from '../components/Overview.tsx'
 import { SkillsRail } from '../components/SkillsRail.tsx'
 import { SystemLine } from '../components/SystemLine.tsx'
+import { Targets } from '../components/Targets.tsx'
 import { VideoSection } from '../components/VideoSection.tsx'
+import { WhyBob } from '../components/WhyBob.tsx'
 
 const SiteScene = lazy(() =>
   import('../components/scene/SiteScene.tsx').then((module) => ({ default: module.SiteScene })),
@@ -18,6 +20,8 @@ export function ProductPage() {
       <main>
         <Hero />
         <VideoSection />
+        <WhyBob />
+        <Targets />
         <Overview />
         <SkillsRail />
         <Audience />

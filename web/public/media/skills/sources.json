@@ -1,0 +1,56 @@
+{
+  "note": "Stock photographs, not rover captures. There is no session, pose or frame timestamp behind them, so no observation here is localized and none is evidence of current worksite conditions. Boxes are this pipeline's own output on the file named below. The files here are 4:5 card framings of the full evidence images in runs/showcase/; regenerate them with `uv run python -m tools.web_skill_cards` after re-running the two commands under `run.tool`.",
+  "model_id": "sh17_yolov8s",
+  "weights_sha256": "dfaf451bdda3f92fe4012327e337225929ad7af22146b00e0d6989c2f4e40a4b",
+  "generated": "2026-10-11",
+  "images": [
+    {
+      "skill": "eyewear",
+      "src": "/media/skills/eyewear-drill-crew.jpg",
+      "annotated": "/media/skills/eyewear-drill-crew-detections.jpg",
+      "alt": "Three workers in hard hats and high-visibility vests beside a drill rig, with person, helmet, vest, eyewear and missing-glove detection boxes drawn on them.",
+      "source": {
+        "title": "2008-07-15 Construction on Erwin Rd in Durham.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:2008-07-15_Construction_on_Erwin_Rd_in_Durham.jpg",
+        "author": "Ildar Sagdejev (Specious)",
+        "license": "CC BY-SA 4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "retrieved_at": "1920x2880 rendering of the 2592x3888 original"
+      },
+      "run": {
+        "tool": "tools/showcase_stills.py --mode head_crop",
+        "source_sha256": "83652713afcdca28",
+        "passes": 5,
+        "inference_ms": 121.6,
+        "verdicts": {
+          "glasses": ["wearing", "unverified"],
+          "helmet": ["wearing", "wearing", "wearing"],
+          "gloves": ["not_wearing", "not_wearing"],
+          "vest": ["wearing", "wearing", "wearing", "not_wearing"]
+        }
+      },
+      "why_this_image": "Single-pass inference on the same file finds 1 face and no eyewear. The head_crop pass finds 2 faces and the glasses (0.65) on the worker at the right. That difference is the card's claim, measured rather than asserted. The second face stays 'unverified' for the glasses rule: a subject that is not large or confident enough is never turned into a pass or a violation."
+    },
+    {
+      "skill": "zones",
+      "src": "/media/skills/zone-yellow-floor-tape.jpg",
+      "annotated": "/media/skills/zone-yellow-floor-tape-detections.jpg",
+      "alt": "Yellow marking tape on a tiled floor in front of a door, with the inspection result 'Unverified, no complete yellow outline' drawn over it.",
+      "source": {
+        "title": "5S Door-range line.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:5S_Door-range_line.jpg",
+        "author": "Adrian Grycuk",
+        "license": "CC BY-SA 3.0 PL",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0/pl/deed.en",
+        "retrieved_at": "1808x1363 original"
+      },
+      "run": {
+        "tool": "tools/inspect_zone.py --tape-config configs/zones-yellow.yaml",
+        "status": "unverified",
+        "reason": "no_complete_yellow_outline",
+        "people": 0
+      },
+      "why_this_image": "This is real yellow tape on a real floor and the detector still refuses to assert a zone, which is the honest state of this feature. The tape is found as yellow (2.9% of the image), but the loop is closed by the walls rather than by tape, so there is no enclosed region: the largest is 44 px of speckle against a 1% minimum. The refusal is correct, not a threshold artifact. No physical floor-tape acceptance test has been run, so no image here shows a 'recognized' zone."
+    }
+  ]
+}

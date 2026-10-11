@@ -80,7 +80,35 @@ export function Credits() {
         </ul>
       ) : null}
       <div className="mt-20 flex flex-col gap-6 border-t border-line pt-8 md:flex-row md:items-end md:justify-between">
-        <p className="max-w-2xl text-sm leading-relaxed text-muted">{copy.credits.license}</p>
+        <div className="max-w-2xl">
+          <p className="text-sm leading-relaxed text-muted">{copy.credits.license}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Skill photographs:{' '}
+            {copy.credits.photos.map((photo, index) => (
+              <span key={photo.href}>
+                {index > 0 ? '; ' : ''}
+                <a
+                  href={photo.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-line underline-offset-4 transition-colors hover:decoration-ink"
+                >
+                  {photo.title}
+                </a>
+                {` by ${photo.author}, `}
+                <a
+                  href={photo.licenseHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-line underline-offset-4 transition-colors hover:decoration-ink"
+                >
+                  {photo.license}
+                </a>
+              </span>
+            ))}
+            . The annotated versions are derivatives under the same licence.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-6">
           <Link
             to="/privacy"

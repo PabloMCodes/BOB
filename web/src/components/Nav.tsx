@@ -29,6 +29,9 @@ export function Nav() {
           <NavLink to="/dashboard" className={linkClass} data-cursor-label="Dashboard">
             {copy.nav.dashboard}
           </NavLink>
+          <NavLink to="/status" className={linkClass} data-cursor-label="Status updates">
+            {copy.nav.status}
+          </NavLink>
           <NavLink to="/inspiration" className={linkClass} data-cursor-label="Inspiration">
             {copy.nav.inspiration}
           </NavLink>

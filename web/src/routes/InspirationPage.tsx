@@ -7,6 +7,7 @@ import { InspirationTitle } from '../components/InspirationTitle.tsx'
 import { OriginsGlobe } from '../components/OriginsGlobe.tsx'
 import { Reveal } from '../components/Reveal.tsx'
 import { TeamConvergence } from '../components/TeamConvergence.tsx'
+import { copy } from '../data/copy.ts'
 import { inspirationChapters } from '../data/inspiration.ts'
 import { useReduced } from '../hooks/useMediaQuery.ts'
 
@@ -35,6 +36,15 @@ export function InspirationPage() {
                 <p className="body-copy mt-8 text-muted">The people, decisions and setbacks behind the rover on our workbench. A growing record of what we built and how we worked through it together.</p>
                 <a href="#build-story" className="cursor-target mt-8 inline-flex items-center gap-3 text-sm text-ink underline decoration-line underline-offset-8 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink" data-cursor-label="Explore">Follow the build <span aria-hidden="true">↘</span></a>
               </Reveal>
+              {/* The statements the product hero opens with, kept here in the same type so the story starts from what B.O.B is. */}
+              <div className="mt-16 grid gap-8 border-t border-line pt-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
+                <Reveal delay={280}>
+                  <p className="hero-title text-ink">{copy.hero.title}</p>
+                </Reveal>
+                <Reveal delay={360}>
+                  <p className="body-copy text-muted">{copy.hero.body}</p>
+                </Reveal>
+              </div>
             </motion.div>
           </div>
 

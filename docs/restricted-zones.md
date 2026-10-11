@@ -72,6 +72,15 @@ object unrelated to tape can still fool this color/shape method; the operator co
 controlled setup are necessary. Actual floor tape footage and physical acceptance are pending.
 The separate image-bound polygon mode remains available and unchanged.
 
+One real photograph of yellow floor tape has now been run through `tools.inspect_zone`
+(a 5S door-range line on a tiled floor, kept with the website assets in
+`runs/showcase/web-zones/`). It returns `unverified / no_complete_yellow_outline`, which is the
+correct answer: the tape is found as yellow, covering 2.9% of the image, but the boundary is
+closed by the walls rather than by tape, so the largest enclosed region is 44 px of speckle
+against the 1% minimum. This is one still of an indoor floor line, not worksite footage: it
+shows the refusal path behaving as specified and says nothing about recognition accuracy.
+No photograph tested so far produces a `recognized` zone, so physical acceptance is unchanged.
+
 ## Feature 3: Mac live/replay inspection
 
 Run the live server with the opt-in tape profile:

@@ -82,4 +82,6 @@ The section plan is [docs/plans/homepage-redesign-plan.md](../docs/plans/homepag
 
 A card without media shows a dark plate with its number. If a photo's boxes are already drawn into the file, leave `boxes` out. For a clean photo, list `boxes` as fractions of the original image (`x`, `y`, `w`, `h`, `label`), measured from the file.
 
+The `eyewear` and `zones` cards use Creative Commons stock photographs, not rover captures, with boxes drawn by the real pipeline. `public/media/skills/sources.json` records each photograph's author, licence and Commons page, and what the detector actually returned — including the zone card, which shows an honest `unverified` result because no photograph tested so far contains a tape loop closed by tape. Both photographs are share-alike, so the annotated versions carry the same licence; the footer credits them. Regenerate the card framings with `uv run python -m tools.web_skill_cards` after re-running `tools.showcase_stills` and `tools.inspect_zone` as recorded in that file.
+
 Motion: Lenis smooths wheel scrolling on the homepage only; Motion (`motion/react`, the Framer Motion package) drives the scroll-linked effects. The closing scene's timeline is `src/components/scene/timeline.ts`.

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" role="img" aria-labelledby="t d">
+  <!-- Illustration, not a pipeline capture: no model, session or frame stands behind it. -->
+  <title id="t">Car flagged as a hazard</title>
+  <desc id="d">A line drawing of a car inside a detection frame, with a hazard mark above it.</desc>
+  <style>
+    .ink    { stroke: var(--color-ink, #f3f2ee); }
+    .muted  { stroke: var(--color-muted, #9b9a94); }
+    .line   { stroke: var(--color-line, #2c2c2a); }
+    .hz     { stroke: var(--color-hazard, #ff5c3a); }
+    .hz-f   { fill: var(--color-hazard, #ff5c3a); }
+    .tape   { fill: var(--color-tape, #e2c15a); }
+    .bg     { fill: var(--color-canvas, #070708); }
+  </style>
+
+  <rect class="bg" width="800" height="480"/>
+
+  <!-- ground -->
+  <line class="line" x1="60" y1="394" x2="740" y2="394" stroke-width="2"/>
+  <g class="tape" opacity=".9">
+    <path d="M60 410h680v10H60z" opacity=".18"/>
+    <path d="M60 410h22l-10 10H60zM102 410h30l-10 10H92zM152 410h30l-10 10h-30zM202 410h30l-10 10h-30zM252 410h30l-10 10h-30zM302 410h30l-10 10h-30zM352 410h30l-10 10h-30zM402 410h30l-10 10h-30zM452 410h30l-10 10h-30zM502 410h30l-10 10h-30zM552 410h30l-10 10h-30zM602 410h30l-10 10h-30zM652 410h30l-10 10h-30zM702 410h30l-10 10h-30z"/>
+  </g>
+
+  <!-- car -->
+  <g fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <path class="ink" stroke-width="3"
+      d="M110 352V322q0-22 24-26l118-12 66-56q12-10 30-10h150q18 0 32 12l68 54 66 10q26 4 26 30v28h-72a58 58 0 0 0-116 0H298a58 58 0 0 0-116 0Z"/>
+    <path class="muted" stroke-width="2" d="M268 282l56-46q10-8 24-8h64v54ZM426 228h70q14 0 24 10l46 44H426Z"/>
+    <path class="muted" stroke-width="2" d="M419 228v118M300 300h20M440 300h20"/>
+    <circle class="ink" stroke-width="3" cx="240" cy="352" r="42"/>
+    <circle class="muted" stroke-width="2" cx="240" cy="352" r="16"/>
+    <circle class="ink" stroke-width="3" cx="560" cy="352" r="42"/>
+    <circle class="muted" stroke-width="2" cx="560" cy="352" r="16"/>
+    <path class="ink" stroke-width="2" d="M666 306h18M118 312h12"/>
+  </g>
+
+  <!-- detection frame -->
+  <g class="hz" fill="none" stroke-width="3" stroke-linecap="square">
+    <path d="M90 196v-24h28M710 196v-24h-28M90 382v24h28M710 382v24h-28"/>
+  </g>
+  <line class="hz" x1="400" y1="132" x2="400" y2="172" stroke-width="2" stroke-dasharray="4 5"/>
+
+  <!-- hazard mark -->
+  <path class="hz-f" d="M400 64l34 58h-68Z"/>
+  <path class="bg" d="M396 84h8l-1.5 22h-5ZM400 110a4 4 0 1 1 0 8a4 4 0 0 1 0-8Z"/>
+</svg>
