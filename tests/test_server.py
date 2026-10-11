@@ -347,6 +347,27 @@ def test_sigterm_twice_still_writes_summary_and_full_recording(tmp_path):
     assert list(iter_records(tmp_path / "stream.bobrec")) == [r.raw for r in records]
 
 
+def test_health_log_is_readable_while_server_is_running(tmp_path):
+    """External preview must see C3 immediately, not only when the buffer closes."""
+    from navigation.feed import latest
+    from vision.schema import StreamHealth
+
+    proc, port = _start_server_process(tmp_path, "--source-mode", "SAMPLE")
+    try:
+        from navigation.run_source import read_run_info
+        info = read_run_info(tmp_path)
+        assert info["source_mode"] == "SAMPLE" and info["started_ts_ns"] <= time.time_ns()
+        records = stream(1)
+        run(replay(records, f"ws://127.0.0.1:{port}", speed=0))
+        path = tmp_path / "stream_health.jsonl"
+        assert wait_for(lambda: (h := latest(path, StreamHealth)) is not None
+                        and h.session_id == records[0].msg.session_id)
+        assert proc.poll() is None
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
+
+
 def test_kill_server_mid_stream_client_fails_fast(tmp_path):
     proc, port = _start_server_process(tmp_path)
     try:

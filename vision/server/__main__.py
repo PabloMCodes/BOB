@@ -19,7 +19,7 @@ import signal
 import time
 from pathlib import Path
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 
@@ -73,9 +73,17 @@ def main() -> None:
 
     run_dir = args.run_dir or REPO_ROOT / config["server"]["run_dir"] / time.strftime("%Y%m%d_%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
-    health_file = open(run_dir / "stream_health.jsonl", "w")
+    health_file = open(run_dir / "stream_health.jsonl", "w", buffering=1)
     record = open(run_dir / "stream.bobrec", "wb") if args.record else None
     detections = open(run_dir / "detections.jsonl", "w") if pipeline is not None else None
+    # Local consumer metadata, not a C1/C2/C3 schema change. Write a fresh
+    # identity even when a directory is reused; navigation must not resume it.
+    run_info = run_dir / "run_info.json.tmp"
+    run_info.write_text(json.dumps({
+        "run_info_version": 1, "producer": "vision.server", "run_id": str(uuid4()),
+        "source_mode": source_mode, "started_ts_ns": time.time_ns(),
+    }))
+    run_info.replace(run_dir / "run_info.json")
     scene_writer = SceneWriter(open(run_dir / "scene_findings.jsonl", "w")) if inspector else None
     if inspector:
         (run_dir / "zone_profile.json").write_text(inspector.profile.model_dump_json(indent=2))

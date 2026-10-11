@@ -121,6 +121,7 @@ def pipeline():
 def published(tmp_path_factory, recording, pipeline):
     path = tmp_path_factory.mktemp("edge")
     edge_config = load_edge_config()
+    edge_config["archive"]["enabled"] = False  # This fixture exercises legacy evidence sampling.
     store = EdgeStore(path, "rover-test")
     publisher = EdgePublisher(store, edge_config, source_mode="REPLAY", run_id="run-test", pipeline=pipeline,
                               render_config=CONFIG["render"], stale_ms=CONFIG["timing"]["stale_ms"],

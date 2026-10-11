@@ -71,6 +71,7 @@ async def main():
         print("Connected and stopped:", describe(status))
         print("Commands: STATUS, ARM, F/B/L/R [seconds], STOP, TONE, Q")
         print("Motion trials default to 0.5 s and never exceed 2 s.")
+        print("Wheels raised: direction trials request the firmware's 85/255 PWM cap.")
         try:
             while client.is_connected:
                 parts = (await asyncio.to_thread(input, "BOB> ")).strip().upper().split()
@@ -93,14 +94,16 @@ async def main():
                     continue
                 if command == "TONE":
                     await send(client, encode_tone(status.session))
-                    print("Tone requested; controller stopped and disarmed.")
+                    print("Missing PPE speech requested (speech-1 firmware); controller stopped and disarmed.")
                     continue
                 if command not in {"F", "B", "L", "R"} or len(parts) > 2:
                     print("Use STATUS, ARM, F/B/L/R [seconds], STOP, TONE, or Q.")
                     continue
                 duration = float(parts[1]) if len(parts) == 2 else DEFAULT_TRIAL_S
-                targets = {"F": (100, 0), "B": (-100, 0),
-                           "L": (0, 250), "R": (0, -250)}
+                # Match speed digit 3 in the working BOB_MotorTest sketch.
+                # These are open-loop requests, not measured wheel speeds.
+                targets = {"F": (200, 0), "B": (-200, 0),
+                           "L": (0, 500), "R": (0, -500)}
                 sequence = await bounded_motion(client, *targets[command],
                                                 duration, sequence)
                 print("Trial ended and controller disarmed:",

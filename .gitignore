@@ -35,3 +35,6 @@ ios/*.xcodeproj/
 ios/BOBCapture/Info.plist
 ios/Signing.local.xcconfig
 ios/build/
+
+# Local mounted-camera assessment photos; retain outside version control.
+/test_images/

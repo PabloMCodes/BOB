@@ -6,7 +6,7 @@ clock_synced: null             # true / false when known for this machine; null 
 
 retention:                     # D4 — starting values, to measure (store growth per hour)
   acked_max_age_s: 86400       # acknowledged records older than this are pruned
-  max_store_bytes: 2147483648  # 2 GiB: above it, oldest observations are pruned first (gap record)
+  max_store_bytes: 2147483648  # 2 GiB: archive pauses; untransferred images stay protected
   min_free_disk_bytes: 1073741824
   prune_interval_s: 30
 
@@ -22,6 +22,9 @@ preview:                       # D5 — annotated, latest wins, never stored as 
 evidence:                      # D6 — clean full-resolution upright frame
   min_interval_s: 2.0          # per rule (or zone) per session; incident frames bypass it
   jpeg_quality: 90
+
+archive:                       # keep every processed frame, online AND offline
+  enabled: true                # independent of website/link state; same evidence JPEG quality
 
 track:                         # plan §7 — proposed downsampling, to measure
   min_move_m: 0.05

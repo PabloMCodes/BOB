@@ -36,27 +36,46 @@ export function Overview({ status, stale }: { status: Status | null; stale: bool
 }
 
 export function Preview({ connection, status, stale }: { connection: Connection; status: Status | null; stale: boolean }) {
-  const ref = status?.live?.preview
   const [url, setUrl] = useState('')
+  const [frameId, setFrameId] = useState('')
   const [note, setNote] = useState('Waiting for a preview frame.')
   useEffect(() => {
-    if (!ref) { setUrl(''); setNote('No preview frame is available.'); return }
-    const controller = new AbortController()
     let stopped = false
     let objectUrl = ''
-    const timeout = setTimeout(() => controller.abort(), 6000)
-    setUrl(''); setNote('Loading preview…')
-    void fetch(`${hubBase(connection.url)}/v1/preview/latest?workspace=${connection.workspace}`, { signal: controller.signal, credentials: 'omit', cache: 'no-store', headers: connection.token ? { Authorization: `Bearer ${connection.token}` } : {} }).then(async (response) => {
-      if (!response.ok) throw new Error('The preview has not synced yet.')
-      if (response.headers.get('X-Sha256') !== ref.sha256) throw new Error('A newer preview is arriving. Waiting for matching metadata.')
-      const blob = await response.blob()
-      if (!stopped) { objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); setNote('') }
-    }).catch((cause) => { if (!stopped) setNote(cause instanceof Error ? cause.message : 'Preview unavailable') }).finally(() => clearTimeout(timeout))
-    return () => { stopped = true; controller.abort(); clearTimeout(timeout); if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [connection, ref?.sha256])
+    let sha = ''
+    let timer: ReturnType<typeof setTimeout>
+    let controller: AbortController
+    async function refresh() {
+      controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 6000)
+      try {
+        const response = await fetch(`${hubBase(connection.url)}/v1/preview/latest?workspace=${connection.workspace}`, { signal: controller.signal, credentials: 'omit', cache: 'no-store', headers: connection.token ? { Authorization: `Bearer ${connection.token}` } : {} })
+        if (!response.ok) throw new Error('Waiting for the camera preview to sync.')
+        const nextSha = response.headers.get('X-Sha256')
+        if (!nextSha) throw new Error('Preview identity is unavailable.')
+        if (nextSha !== sha) {
+          const blob = await response.blob()
+          if (!stopped) {
+            const previous = objectUrl
+            objectUrl = URL.createObjectURL(blob)
+            setUrl(objectUrl); setFrameId(response.headers.get('X-Event-Id') || ''); sha = nextSha
+            if (previous) URL.revokeObjectURL(previous)
+          }
+        }
+        if (!stopped) setNote('')
+      } catch (cause) {
+        if (!stopped) setNote(cause instanceof Error ? cause.message : 'Preview unavailable')
+      } finally {
+        clearTimeout(timeout)
+        if (!stopped) timer = setTimeout(refresh, document.hidden ? 3000 : 400)
+      }
+    }
+    void refresh()
+    return () => { stopped = true; controller?.abort(); clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [connection])
   return <section className="dashboard-panel dashboard-preview" aria-label="Camera preview">
     <div className="dashboard-panel-heading"><h2 className="eyebrow">Camera preview</h2><span className="status-tag">{connection.workspace === 'sample' ? 'SAMPLE' : stale || !status?.live_is_current || (status?.live?.freshness.video.age_ms ?? Infinity) + (status?.live_received_age_ms ?? Infinity) >= 3000 ? 'Last known' : 'Current stream'}</span></div>
     <div className="dashboard-preview-image">{url ? <img src={url} alt={connection.workspace === 'sample' ? 'Clearly labelled sample preview' : 'Latest annotated phone camera frame'} /> : <p>{note}</p>}</div>
-    <p className="dashboard-note">{ref ? `Frame ${ref.seq_id} · ${ref.event_id.slice(0, 8)}` : 'Preview frames come from the vision publisher.'} {note && url ? note : ''}</p>
+    <p className="dashboard-note">{frameId ? `Frame ${frameId.slice(0, 8)}` : 'Preview frames come from the vision publisher.'} {note && url ? note : ''}</p>
   </section>
 }

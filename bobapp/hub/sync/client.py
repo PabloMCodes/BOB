@@ -1,13 +1,14 @@
 """Hub sync client: connect to the rover edge API, resume per lane, commit, then acknowledge.
 
-Every batch is committed to the replica before its acknowledgment is sent, so the rover only prunes
-what the laptop really has. Reconnects back off from `link.reconnect_min_s` to `reconnect_max_s`; a
+Every batch is committed before its record acknowledgment. Image retention separately waits for a
+verified-JPEG receipt from BlobFetcher. Reconnects back off from `link.reconnect_min_s` to `reconnect_max_s`; a
 silent link (no message for `link.stale_after_s`; the rover sends live state every 0.2 s) counts as lost.
 """
 from __future__ import annotations
 
 import asyncio
 import hashlib
+from http.client import HTTPException
 from typing import Any, Callable, Optional
 
 from websockets.asyncio.client import connect
@@ -85,6 +86,8 @@ class HubSyncClient:
             if not isinstance(welcome, SyncWelcome):
                 raise ValueError(f"expected sync_welcome, got {welcome.msg_type}")
             workspace, changed = self.replica.adopt(welcome.edge_id, welcome.store_epoch)
+            self.fetcher.workspace = workspace
+            self.replica.db.execute("UPDATE blobs SET attempts=0 WHERE status IN ('pending_sync', 'hash_mismatch')")
             moved = self.replica.reconcile_welcome(workspace, welcome.lanes)
             for lane, seq in moved.items():
                 await ws.send(self._ack(workspace, lane, seq))
@@ -129,9 +132,9 @@ class HubSyncClient:
     async def _fetch_preview(self, sha: str) -> None:
         try:
             data, headers = await asyncio.to_thread(http_get, f"{self.http_base}/v1/preview/latest", self.token, 5.0)
-        except (HttpStatusError, OSError):
+        except (HttpStatusError, OSError, HTTPException):
             return  # the next live message tries again
         actual = hashlib.sha256(data).hexdigest()
         if headers.get("x-sha256") == actual:  # the preview may have moved on; keep whatever is consistent
-            self.replica.set_live_preview(data, actual)
+            self.replica.set_live_preview(data, actual, headers.get("x-event-id"))
 

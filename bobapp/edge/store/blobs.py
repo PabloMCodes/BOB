@@ -4,6 +4,9 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+from uuid import UUID
+
+from .types import StoreError
 
 
 class BlobsMixin:
@@ -29,3 +32,12 @@ class BlobsMixin:
     def has_blob(self, sha256: str) -> bool:
         return self.db.execute("SELECT 1 FROM blobs WHERE sha256=?", (sha256,)).fetchone() is not None \
             and self.blob_file(sha256).exists()
+
+    def ack_blob(self, hub_id: str, epoch: UUID, sha256: str) -> None:
+        """Authenticated hub reports a hash-verified, durable copy, not just metadata."""
+        if epoch != self.store_epoch:
+            raise StoreError("blob receipt belongs to another store epoch")
+        with self._tx():
+            # Idempotent even when a retry arrives after acknowledged retention.
+            if self.has_blob(sha256):
+                self.db.execute("INSERT OR IGNORE INTO blob_acks VALUES (?, ?)", (hub_id, sha256))

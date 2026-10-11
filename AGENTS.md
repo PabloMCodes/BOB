@@ -108,3 +108,37 @@ This hackathon moves quickly with multiple teammates. Keep changes small and syn
 - **After completing every new feature:** run the required tests and review the diff. Commit or push only when the user asks.
 - When asked to push and it is rejected because teammates pushed first, fetch and integrate their changes, resolve conflicts, rerun the relevant tests, and retry. Never force-push. Report authentication or other blockers rather than claiming synchronization succeeded.
 - Merges into `main` still follow `integration.md` and use a PR; do not push directly to `main`.
+
+
+## Jetson collaboration agreement (2026-10-11)
+
+The user has given standing authorization to synchronize and publish this agent's
+completed work without asking for each commit or push. This satisfies the Team
+Git workflow's "when the user asks" condition above.
+
+- During active work, pull before starting each feature; fetch again before
+  publication, integrate new main/upstream commits without discarding work,
+  and rerun checks affected by any integration changes.
+- After the feature's required checks and diff review pass, commit in focused
+  pieces and push the feature branch. Keep its upstream set. No force pushes;
+  main integration continues through a PR and the integration.md gates.
+- This agent owns Jetson capture/local inference, durable frame storage/transfer,
+  and rover firmware/navigation. The teammate owns the website's online LLM
+  inference, provider integration, prompts and analysis UI. Do not implement or
+  redesign the teammate's feature unless the user explicitly changes ownership.
+- Preserve already-authorized frame gallery/reconnect work. Keep website changes
+  isolated in their own commit, and call out overlapping files in the PR.
+- Keep frame IDs, session IDs, source labels, JPEG hashes and original local model
+  results stable across consumers. Document interface changes before introducing
+  dependencies. See docs/jetson-frame-handoff.md for the current boundary.
+- Check published branch/PR changes for overlap. A clean merge against current
+  main does not establish compatibility with unpushed teammate work. Do not
+  auto-merge unrelated branches or run a background pull/commit daemon.
+
+Publishing note: this Jetson currently has public HTTPS fetch access but no Git
+push credential helper. The connected GitHub account successfully publishes via
+GitHub Git Data tools. When using that fallback, verify each created tree against
+the reviewed local tree, advance only the feature ref without force, fetch the
+canonical GitHub commits and keep the checkout tracking them. Preserve any local
+commit history on a backup branch before switching to equivalent API-created
+commits. Do not print credentials or ask the user to paste a token into chat.

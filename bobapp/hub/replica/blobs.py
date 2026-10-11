@@ -20,7 +20,7 @@ class BlobsMixin:
 
     def pending_blobs(self, limit: int = 50, retry_after_ns: int = 0) -> list[str]:
         cutoff = time.time_ns() - retry_after_ns
-        rows = self.db.execute("SELECT sha256 FROM blobs WHERE status='pending_sync' AND "
+        rows = self.db.execute("SELECT sha256 FROM blobs WHERE status IN ('pending_sync', 'hash_mismatch') AND "
                                "(attempts=0 OR updated_wall_ns<?) ORDER BY rowid LIMIT ?", (cutoff, limit))
         return [r[0] for r in rows.fetchall()]
 
@@ -62,3 +62,13 @@ class BlobsMixin:
 
     def blob_counts(self) -> dict[str, int]:
         return dict(self.db.execute("SELECT status, COUNT(*) FROM blobs GROUP BY status").fetchall())
+
+    def pending_receipts(self, ws, limit=20) -> list[str]:
+        rows = self.db.execute("SELECT r.sha256 FROM blob_receipts r JOIN blobs b USING(sha256) "
+                               "WHERE r.ws_id=? AND r.acknowledged=0 AND b.status='available' LIMIT ?",
+                               (ws.ws_id, limit)).fetchall()
+        return [sha for (sha,) in rows if self.blob_file(sha).exists()]
+
+    def acknowledge_blob(self, ws, sha):
+        with self._tx():
+            self.db.execute("UPDATE blob_receipts SET acknowledged=1 WHERE ws_id=? AND sha256=?", (ws.ws_id, sha))

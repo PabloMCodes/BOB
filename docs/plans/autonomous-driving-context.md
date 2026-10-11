@@ -1,8 +1,9 @@
 # BOB autonomous-driving context
 
 Last updated: 2026-10-11. This document records the agreed direction for the
-future navigation workstream. It is a design context, not a claim that autonomy,
-mapping, collision avoidance, or motor integration is implemented.
+navigation workstream. A camera-based preview and operator-authorized short BLE
+steps are implemented. Physical step acceptance and hands-free obstacle avoidance
+remain pending. [Current test guide](../supervised-camera-driving.md).
 
 ## Step 0 checkpoint: controller simulation
 
@@ -46,14 +47,45 @@ the full repository suite passed with 412 tests and 5 optional/platform skips in
 Arduino headers, so the new `.ino` has not been compiled here. Arduino IDE 3.x
 compilation and physical behavior remain part of the wheels-raised acceptance.
 
-Physical Step 1 remains pending. First revalidate the original motor/speaker sketch
-after the wiring move. Then compile/upload the controller-bench sketch and verify it
-with wheels raised: boot is neutral, connection is disarmed, session mismatch and
-replay stop, 0.5-second directional trials stop, lease expiry stops independently,
-disconnect/process death stop, tone works, and reconnect cannot resume motion. An
-ESP32 connection from this Jetson and actual stopping time remain unverified.
+Physical Step 1 is partially observed: the user uploaded the controller sketch
+after the Arduino String `c_str()` correction and connected from the Jetson.
+Motor commands work after raising client requests to the firmware's existing
+85/255 PWM cap. The user confirmed that `audio-restore-2`, which restores the
+original speaker task, also plays the tone successfully. `speech-1` now replaces
+that tone with an embedded, locally generated "Missing PPE" clip using the same
+audio task. The user confirmed that both motor control and the spoken clip now
+work from the Jetson with the uploaded sketch.
+Remaining wheels-raised acceptance includes session mismatch/replay stopping,
+independent lease expiry, disconnect/process death, reconnect without
+motion, and actual stopping time. See the ESP32 README for the current test steps.
+
+## Camera-only checkpoint: navigation preview
+
+The user confirmed the iPhone camera is the only obstacle-related sensor currently
+available. `python -m navigation` therefore implements a **motor-disabled preview**:
+latest C2/C3 observations, an advisory visited-camera grid, hypothetical directions,
+person observation, repeated derived PPE evidence, optional BLE speech, ten-second
+pause and global announcement cooldown. Session changes discard the map and
+evidence. Missing/stale/invalid observations stop suggestions. It loads no models
+and sends no ARM or MOTION commands. [Run and acceptance guide](../navigation-preview.md).
+
+This exercises inspection and exploration decisions before the physical motion
+gates below. It does not claim route clearance, worker identity, measured wheel
+velocity, localization accuracy, or scene-VLM hazard detection. No encoders are
+required for this stage. Future wheel feedback belongs in a separate localization
+and controller adapter; motion still needs an obstacle-stop supervisor.
 
 ## Intended behavior
+
+Hackathon checkpoint (2026-10-11): the user authorized a slow, supervised
+camera-only test. `python -m navigation.supervised` defaults to dry run;
+`--execute` enables one 100 ms pulse per SPACE press while READY, followed by a
+one-second stop and fresh camera observations. The existing firmware is reused.
+R releases a host pause without moving; S/Esc stops; Q exits. Human clearance of
+the proposed direction is mandatory; absence of detections never grants motion.
+The model-free host consumes C2/C3, keeps the prior person/PPE inspection behavior,
+and leaves vision/edge capture running. This limited test does not implement the
+hands-free navigation target or bypass the later collision-avoidance acceptance.
 
 BOB should explore a bounded work area in a Roomba-like way: prefer unvisited
 reachable space, revisit only when needed to reach another frontier, and stop
@@ -104,18 +136,17 @@ Networking and software stops do not replace a physical emergency stop.
 
 ## BLE now, Wi-Fi later if justified
 
-Use BLE first because the committed firmware already advertises
-`BOB-MotorTest`, the motors were physically controlled through it, disconnects
-stop the motors, and motion expires after one second without another movement
-command. It avoids adding and debugging a second ESP32 transport before the
-navigation behavior is understood.
+Use BLE first: the current `BOB_ControllerBench` firmware/client has user-confirmed
+motor and speech operation, explicit arm, receive-time command leases and status.
+The original `BOB-MotorTest` sketch remains a recovery baseline. This avoids adding
+and debugging a second ESP32 transport before navigation behavior is understood.
 
-The existing single-character protocol is a bench-test interface, not the final
+The legacy single-character protocol is a bench-test interface, not the final
 autonomy contract. `F/B/L/R` plus a shared PWM digit cannot express gradual arcs,
 independent wheel effort, sequence numbers, acknowledgments, controller faults,
-or future encoder feedback. The first navigation milestone should therefore put
-a transport-neutral controller interface above BLE rather than letting planners
-write BLE characters directly.
+or future encoder feedback. The controller bench now supplies a binary protocol
+and status. Future navigation execution should retain a transport-neutral
+controller interface rather than letting planners write BLE packets directly.
 
 Wi-Fi may become preferable when BOB needs richer telemetry, longer range,
 multiple consumers, remote diagnostics, or ROS-native networking. It also adds
@@ -209,11 +240,18 @@ home. Open-loop motion changes with battery voltage, surface, load, and wheel
 slip. ARKit can reduce drift but remains an advisory visual-inertial estimate and
 may lose or reset tracking.
 
-The current iPhone mount is about 20 cm high and tilted upward for PPE. That view
-does not reliably cover the ground directly in front of the wheels. Before free
-autonomous motion, add an independent forward/downward range source, preferably
-a depth camera or LiDAR, and provide drop-off coverage if edges or stairs are
-possible. The existing audible LiPo alarm is not machine-readable, so early
+Earlier notes described an approximately 20 cm-high mount tilted upward for PPE.
+The user clarified on 2026-10-11 that the current camera is barely angled upward
+and can see the floor about five inches (13 cm) ahead. The three mounted images
+`IMG_0344/0345/0346.jpg` have now been inspected: broad floor foreground is visible,
+along with boxes, chair legs and furniture bases. The lower quarter to third is
+mostly floor. The nearest visible ground distance is still user-reported; camera
+calibration, robot footprint, side/rear coverage and stopping distance have not
+been measured. At 1920×1440 the installed SH17 pipeline emitted no boxes in these
+three empty-room photos, including no furniture detections: it is not an obstacle
+detector. See the [assessment and test guide](../supervised-camera-driving.md).
+Obstacle/drop-off stopping remains unvalidated. The audible LiPo alarm is not
+machine-readable, so early
 missions need a conservative time limit until battery telemetry is available.
 
 ## Development sequence and acceptance gates
@@ -247,10 +285,13 @@ stopping distance, and whether the result was automatic or user-reported.
 - `hardware/esp32/BOB_MotorTest/BOB_MotorTest.ino` implements BLE motor commands,
   a one-second command timeout, disconnect stop, and a speaker test.
 - The user confirmed motor direction and speaker operation on 2026-10-10.
-- The current firmware has no encoder input, autonomous protocol, controller
-  telemetry characteristic, Wi-Fi transport, obstacle sensor, or navigation.
-- The existing Python BLE terminal does not refresh a movement command
-  automatically and is not an autonomous control client.
+- `BOB_ControllerBench` adds the C11 binary protocol and status characteristic;
+  `bob_controller.py` refreshes leases during bounded manual trials and disarms
+  after each trial. Motor and embedded speech operation are user-confirmed.
+- The firmware has no encoder input, Wi-Fi transport, obstacle sensor, or onboard
+  navigation. The original preview has STOP/speech access only. The separate
+  supervised executor has single-pulse motion access after explicit operator input,
+  a declared LIVE run, fresh observations and controller status checks.
 - PPE, pose association, recording, and detections remain owned by the current
   computer-vision pipeline. Motor control remains a separate workstream.
 
@@ -258,10 +299,10 @@ stopping distance, and whether the result was automatic or user-reported.
 
 - Exact forward/downward obstacle sensor and mounting geometry
 - Physical emergency-stop implementation
-- Where the first navigation process runs and how close it remains to the rover
+- Physical operating distance for the off-board Jetson BLE link
 - Initial maximum PWM and measured maximum speed
-- BLE packet format, acknowledgment/status characteristic, and command rate
-- Map representation and whether the first demo uses frontier exploration or a
-  simpler bounded sweep
+- Physical validation of the existing C11 protocol, status and lease limits
+- Obstacle-aware planning beyond the preview's bounded camera-visit grid
 - Battery-voltage telemetry and mission stop threshold
-- Speaker message set, confirmation window, and per-person cooldown duration
+- Further speaker messages and calibration of confirmation/cooldown defaults;
+  the preview uses a global cooldown because persistent worker identity is absent

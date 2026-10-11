@@ -23,6 +23,7 @@ from bobapp.edge.api.auth import token_ok
 
 from ..replica import Replica
 from . import views
+from .frames import frame_router
 from .twin import twin_router
 from .worksites import worksite_router
 from .models import AssessmentPage, InspectionPage, Page, StatusResponse, WorkspaceName
@@ -31,6 +32,7 @@ HUB_ROUTES = {
     ("GET", "/v1/status"), ("WEBSOCKET", "/v1/live"), ("GET", "/v1/preview/latest"), ("GET", "/v1/observations"),
     ("GET", "/v1/incidents"), ("GET", "/v1/assessments"), ("GET", "/v1/inspections"), ("GET", "/v1/evidence/{sha256}"),
     ("GET", "/v1/logs"),
+    ("GET", "/v1/frames"),
     ("GET", "/v1/worksites"), ("GET", "/v1/worksites/{worksite_id}"), ("PUT", "/v1/worksites/{worksite_id}"),
     ("GET", "/v1/worksites/{worksite_id}/revisions/{revision}"), ("POST", "/v1/inspections"),
     ("POST", "/v1/inspections/{inspection_id}/end"),
@@ -72,7 +74,8 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
                   description="Laptop hub for the dashboard and 2D Twin. Read-only views of rover data; "
                               "no motion, arming or fault endpoints. Every item states source_mode and delivery.")
     app.add_middleware(CORSMiddleware, allow_origins=api.get("cors_origins", []), allow_methods=["GET", "POST", "PUT"],
-                       allow_headers=["Authorization", "Content-Type"])
+                       allow_headers=["Authorization", "Content-Type"],
+                       expose_headers=["X-Sha256", "X-Event-Id", "X-Hub-Received-Wall-Ns"])
 
     def allowed(authorization: Optional[str], query_token: Optional[str]) -> bool:
         return token_ok(token, authorization) or (query_token is not None and token_ok(token, f"Bearer {query_token}"))
@@ -84,6 +87,7 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
     deps = [Depends(auth)]
     app.include_router(worksite_router(lambda: replica("rover"), edge, deps))
     app.include_router(twin_router(replica, stale_after_s, deps))
+    app.include_router(frame_router(replica, deps))
 
     @app.get("/v1/status", response_model=StatusResponse, dependencies=deps)
     def get_status(workspace: WorkspaceName = "rover") -> StatusResponse:
@@ -94,9 +98,10 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
         live_json, rx, data, sha = replica(workspace).get_live()
         if data is None:
             return JSONResponse({"preview": None, "reason": "no preview received yet"}, status_code=404)
-        event_id = json.loads(live_json).get("preview", {}) or {}
+        event_id = replica(workspace).preview_event(sha)
         return Response(data, media_type="image/jpeg", headers={
-            "X-Sha256": sha, "X-Event-Id": str(event_id.get("event_id")), "X-Hub-Received-Wall-Ns": str(rx)})
+            "X-Sha256": sha, "X-Hub-Received-Wall-Ns": str(rx), "Cache-Control": "no-store",
+            **({"X-Event-Id": event_id} if event_id else {})})
 
     @app.get("/v1/observations", response_model=Page, dependencies=deps)
     def observations(workspace: WorkspaceName = "rover", after: int = 0, limit: int = Limit,

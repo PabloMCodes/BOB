@@ -129,6 +129,16 @@
         "title": "AssessmentStatus",
         "type": "string"
       },
+      "BlobStatusValue": {
+        "enum": [
+          "available",
+          "pending_sync",
+          "missing",
+          "hash_mismatch"
+        ],
+        "title": "BlobStatusValue",
+        "type": "string"
+      },
       "Bounds": {
         "properties": {
           "max_east": {
@@ -677,6 +687,81 @@
           "neutral"
         ],
         "title": "FrameCounts",
+        "type": "object"
+      },
+      "FrameItem": {
+        "properties": {
+          "cursor": {
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "hub_rx_wall_ns": {
+            "title": "Hub Rx Wall Ns",
+            "type": "integer"
+          },
+          "image_status": {
+            "$ref": "#/components/schemas/BlobStatusValue"
+          },
+          "record": {
+            "$ref": "#/components/schemas/Record"
+          }
+        },
+        "required": [
+          "cursor",
+          "delivery",
+          "hub_rx_wall_ns",
+          "record",
+          "image_status"
+        ],
+        "title": "FrameItem",
+        "type": "object"
+      },
+      "FramePage": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FrameItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_after": {
+            "title": "Next After",
+            "type": "integer"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "items",
+          "next_after"
+        ],
+        "title": "FramePage",
         "type": "object"
       },
       "Freshness": {
@@ -2405,6 +2490,13 @@
             "title": "Evidence",
             "type": "object"
           },
+          "frames": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Frames",
+            "type": "object"
+          },
           "gaps": {
             "items": {
               "additionalProperties": true,
@@ -3405,6 +3497,164 @@
           }
         },
         "summary": "Evidence"
+      }
+    },
+    "/v1/frames": {
+      "get": {
+        "operationId": "frames_v1_frames_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delivery",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Delivery"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Delivery"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "latest",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Latest",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FramePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Frames"
       }
     },
     "/v1/incidents": {

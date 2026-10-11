@@ -122,6 +122,8 @@ def test_retention_prunes_only_acknowledged_old_records_and_their_blobs(store):
     later = time.time_ns() + 10**9
     assert store.prune(0, 1 << 40, 0, now_wall_ns=later)["retention"] == 0      # nothing acknowledged
     store.ack("hub", Lane.CONTROL, 1)
+    assert store.prune(0, 1 << 40, 0, now_wall_ns=later)["retention"] == 0  # metadata is not image receipt
+    store.ack_blob("hub", store.store_epoch, sha)
     assert store.prune(3600, 1 << 40, 0, now_wall_ns=later)["retention"] == 0   # acknowledged but young
     assert store.prune(0, 1 << 40, 0, now_wall_ns=later)["retention"] == 1
     assert [r.seq for r in store.read(Lane.CONTROL, 0)] == [2]
