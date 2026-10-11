@@ -8,14 +8,20 @@ import multiprocessing
 import queue
 import random
 import time
+from datetime import datetime
+from pathlib import Path
 from urllib.request import Request, urlopen
 
-from hardware.controller_protocol import STATUS_UUID
+from hardware.controller_protocol import STATUS_UUID, decode_status, encode_tone
 from hardware.esp32.remote import Remote
 
 MAX_AGE_S = 1.0
 PULSE_S = 0.25
-REST_S = 0.6
+REST_S = 0.2
+TURN_S = 0.8
+INSPECT_S = 2.0
+TURN_AWAY_S = 4.0
+SPEECH_COOLDOWN_S = 30.0
 MISSION_S = 30.0
 
 
@@ -26,6 +32,9 @@ class Observation:
     person: bool
     expires: float
     ppe: str
+    subject: tuple | None = None
+    missing: tuple[str, ...] = ()
+    photo_sha: str | None = None
 
 
 def observation(status_data, page_data, started, now):
@@ -65,40 +74,88 @@ def observation(status_data, page_data, started, now):
     age = max(frame_age + max(0, record_age), max(ages[:3]) / 1000) + hub_age / 1000 + now - started
     if age >= MAX_AGE_S:
         raise ValueError('Jetson observation is too old')
-    person = any(box.source == 'model' and box.cls_name in {'person', 'head', 'face'}
-                 and box.conf >= 0.5 for box in event.boxes)
+    people = [box for box in event.boxes if box.source == 'model'
+              and box.cls_name == 'person' and box.conf >= 0.5]
+    width, height = event.image_size.width, event.image_size.height
+    candidates = [box for box in people if box.conf >= 0.75
+                  and (box.xyxy[2] - box.xyxy[0]) * (box.xyxy[3] - box.xyxy[1]) >= width * height * .02
+                  and box.xyxy[3] - box.xyxy[1] >= height * .2]
+    subject = max(candidates, key=lambda box: box.conf, default=None)
+    missing = set()
+    if subject is not None and len(people) == 1:
+        x1, y1, x2, y2 = subject.xyxy
+        for verdict in record.body.verdicts:
+            box = verdict.violation
+            if verdict.verdict == 'not_wearing' and box is not None and box.source == 'derived':
+                cx, cy = (box.xyxy[0] + box.xyxy[2]) / 2, (box.xyxy[1] + box.xyxy[3]) / 2
+                if x1 <= cx <= x2 and y1 <= cy <= y2:
+                    missing.add(verdict.rule)
     ppe = ', '.join(f'{name}: {verdict.value}' for name, verdict in record.body.frame_verdicts.items())
     return Observation((record.edge_id, str(record.store_epoch), record.run_id,
-                        str(event.session_id)), str(event.event_id), person,
-                       now + MAX_AGE_S - age, ppe or 'PPE unverified')
+                        str(event.session_id)), str(event.event_id), subject is not None,
+                       now + MAX_AGE_S - age, ppe or 'PPE unverified',
+                       tuple(subject.xyxy) if subject else None, tuple(sorted(missing)),
+                       record.body.evidence_sha256)
+
+
+def same_subject(a, b):
+    if a is None or b is None:
+        return False
+    x1, y1, x2, y2 = a
+    u1, v1, u2, v2 = b
+    overlap = max(0, min(x2, u2) - max(x1, u1)) * max(0, min(y2, v2) - max(y1, v1))
+    union = (x2-x1)*(y2-y1) + (u2-u1)*(v2-v1) - overlap
+    return union > 0 and overlap / union >= .3
+
 
 
 class Wander:
-    """No camera clearance claim: bounded random bursts in an operator-cleared area."""
+    """Turn-led search -> brief inspection -> speech if confirmed -> turn away."""
     def __init__(self, rng=None):
-        self.rng = rng or random.Random()
+        self.turn = (rng or random.Random()).choice(['L', 'R'])
         self.active = False
         self.reason = 'Press R to start a 30-second search'
         self.identity = None
         self.command = None
         self.until = self.rest_until = self.deadline = 0.0
-        self.used_key = None
-        self.latest_key = None
+        self.used_key = self.latest_key = None
         self.key_since = 0.0
+        self.phase = 'SEARCH'
+        self.turn_count = 0
+        self.last_speech = -float('inf')
+        self.announce = False
+        self.report = None
+        self.photo = None
+        self.evidence = {}
+        self.subject = None
+        self.clear_since = None
 
     def stop(self, reason):
         self.active = False
         self.command = None
+        self.phase = 'SEARCH'
         self.reason = reason
 
+    def turn_away(self, now):
+        self.phase = 'TURN_AWAY'
+        self.until = now + TURN_AWAY_S
+        self.away_started = now
+        self.clear_since = None
+        self.command = self.turn
+        self.reason = 'Turning away from inspected view'
+        return self.turn
+
     def update(self, obs, now, *, start=False, stop=False):
+        self.announce = False
+        self.report = None
         if stop:
             self.stop('Paused — R to restart')
             return None
         if obs is None or now >= obs.expires:
             self.stop('Waiting for fresh Jetson detections — R to restart')
             return None
-        if obs.key != self.latest_key:
+        fresh = obs.key != self.latest_key
+        if fresh:
             self.latest_key, self.key_since = obs.key, now
         elif now - self.key_since >= MAX_AGE_S:
             self.stop('Frozen detection feed — R to restart')
@@ -108,33 +165,109 @@ class Wander:
             self.stop('Vision run/session changed — R to restart')
             return None
         self.identity = obs.identity
-        if obs.person:
-            self.stop('PERSON FOUND — stopped for PPE inspection')
-            return None
         if start and not self.active:
             self.active = True
             self.deadline = now + MISSION_S
             self.rest_until = now
             self.used_key = None
+            self.phase = 'SEARCH'
+            self.turn_count = 0
         if not self.active:
             return None
         if now >= self.deadline:
             self.stop('30-second demo complete — R to restart')
             return None
+        if self.phase == 'SPEAK':
+            if now < self.until:
+                self.reason = 'Missing PPE — stopped for announcement'
+                return None
+            return self.turn_away(now)
+        if self.phase == 'TURN_AWAY':
+            if obs.person:
+                self.clear_since = None
+            elif fresh and self.clear_since is None:
+                self.clear_since = now
+            if (now - self.away_started >= 1.0 and self.clear_since is not None
+                    and now - self.clear_since >= .4):
+                self.phase = 'SEARCH'
+                self.command = None
+                self.rest_until = now + REST_S
+                self.used_key = obs.key
+            elif now >= self.until:
+                self.stop('Person still in view after turning — Space/R to retry')
+                return None
+            else:
+                self.reason = 'Turning away; waiting for person to leave view'
+                return self.turn
+        if self.phase == 'SEARCH' and obs.person:
+            self.phase = 'INSPECT'
+            self.command = None
+            self.inspect_started = now
+            self.subject = obs.subject
+            self.evidence = {}
+            self.photo = None
+            self.inspection_key = obs.key
+        if self.phase == 'INSPECT':
+            self.reason = 'Checking person/PPE briefly'
+            confirmed = ()
+            # Count distinct frames after the stop, matched to the same image subject.
+            if fresh and obs.key != self.inspection_key and now - self.inspect_started >= .3:
+                if not same_subject(self.subject, obs.subject):
+                    self.evidence = {}
+                    self.photo = None
+                self.subject = obs.subject
+                if obs.person and obs.photo_sha:
+                    self.photo = obs
+                self.evidence = {rule: (self.evidence.get(rule, (0, now))[0] + 1,
+                                       self.evidence.get(rule, (0, now))[1])
+                                 for rule in obs.missing if obs.person}
+                confirmed = tuple(rule for rule, (count, since) in self.evidence.items()
+                                  if count >= 3 and now - since >= .4)
+            if confirmed or now - self.inspect_started >= INSPECT_S:
+                # Keep IDs/hashes pointing to the existing Jetson image and website record.
+                evidence = obs if confirmed else (self.photo or obs)
+                self.report = {'event_id': evidence.key, 'identity': evidence.identity,
+                               'evidence_sha256': evidence.photo_sha,
+                               'source_mode': 'LIVE', 'delivery': 'realtime',
+                               'confirmed_missing': list(confirmed),
+                               'result': 'missing_ppe' if confirmed else 'unverified',
+                               'speech_requested': False}
+                if confirmed and now - self.last_speech >= SPEECH_COOLDOWN_S:
+                    self.announce = True
+                    self.report['speech_requested'] = True
+                    self.last_speech = now
+                    self.phase = 'SPEAK'
+                    self.until = now + 1.5
+                    return None
+                return self.turn_away(now)
+            return None
         if self.command is not None:
             if now < self.until:
-                self.reason = f'Searching: {self.command}'
+                self.reason = f'Scanning: {self.command}'
                 return self.command
             self.command = None
             self.rest_until = now + REST_S
             self.used_key = obs.key
         if now >= self.rest_until and obs.key != self.used_key:
-            self.command = self.rng.choice(['F', 'F', 'F', 'L', 'R'])
-            self.until = now + PULSE_S
-            self.reason = f'Searching: {self.command}'
+            # Same-direction turns explore the surrounding view instead of undoing each other.
+            self.command = self.turn if self.turn_count < 6 else 'F'
+            self.turn_count = self.turn_count + 1 if self.command != 'F' else 0
+            self.until = now + (TURN_S if self.command != 'F' else PULSE_S)
+            self.reason = f'Scanning: {self.command}'
             return self.command
-        self.reason = 'Stopped between bursts; watching camera'
+        self.reason = 'Watching between scan turns'
         return None
+
+
+async def say_missing(remote):
+    """Existing speech-1 firmware command. MotorTest's beep is not speech."""
+    await remote.stop()
+    if remote.legacy:
+        return 'unsupported_on_MotorTest'
+    status = decode_status(bytes(await asyncio.wait_for(
+        remote.client.read_gatt_char(STATUS_UUID), 1.0)))
+    await remote.send(encode_tone(status.session))
+    return 'write_acknowledged'
 
 
 class HubFeed:
@@ -227,7 +360,12 @@ async def run(url):
                 wander = Wander()
                 running = focused = True
                 next_send = 0.0
-                print('R starts; Space stops; Esc quits. Person detection latches STOP.', flush=True)
+                print('R starts; Space stops; Esc quits. Inspect, announce, then turn away.', flush=True)
+                log_dir = Path('runs/wander') / datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+                log_dir.mkdir(parents=True, exist_ok=True)
+                print(f'Inspection log: {log_dir / "inspections.jsonl"}', flush=True)
+                speaking = False
+                last_result = ''
                 stage = 'running demo'
                 while running and client.is_connected:
                     start = stop = False
@@ -249,17 +387,30 @@ async def run(url):
                     now = time.monotonic()
                     command = wander.update(feed.current, now, start=start,
                                             stop=stop or not focused or not running)
-                    if command is None:
-                        if remote.moving:
-                            await remote.stop()
-                    elif not remote.moving or now >= next_send:
+                    if (command is None and remote.moving) or (speaking and wander.phase != 'SPEAK'):
+                        await remote.stop()
+                        speaking = False
+                    if wander.announce:
+                        delivery = await say_missing(remote)
+                        speaking = delivery == 'write_acknowledged'
+                        wander.report['speech_delivery'] = delivery
+                        # Allow the full clip after the BLE acknowledgement before moving.
+                        wander.until = time.monotonic() + 1.5
+                    if wander.report is not None:
+                        report = {**wander.report, 'mac_logged_wall_ns': time.time_ns()}
+                        with (log_dir / 'inspections.jsonl').open('a') as log:
+                            log.write(json.dumps(report) + '\n')
+                        last_result = ('Photo saved on Jetson; website sync uses existing archive'
+                                       if report['evidence_sha256'] else 'No saved photo reported by Jetson')
+                        print(json.dumps(report), flush=True)
+                    if command is not None and (not remote.moving or now >= next_send):
                         await remote.move(command)
                         next_send = now + 0.1
                     screen.fill((22, 27, 34))
                     lines = ['Mac Bluetooth + existing Jetson detections',
                              'Cleared floor / supervised demo — no obstacle avoidance',
                              'R: start search     Space: STOP     Esc: quit', wander.reason,
-                             feed.error or 'Live Jetson feed connected',
+                             feed.error or last_result or 'Live Jetson feed connected',
                              (feed.current.ppe if feed.current else 'PPE: waiting')[:100]]
                     for i, line in enumerate(lines):
                         screen.blit(font.render(line, True, (235, 240, 245)), (20, 20 + i * 44))

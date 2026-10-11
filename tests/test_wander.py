@@ -60,19 +60,31 @@ def clear(now=0, key='1'):
 def test_bursts_rest_and_new_frame_required():
     w = Wander(random.Random(3))
     assert w.update(clear(), 0) is None
-    assert w.update(clear(), 0, start=True) in 'FLR'
-    assert w.update(clear(), .26) is None
-    assert w.update(replace(clear(), expires=2), .9) is None  # repeated frame
-    assert w.update(clear(.91, '2'), .91) in 'FLR'
+    assert w.update(clear(), 0, start=True) in 'LR'
+    assert w.update(clear(.81, '2'), .81) is None
+    assert w.update(clear(1.02, '2'), 1.02) is None
+    assert w.update(clear(1.03, '3'), 1.03) == w.turn
 
 
-def test_person_stops_and_stays_stopped_until_explicit_restart():
+def person(now, key, missing=()):
+    return replace(clear(now, key), person=True, subject=(100, 50, 300, 600),
+                   missing=missing, photo_sha='a' * 64)
+
+
+def test_person_inspection_is_bounded_then_turns_away_and_resumes():
     w = Wander()
     w.update(clear(), 0, start=True)
-    assert w.update(replace(clear(.1, '2'), person=True), .1) is None
-    assert 'PERSON FOUND' in w.reason
-    assert w.update(clear(.2, '3'), .2) is None
-    assert w.update(clear(.3, '4'), .3, start=True) in 'FLR'
+    assert w.update(person(.1, '2'), .1) is None
+    for n, t in enumerate((.6, 1.1, 1.6), 3):
+        assert w.update(person(t, str(n)), t) is None
+    assert w.update(person(2.2, '6'), 2.2) == w.turn
+    assert w.report['result'] == 'unverified'
+    assert w.report['evidence_sha256'] == 'a' * 64
+    assert not w.announce
+    assert w.update(clear(2.8, '7'), 2.8) == w.turn
+    assert w.update(clear(3.3, '8'), 3.3) is None
+    assert w.phase == 'SEARCH'
+    assert w.update(clear(3.6, '9'), 3.6) == w.turn
 
 
 @pytest.mark.parametrize('cause', ['expired', 'missing', 'session', 'stop', 'frozen', 'timeout'])
@@ -163,3 +175,102 @@ def test_scan_error_keeps_detail_and_does_not_start_window(monkeypatch):
     with pytest.raises(RuntimeError, match='Bluetooth scan: RuntimeError: Bluetooth is turned off'):
         asyncio.run(run('http://127.0.0.1:8780'))
     assert calls == ['quit']
+
+
+@pytest.mark.parametrize('case', ['weak', 'head_only', 'tiny'])
+def test_weak_partial_or_tiny_person_does_not_interrupt_scan(feed, case):
+    status, page = feed
+    box = page['items'][0]['record']['body']['event']['boxes'][0]
+    if case == 'weak': box['conf'] = .6
+    if case == 'head_only': box['cls_name'] = 'head'
+    if case == 'tiny': box['xyxy'] = [100, 50, 120, 70]
+    obs = observation(status, page, 10, 10.05)
+    assert not obs.person
+    assert obs.missing == ()
+
+
+def test_violation_is_from_subject_verdict_not_frame_summary(feed):
+    status, page = feed
+    obs = observation(status, page, 10, 10.05)
+    assert obs.missing == ('glasses',)
+    # Keep per-frame not_wearing summary but remove the subject verdict evidence.
+    page['items'][0]['record']['body']['verdicts'] = []
+    assert observation(status, page, 10, 10.05).missing == ()
+
+
+def test_multiple_people_do_not_mix_ppe_evidence(feed):
+    from copy import deepcopy
+    status, page = feed
+    boxes = page['items'][0]['record']['body']['event']['boxes']
+    boxes.append(deepcopy(boxes[0]))
+    obs = observation(status, page, 10, 10.05)
+    assert obs.person and not obs.missing
+
+
+def confirmed_inspection(w, start=0, prefix=''):
+    w.update(person(start, prefix+'0', ('helmet',)), start, start=True)
+    for n, dt in enumerate((.4, .65, .85), 1):
+        w.update(person(start+dt, prefix+str(n), ('helmet',)), start+dt)
+
+
+def test_confirmed_missing_speaks_once_logs_exact_frame_then_turns():
+    w = Wander()
+    confirmed_inspection(w)
+    assert w.announce and w.phase == 'SPEAK'
+    assert w.report['confirmed_missing'] == ['helmet']
+    assert w.report['event_id'] == '3' and w.report['evidence_sha256'] == 'a' * 64
+    assert w.update(person(1, '4'), 1) is None
+    assert not w.announce
+    w.update(person(1.8, '5'), 1.8)
+    assert w.update(person(2.4, '6'), 2.4) == w.turn
+    assert w.phase == 'TURN_AWAY'
+
+
+def test_single_frame_or_changed_subject_never_triggers_speech():
+    w = Wander()
+    w.update(person(0, '1', ('helmet',)), 0, start=True)
+    for t in (.4, .65, .85):
+        # Repeated same frame cannot confirm a violation.
+        w.update(person(t, '2', ('helmet',)), t)
+    assert not w.announce
+    w.update(replace(person(.9, '3', ('helmet',)), subject=(500, 50, 700, 600)), .9)
+    assert not w.announce
+    w.update(person(1.2, '4'), 1.2)
+    assert not w.evidence
+
+
+def test_speech_cooldown_survives_manual_restart():
+    w = Wander()
+    confirmed_inspection(w)
+    assert w.announce
+    w.update(clear(1, '4'), 1, stop=True)
+    confirmed_inspection(w, 2, 'again')
+    assert not w.announce and w.phase == 'TURN_AWAY'
+    assert w.report['confirmed_missing'] == ['helmet']
+
+
+def test_turn_away_has_a_limit_when_person_never_leaves_view():
+    w = Wander()
+    confirmed_inspection(w)
+    for n in range(1, 14):
+        t = .85 + n * .5
+        w.update(person(t, str(10+n)), t)
+    assert not w.active
+    assert 'still in view' in w.reason
+
+
+@pytest.mark.parametrize('legacy', [False, True])
+def test_speech_uses_existing_packet_while_stopped(legacy):
+    import asyncio
+    from hardware.esp32.wander import say_missing
+    from hardware.esp32.remote import Remote
+    from hardware.controller_protocol import encode_stop, encode_tone
+    from tests.test_keyboard_remote import Client
+    async def check():
+        client = Client()
+        remote = Remote(client, legacy=legacy)
+        result = await say_missing(remote)
+        assert not remote.moving
+        assert client.packets == ([b'S'] if legacy else [encode_stop(), encode_tone(123)])
+        assert result == ('unsupported_on_MotorTest' if legacy else 'write_acknowledged')
+    asyncio.run(check())

@@ -35,7 +35,7 @@ steps = iter([
     (pygame.KEYDOWN, pygame.K_r, False),
     (None, None, True),
     (pygame.KEYDOWN, pygame.K_r, True),
-    (None, None, False),
+    (pygame.KEYDOWN, pygame.K_SPACE, False),
     (pygame.KEYDOWN, pygame.K_r, False),
     (pygame.WINDOWFOCUSLOST, None, False),
     (pygame.WINDOWFOCUSGAINED, None, False),
@@ -55,4 +55,4 @@ assert packets[:2] == [b'S', b'3']
 assert len(packets) == 7, packets
 assert packets[2] in [b'F', b'L', b'R'] and packets[4] in [b'F', b'L', b'R']
 assert packets[3] == packets[5] == packets[6] == b'S'
-print('PASS: start, person stop, no auto-resume, restart, focus loss and exit')
+print('PASS: start, inspection stop, explicit pause/restart, focus loss and exit')
