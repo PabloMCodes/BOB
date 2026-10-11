@@ -144,3 +144,22 @@ def test_spawned_feed_worker_reads_http_and_shuts_down(feed):
         server.shutdown()
         server.server_close()
         thread.join(timeout=1)
+
+
+def test_scan_error_keeps_detail_and_does_not_start_window(monkeypatch):
+    import asyncio
+    import sys
+    from types import SimpleNamespace
+    from hardware.esp32.wander import run
+
+    async def failed_scan(*args, **kwargs):
+        raise RuntimeError('Bluetooth is turned off')
+    calls = []
+    monkeypatch.setitem(sys.modules, 'pygame', SimpleNamespace(
+        init=lambda: calls.append('init'), quit=lambda: calls.append('quit')))
+    monkeypatch.setitem(sys.modules, 'bleak', SimpleNamespace(
+        BleakClient=object,
+        BleakScanner=SimpleNamespace(find_device_by_filter=failed_scan)))
+    with pytest.raises(RuntimeError, match='Bluetooth scan: RuntimeError: Bluetooth is turned off'):
+        asyncio.run(run('http://127.0.0.1:8780'))
+    assert calls == ['quit']

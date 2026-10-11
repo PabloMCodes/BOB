@@ -75,3 +75,13 @@ Final full suite: **740 passed, 4 optional skips**, 77.06 s. An unrelated
 camera-server timing assertion failed on the preceding run and passed on the
 full rerun. The local live hub was unreachable during the read-only check;
 no physical Bluetooth or Jetson-feed acceptance is claimed.
+
+Bluetooth startup follow-up (2026-10-11): initialize pygame and the feed worker
+after connecting/stopping the controller, matching the working remote order.
+Errors now include the failed stage and original message instead of only
+`BleakError`. A read-only Mac scan, connection and status read succeeded against
+BOB-ControllerBench: DISARMED, NONE fault, PWM (0,0). No motor commands were sent
+in that check; the cause of the original intermittent failure is unconfirmed.
+
+Startup-fix validation: simulated pygame/BLE loop passes; full suite
+**741 passed, 4 optional skips** in 85.73 s, including the scan-error regression.

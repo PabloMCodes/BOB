@@ -22,7 +22,7 @@ class Client:
     async def __aenter__(self): return self
     async def __aexit__(self, *args): pass
     async def write_gatt_char(self, uuid, packet, response): packets.append(packet)
-async def discover(*args, **kwargs): return object()
+async def discover(*args, **kwargs): return SimpleNamespace(name='BOB-MotorTest')
 bleak.BleakClient = Client
 bleak.BleakScanner.find_device_by_filter = discover
 feed = SimpleNamespace(current=None, error='')

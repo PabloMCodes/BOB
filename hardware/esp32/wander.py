@@ -200,21 +200,27 @@ async def run(url):
     import pygame
     from bleak import BleakClient, BleakScanner
 
-    pygame.init()
     feed = HubFeed(url)
-    poller = asyncio.create_task(feed.poll())
+    poller = None
+    stage = 'Bluetooth scan'
     try:
         print('Looking for BOB; close the arrow-key remote first.', flush=True)
         device = await BleakScanner.find_device_by_filter(
             lambda d, ad: (ad.local_name or d.name) in {'BOB-ControllerBench', 'BOB-MotorTest'}, timeout=15)
         if device is None:
             raise RuntimeError('BOB not found; check power and other BLE clients')
+        stage = 'Bluetooth connection'
+        print(f'Found {device.name or "BOB"}; connecting...', flush=True)
         async with BleakClient(device) as client:
+            stage = 'controller initialization'
             remote = Remote(client, legacy=client.services.get_characteristic(STATUS_UUID) is None)
             try:
                 await remote.stop()
                 if remote.legacy:
                     await remote.send(b'3')
+                stage = 'remote window'
+                pygame.init()
+                poller = asyncio.create_task(feed.poll())
                 screen = pygame.display.set_mode((850, 300))
                 pygame.display.set_caption('BOB — supervised wander demo')
                 font = pygame.font.Font(None, 26)
@@ -222,6 +228,7 @@ async def run(url):
                 running = focused = True
                 next_send = 0.0
                 print('R starts; Space stops; Esc quits. Person detection latches STOP.', flush=True)
+                stage = 'running demo'
                 while running and client.is_connected:
                     start = stop = False
                     for event in pygame.event.get():
@@ -262,10 +269,13 @@ async def run(url):
                 if client.is_connected:
                     with suppress(Exception):
                         await remote.stop()
+    except Exception as error:
+        raise RuntimeError(f'{stage}: {type(error).__name__}: {error}') from error
     finally:
-        poller.cancel()
-        with suppress(asyncio.CancelledError):
-            await poller
+        if poller is not None:
+            poller.cancel()
+            with suppress(asyncio.CancelledError):
+                await poller
         pygame.quit()
 
 
@@ -281,7 +291,7 @@ def main():
     except KeyboardInterrupt:
         print('Stopped.')
     except Exception as error:
-        raise SystemExit(f'Wander demo stopped: {type(error).__name__}') from error
+        raise SystemExit(f'Wander demo stopped: {error}') from error
 
 
 if __name__ == '__main__':
