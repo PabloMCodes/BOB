@@ -57,6 +57,7 @@ function CardImage({ media }: { media: Media }) {
         alt={media.alt}
         onLoad={onLoad}
         className="absolute inset-0 h-full w-full object-cover"
+        style={{ objectPosition: media.objectPosition }}
       />
     )
   }

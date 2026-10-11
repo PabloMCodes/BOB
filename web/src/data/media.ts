@@ -16,6 +16,8 @@ export type Media = {
   src: string
   kind: 'image' | 'video'
   alt: string
+  /** Focal point when an image is cropped to fill its card. */
+  objectPosition?: string
   /** Only for clean images. Leave empty when the boxes are drawn into the file. */
   boxes?: LookBox[]
 }
@@ -26,4 +28,11 @@ export type Media = {
  */
 export const heroBackground: Media | null = null
 
-export const skillMedia: Partial<Record<SkillId, Media>> = {}
+export const skillMedia: Partial<Record<SkillId, Media>> = {
+  ppe: {
+    src: '/media/workers/03-site-dusk-hivis-detections.jpg',
+    kind: 'image',
+    alt: 'Two workers in hard hats and high-visibility jackets, with person, helmet, eyewear and vest detection labels.',
+    objectPosition: '85% center',
+  },
+}
