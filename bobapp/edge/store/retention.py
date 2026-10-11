@@ -36,8 +36,8 @@ class RetentionMixin:
     def prune(self, acked_max_age_s: float, max_store_bytes: int, min_free_disk_bytes: int,
               now_wall_ns: Optional[int] = None, source_mode: SourceMode = SourceMode.LIVE) -> dict[str, int]:
         """Retention: delete acknowledged records older than the age limit. Disk pressure: delete the
-        oldest observation records (then track points), acknowledged or not, writing a gap record for
-        any unacknowledged range. Control records (incidents, evidence) are never pruned unacknowledged."""
+        oldest observations without retained images (then track points), writing exact gap ranges.
+        Frame records await verified image receipts. Control records are never pruned unacknowledged."""
         now = time.time_ns() if now_wall_ns is None else now_wall_ns
         cutoff = now - int(acked_max_age_s * 1e9)
         removed = {"retention": 0, "pressure": 0}
@@ -59,24 +59,47 @@ class RetentionMixin:
         return self.size_bytes() > max_store_bytes or self.disk_free_bytes() < min_free_disk_bytes
 
     def _delete(self, lane: Lane, where: str, args: tuple) -> int:
-        if lane == Lane.CONTROL:
-            seqs = [s for (s,) in self.db.execute(f"SELECT seq FROM records WHERE lane=? AND kind='evidence' AND {where}",
-                                                   (lane.value, *args))]
-            for (sha,) in self.db.execute(f"SELECT sha256 FROM blobs WHERE evidence_seq IN ({','.join('?' * len(seqs))})",
-                                          seqs).fetchall() if seqs else []:
-                self.db.execute("DELETE FROM blobs WHERE sha256=?", (sha,))
-                self._unlink_after_commit.append(sha)
-        return self.db.execute(f"DELETE FROM records WHERE lane=? AND {where}", (lane.value, *args)).rowcount
+        # Never discard an archived frame before image receipt, even when its
+        # metadata was acknowledged. Every known consumer of its lane must have
+        # a durable image copy. Legacy hubs without image receipts retain images.
+        protected = ("NOT EXISTS (SELECT 1 FROM blob_refs r JOIN blobs b0 ON b0.sha256=r.sha256 "
+                     "WHERE r.lane=records.lane AND r.seq=records.seq "
+                     "AND (NOT EXISTS (SELECT 1 FROM blob_acks b WHERE b.sha256=r.sha256) OR "
+                     "EXISTS (SELECT 1 FROM acks a WHERE a.lane=r.lane AND NOT EXISTS "
+                     "(SELECT 1 FROM blob_acks b WHERE b.sha256=r.sha256 AND b.hub_id=a.hub_id))))")
+        removed = self.db.execute(f"DELETE FROM records WHERE lane=? AND {where} AND {protected}",
+                                  (lane.value, *args)).rowcount
+        self.db.execute("DELETE FROM blob_refs WHERE NOT EXISTS "
+                        "(SELECT 1 FROM records r WHERE r.lane=blob_refs.lane AND r.seq=blob_refs.seq)")
+        unused = self.db.execute("SELECT sha256 FROM blobs b WHERE "
+                                 "NOT EXISTS (SELECT 1 FROM blob_refs r WHERE r.sha256=b.sha256) "
+                                 "AND EXISTS (SELECT 1 FROM blob_acks a WHERE a.sha256=b.sha256)").fetchall()
+        for (sha,) in unused:
+            self.db.execute("DELETE FROM blobs WHERE sha256=?", (sha,))
+            self.db.execute("DELETE FROM blob_acks WHERE sha256=?", (sha,))
+            self._unlink_after_commit.append(sha)
+        return removed
 
     def _prune_oldest(self, lane: Lane, count: int, source_mode: SourceMode) -> int:
         with self._tx():
-            rows = self.db.execute("SELECT seq FROM records WHERE lane=? ORDER BY seq LIMIT ?",
+            rows = self.db.execute("SELECT seq FROM records WHERE lane=? AND NOT EXISTS "
+                                   "(SELECT 1 FROM blob_refs r JOIN blobs b ON b.sha256=r.sha256 "
+                                   "WHERE r.lane=records.lane AND r.seq=records.seq) "
+                                   "ORDER BY seq LIMIT ?",
                                    (lane.value, count)).fetchall()
             if not rows:
                 return 0
-            first, last = rows[0][0], rows[-1][0]
             acked = self.acked_seq(lane)
-            if last > acked:  # someone has not received part of this range: say so explicitly
-                self._append(GapBody(kind="gap", lane=lane, first_seq=max(first, acked + 1), last_seq=last,
-                                     reason=GapReason.PRUNED_DISK_PRESSURE), source_mode, None)
-            return self._delete(lane, "seq BETWEEN ? AND ?", (first, last))
+            groups = []
+            for (seq,) in rows:
+                if not groups or seq != groups[-1][1] + 1:
+                    groups.append([seq, seq])
+                else:
+                    groups[-1][1] = seq
+            for first, last in groups:
+                if last > acked:
+                    self._append(GapBody(kind="gap", lane=lane, first_seq=max(first, acked + 1), last_seq=last,
+                                         reason=GapReason.PRUNED_DISK_PRESSURE), source_mode, None)
+            # Selected rows may straddle protected frame records. Delete only
+            # this exact set; gaps must likewise describe actual missing rows.
+            return self._delete(lane, f"seq IN ({','.join('?' for _ in rows)})", tuple(r[0] for r in rows))

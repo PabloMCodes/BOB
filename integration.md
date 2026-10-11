@@ -37,19 +37,25 @@ These are the only ways other parts may depend on the CV and application subsyst
 | C6 | Python package `vision` (import path, Python 3.10) | `main` CV subsystem | Jetson deploy | `pyproject.toml`, `uv.lock` | package version |
 | C7 | Independent scene inspection output (`scene_version: 1`), image-bound or declared closed yellow floor-tape definitions, frame-linked findings; no movement authority | Still inspection, opt-in Mac server/replay; `configs/zones-yellow.yaml` profile | Future dashboard/evidence | `vision/zones.py`, `vision/tape.py`, `vision/scene.py`, `docs/restricted-zones.md` | scene contract version |
 | C8 | Independent walkway obstruction contract (`walkway_version: 1`): operator quadrilateral bound to a declared-empty fixed-camera reference file, entry/exit edges, reference check + change evidence; lane findings planned; no movement authority | `vision/walkway.py`; `configs/walkway.yaml` (prototype defaults). Library only — no CLI/live output yet | Future dashboard/evidence | `vision/walkway.py`, `docs/walkway-obstruction.md` | `walkway_version` |
-| C9 | **Built on the Mac (dashboard Steps 2–4).** Rover edge sync: `bob-app` v1 lane records (control / track / observation, per-lane `seq`, `store_epoch`), live state, `sync_*` messages, evidence blobs by SHA-256. Measured two-second FPS/Hz/confidence windows travel in the existing `notice` envelope (`code=stream_metrics`, at most 1/s). Rover → laptop over the local network only; read-only except inspection start/end and profile delivery; no motion, arming or fault endpoints | `bobapp/edge/` (SQLite WAL store fed by `vision.server --edge`; edge API `python -m bobapp.edge.api`, port 8770, token `BOB_EDGE_TOKEN`); `configs/edge.yaml` | Laptop hub | `bobapp/contracts/`, `schema/app/*.schema.json`, `tests/fixtures/app/` | `app_version` (**v1**, unchanged) |
-| C10 | **Built and consumed by the local dashboard.** Hub API: REST + `WS /v1/live`, optional measured `status.telemetry`, operational `/v1/logs` with backwards paging, worksites + explicit revision-bound inspection commands, observations/incidents (optional `latest=true`), evidence and Twin. `?workspace=rover|sample` separates databases; worksite/command routes are rover-only. Every history item states `source_mode`, `delivery` and clock domains; the browser uses token headers and bounded REST polling | `bobapp/hub/` (laptop, `python -m bobapp.hub serve`, port 8780) | `web/src/dashboard/`, `web/src/twin/` ([connection guide](docs/plans/digital-twin-frontend-guide.md)) | `schema/app/hub-openapi.json` (generated, drift-tested) + `bobapp/contracts/` | `app_version` (**v1**, unchanged); additive hub API fields/routes |
-| C11 | Experimental controller-bench BLE protocol: 20-byte-or-smaller binary stop/arm/motion/tone commands and status; per-connection session, monotonic sequence and receive-time lease; no CV motion authority | Future navigation host client | `BOB_ControllerBench` ESP32 firmware; status returns to host | `hardware/controller_protocol.py`, `hardware/esp32/BOB_ControllerBench/BOB_ControllerBench.ino` | protocol byte `1` (experimental; physical acceptance pending) |
-
+| C9 | **Built on the Mac (dashboard Steps 2–4).** Rover edge sync: `bob-app` v1 lane records (control / track / observation, per-lane `seq`, `store_epoch`), live state, `sync_*` messages, evidence blobs by SHA-256. Measured two-second FPS/Hz/confidence windows travel in the existing `notice` envelope (`code=stream_metrics`, at most 1/s). Rover → laptop over the local network only; image receipts via `POST /v1/blobs/{sha256}/ack`; writes limited to receipts, inspection start/end and profile delivery; no motion, arming or fault endpoints | `bobapp/edge/` (SQLite WAL store fed by `vision.server --edge`; edge API `python -m bobapp.edge.api`, port 8770, token `BOB_EDGE_TOKEN`); `configs/edge.yaml` | Laptop hub | `bobapp/contracts/`, `schema/app/*.schema.json`, `tests/fixtures/app/` | `app_version` (**v1**, unchanged) |
+| C10 | **Built and consumed by the local dashboard.** Hub API: REST + `WS /v1/live`, optional measured `status.telemetry`, operational `/v1/logs` with backwards paging, archived `/v1/frames` with image status and `status.frames` counts, worksites + explicit revision-bound inspection commands, observations/incidents (optional `latest=true`), evidence and Twin. `?workspace=rover|sample` separates databases; worksite/command routes are rover-only. Every history item states `source_mode`, `delivery` and clock domains; the browser uses token headers and bounded REST polling | `bobapp/hub/` (laptop, `python -m bobapp.hub serve`, port 8780) | `web/src/dashboard/`, `web/src/twin/` ([connection guide](docs/plans/digital-twin-frontend-guide.md)) | `schema/app/hub-openapi.json` (generated, drift-tested) + `bobapp/contracts/` | `app_version` (**v1**, unchanged); additive hub API fields/routes |
+| C11 | Experimental controller-bench BLE protocol: 20-byte-or-smaller binary stop/arm/motion/tone commands and status; per-connection session, monotonic sequence and receive-time lease; no CV motion authority. `TONE` plays embedded Missing PPE on speech-1 firmware | Manual bench client; preview STOP/TONE only; supervised executor sends one 100–150 ms motion packet per operator-authorized step | `BOB_ControllerBench` ESP32 firmware; status returns to host | `hardware/controller_protocol.py`, `hardware/esp32/BOB_ControllerBench/BOB_ControllerBench.ino`, `navigation/drive.py` | protocol byte `1` unchanged (experimental; manual motor/speech user-confirmed, destructive acceptance pending) |
+| C14 | Experimental local navigation preview trace/map: state, reason, camera/goal cells, hypothetical direction, repeated PPE classes, announcement request, explicit disabled motor output, declared source mode and speech delivery status | `navigation/` same-host C2/C3 latest-line consumer | Operator: `runs/navigation/<run>/decisions.jsonl` and `map.svg`; no actuator consumer | `navigation/preview.py`, `navigation/__main__.py`, [guide](docs/navigation-preview.md) | Internal experiment, not a frozen/public wire schema |
+| C13 | Local vision run identity (`run_info.json`: version, producer, UUID, declared source mode, receiver start time); supervised trace (`steps.jsonl`: advisory decision, operator request, delivery and controller status; wheel velocity null) | `vision.server` run identity; `navigation.supervised` trace | Same-host supervised runner; operator | `vision/server/__main__.py`, `navigation/run_source.py`, `navigation/supervised.py`, [guide](docs/supervised-camera-driving.md) | Internal run-info version 1; unchanged C1–C3 and C11 |
+| C15 | Internal exact-frame point preview (`point_frame.json` v1) and separate loopback operator control | `vision.server --point-preview`; `navigation.point_drive` | Authenticated single operator through SSH; existing C11 pulse executor | `vision/server/point_preview.py`, `navigation/point_geometry.py`, `navigation/point_control.py`, `docs/point-driving.md` | Internal v1; unchanged CV/app wire schemas; no hub motion routes |
 | C12 | **Build-time only.** Browser audit fixture (`fixture_version: 1`): recorded `vision.pipeline` boxes and per-subject verdicts for the published website stills, plus model identity, weights hash, active rules and each inactive rule's missing classes. Written by `tools/export_audit_fixture.py`; consumed only by the in-browser second-opinion panel for comparison. Precomputed prompt embeddings (`public/audit/prompt-embeddings.json`) accompany it. No runtime path, no hub or edge dependency, no motion authority; audit results stay in browser memory and are never written back, stored or treated as evidence | `tools/export_audit_fixture.py`, `web/scripts/export-prompt-embeddings.ts` | `web/src/audit/` | `web/public/media/workers/audit-fixture.json`, `web/public/audit/prompt-embeddings.json` | `fixture_version` (**v1**) |
 
 Wire codec (`encode` / `decode`) lives in `vision/schema/wire.py`. **Non-Python consumers** should validate against `schema/*.schema.json` **and** the fixtures: JSON Schema can't express cross-field rules (rigid transform, box bounds, `pose_valid` consistency, `source`↔`cls_id`), the fixtures do.
 
 Navigation preparation (2026-10-11): `hardware/control_sim.py` remains an isolated
-simulation with no actuator access. Experimental C11 defines a separate BLE
-controller-bench protocol and ESP32 sketch/client; neither is connected to C1–C10,
-CV detections, navigation, or a physically accepted controller. See
-`docs/plans/autonomous-driving-context.md`.
+simulation. `navigation/` consumes unchanged C2/C3 on the receiver host and emits
+C14 motor-disabled decisions. Its optional speech adapter has STOP and speech
+access only. A separate `navigation.supervised --execute` runner now gates one
+short C11 pulse on explicit operator input, current observations and controller
+status. Camera observations alone cannot arm or move the rover. C3 log output is
+line-buffered; C13 identifies live versus replay runs and detects server restarts.
+ARKit remains advisory; no obstacle-stop sensor is wired. Physical supervised
+acceptance is pending. See `docs/plans/autonomous-driving-context.md`.
 
 **Pose validity in C2 (Step 7):** `pose` is the camera pose of the event's **own** ARFrame (`pose_dt_ms = 0`), never a later one. `pose_valid=false` reasons: `session_mismatch` (a newer ARKit session exists — new world origin), `stale` (> `timing.stale_ms` gap on the iPhone clock right before the frame), `tracking_not_normal`, `no_pose` (camera vertical). `dt_exceeded` is reserved. The pose is the **phone's**, not the detected person's position, and is advisory only.
 
@@ -57,7 +63,30 @@ CV detections, navigation, or a physically accepted controller. See
 
 **Breaking change** = removing/renaming a field, key, class name, or changing units/meaning. Breaking changes require: `schema_version` bump → fixtures updated → every consumer in [§7](#7-branch-registry) notified and its checks ([§5](#5-checks-required-in-other-branches)) run **before** merge.
 
+Offline-frame extension (2026-10-11): C9 adds authenticated
+`POST /v1/blobs/{sha256}/ack` with `{hub_id, store_epoch}` after verified image
+storage. C10 adds `GET /v1/frames` (paged original observations plus `image_status`)
+and `status.frames` counts. The existing v1 `observation.evidence_sha256` points to
+each archived clean JPEG; no CV or bob-app envelope/schema changes are needed.
+`archive.enabled` is an additive edge config key. The hub discovers referenced
+images from observations as well as sampled evidence metadata. Upgrade edge, hub
+and website together for the recovered gallery; old hubs cannot acknowledge new
+image receipts, so image retention is conservative. See [demo guide](docs/offline-frame-demo.md).
+
+Site photo extension (2026-10-11): additive edge `site_photos` settings and
+C9 v1 `site_photo` notices select general views independently of PPE. C10 adds
+`/v1/frames?site_only=true` and nullable `site_photo` item metadata. C1–C3 and
+bob-app envelopes remain unchanged. See docs/jetson-frame-handoff.md for selection
+limits, delayed notice handling and the online-worker boundary.
+
 ## 3. File ownership — avoiding merge conflicts
+
+Standing user agreement (2026-10-11): the Jetson agent pulls before feature work
+and commits/pushes tested work without a separate request each time. The teammate
+owns website online-LLM inference; the Jetson agent owns local capture/inference,
+frame storage/transfer and rover control. Existing frame-gallery changes are kept
+in their own commit. [Frame API handoff and touched website files](docs/jetson-frame-handoff.md).
+This does not enable automatic main merges or a background Git daemon.
 
 Conflicts mostly happen on shared files. Rule: **each branch edits only what it owns; shared files follow the rules below.**
 
@@ -200,6 +229,10 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 | `main` | Computer vision, edge/hub integration, local dashboard and experimental controller bench | Humbertxx | C1–C12 | C10 (browser), C12 (browser audit) | Default branch; former `autoCV` history merged and branch retired on 2026-10-11. Physical walk, PPE/worksite accuracy, incident calibration, navigation and remaining Jetson acceptance are pending. |
 | `feature/dashboard-csv-export` | Conservative PPE absence/edge policies; selected website photo, dropdowns, privacy, terms and detection CSV | Humbertxx | C4 (additive PPE settings) | C10 (existing browser data) | Seven separate feature commits; publication gates reported in the PR. CV schema v2 and bob-app v1 are unchanged. Physical acceptance and automatic image expiry remain pending. |
 | `feature/inspiration-journey` | Inspiration story, team origins globe and scroll motion | Humbertxx | Website route `/inspiration`; no wire changes | Existing local robot photos | Build and frontend checks passed; draft team responses labelled for confirmation. |
-| *(TBD)* | Safety supervisor / navigation | — | C11 controller bench (experimental) | C2, C3 (planned) | No runtime branch/CV integration; simulator plus separate BLE bench firmware/client implemented, physical acceptance pending |
+| `feature/navigation-preview` | Navigation preview and controller bench follow-up | — | C14 internal preview trace/map; C11 embedded speech | C2, C3; optional C11 STOP/TONE/status only | Motor-disabled consumer and deterministic demo implemented; camera/speech preview physical acceptance and all autonomous driving gates pending |
+| `feature/offline-frame-sync` | Offline processed-frame archive, verified image receipts and recovered gallery | — | C9 image receipt; C10 frames/status additions | Existing C2; bob-app v1 observations and sync | 640 Python tests pass; browser offline/reconnect acceptance passes; physical Wi-Fi demo and deployment pending. Prior uncommitted navigation/hardware work preserved. |
+| `feature/supervised-camera-drive` | Jetson frame recovery, existing frame gallery and supervised rover steps | — | C9 receipts, C10 frames/status, C13 internal run identity/trace | C2, C3, existing C11 v1 | Based on main 516d185; pending work packaged as focused hardware, sync, gallery, navigation and documentation commits. 684 tests pass, 5 optional/platform skips; 44 new supervisor/transport/terminal tests. Website online LLM remains teammate-owned. Physical stopping/direction acceptance pending. |
+| `feature/site-photo-selection` | Diverse general site photos alongside PPE | Jetson agent | C9 selection notices; C10 gallery filter | Existing C2 poses/images | 711 Python tests pass (5 optional/platform skips); website build, frontend tests and browser filter/reconnect pass; physical threshold calibration pending; online analysis remains teammate-owned. |
+| `feature/point-driving` | Supervised click-to-floor driver and unused VLM cleanup | Jetson agent | C15 local preview/control | C1 metadata after admission, C2/C3, C11 bounded pulses | 47 point tests and SAMPLE browser acceptance pass; full Jetson suite 758 passed, 5 optional/platform skips. Physical geometry/direction/stopping acceptance pending; dry run default. |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |
 | *(TBD)* | Jetson deploy / hardware | — | — | C4, C5, C6 | Not created |

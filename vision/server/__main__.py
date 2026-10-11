@@ -19,7 +19,7 @@ import signal
 import time
 from pathlib import Path
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 
@@ -41,6 +41,7 @@ def main() -> None:
     parser.add_argument("--zones-source-mode", choices=("LIVE", "REPLAY", "SAMPLE"), default=None,
                         help="alias of --source-mode (kept for existing commands)")
     parser.add_argument("--edge", action="store_true", help="publish to the rover edge store; requires --detect")
+    parser.add_argument("--point-preview", action="store_true", help="write exact-frame local point-driving preview; requires --detect")
     parser.add_argument("--edge-config", type=Path, help="override of configs/edge.yaml")
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
@@ -50,6 +51,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.zones and not args.detect:
         parser.error("--zones requires --detect")
+    if args.point_preview and not args.detect:
+        parser.error("--point-preview requires --detect")
     if args.edge and not args.detect:
         parser.error("--edge requires --detect")
     if args.source_mode and args.zones_source_mode and args.source_mode != args.zones_source_mode:
@@ -73,9 +76,17 @@ def main() -> None:
 
     run_dir = args.run_dir or REPO_ROOT / config["server"]["run_dir"] / time.strftime("%Y%m%d_%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
-    health_file = open(run_dir / "stream_health.jsonl", "w")
+    health_file = open(run_dir / "stream_health.jsonl", "w", buffering=1)
     record = open(run_dir / "stream.bobrec", "wb") if args.record else None
     detections = open(run_dir / "detections.jsonl", "w") if pipeline is not None else None
+    # Local consumer metadata, not a C1/C2/C3 schema change. Write a fresh
+    # identity even when a directory is reused; navigation must not resume it.
+    run_info = run_dir / "run_info.json.tmp"
+    run_info.write_text(json.dumps({
+        "run_info_version": 1, "producer": "vision.server", "run_id": str(uuid4()),
+        "source_mode": source_mode, "started_ts_ns": time.time_ns(),
+    }))
+    run_info.replace(run_dir / "run_info.json")
     scene_writer = SceneWriter(open(run_dir / "scene_findings.jsonl", "w")) if inspector else None
     if inspector:
         (run_dir / "zone_profile.json").write_text(inspector.profile.model_dump_json(indent=2))
@@ -84,6 +95,12 @@ def main() -> None:
             "model_id": pipeline.model_id, "names": pipeline.names,
             "model": config["model"], "footwear_model": config.get("footwear_model"),
         }, indent=2))
+
+    point_preview = None
+    if args.point_preview:
+        from .point_preview import PointPreviewWriter
+        point_preview = PointPreviewWriter(run_dir, json.loads((run_dir / "run_info.json").read_text()),
+                                           config["camera"]["mount_orientation"])
 
     publisher = None
     if args.edge:
@@ -135,6 +152,8 @@ def main() -> None:
                     detection = detect_frame(frame, pipeline, mount, server.associator)
                     if detection is not None:
                         event, result = detection.event, detection.result
+                        if point_preview is not None:
+                            point_preview.submit(frame, detection)
                         detections.write(event.model_dump_json() + "\n")
                         detections.flush()
                         inference_ms.append(result.inference_ms)
@@ -199,6 +218,8 @@ def main() -> None:
         if scene_writer:
             summary["zones"] = {"frames": scene_count, "scene_mean_ms": scene_total_ms / scene_count if scene_count else None,
                                 "scene_max_ms": scene_max_ms, "writer": scene_writer.close()}
+        if point_preview is not None:
+            summary["point_preview"] = point_preview.close()
         if publisher is not None:
             summary["edge"] = publisher.close()  # bounded wait; unfinished work is reported, not hidden
         (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))

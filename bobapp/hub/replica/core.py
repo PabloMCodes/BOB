@@ -46,6 +46,16 @@ class ReplicaCore:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=NORMAL")
         self.db.executescript(SCHEMA)
+        with self._tx():
+            if self.db.execute("SELECT 1 FROM replica_meta WHERE key='blob_receipts_v1'").fetchone() is None:
+                self.db.execute("INSERT OR IGNORE INTO blob_receipts (ws_id, sha256) SELECT ws_id, "
+                                "CASE kind WHEN 'evidence' THEN json_extract(json, '$.body.sha256') "
+                                "ELSE json_extract(json, '$.body.evidence_sha256') END FROM records "
+                                "WHERE kind IN ('evidence', 'observation') AND COALESCE("
+                                "json_extract(json, '$.body.sha256'), json_extract(json, '$.body.evidence_sha256')) IS NOT NULL")
+                self.db.execute("INSERT OR IGNORE INTO blobs (sha256, status, updated_wall_ns) "
+                                "SELECT DISTINCT sha256, 'pending_sync', ? FROM blob_receipts", (time.time_ns(),))
+                self.db.execute("INSERT INTO replica_meta VALUES ('blob_receipts_v1', '1')")
 
     def close(self) -> None:
         self.db.close()
@@ -138,9 +148,13 @@ class ReplicaCore:
                 inserted += self.db.execute("INSERT OR IGNORE INTO records VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                                             (ws.ws_id, lane.value, record.seq, record.body.kind,
                                              record.source_mode.value, Delivery(delivery).value, rx, text)).rowcount
-                if record.body.kind == "evidence":
+                sha = (record.body.sha256 if record.body.kind == "evidence" else
+                       record.body.evidence_sha256 if record.body.kind == "observation" else None)
+                if sha:
                     self.db.execute("INSERT OR IGNORE INTO blobs (sha256, status, updated_wall_ns) "
-                                    "VALUES (?, 'pending_sync', ?)", (record.body.sha256, rx))
+                                    "VALUES (?, 'pending_sync', ?)", (sha, rx))
+                    self.db.execute("INSERT OR IGNORE INTO blob_receipts (ws_id, sha256) VALUES (?, ?)",
+                                    (ws.ws_id, sha))
                 if record.seq <= cursor:
                     continue  # a replay of something already committed
                 if record.seq > cursor + 1:

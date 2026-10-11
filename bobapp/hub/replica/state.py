@@ -26,9 +26,15 @@ class StateMixin:
                             "DO UPDATE SET json=excluded.json, hub_rx_wall_ns=excluded.hub_rx_wall_ns",
                             (live_json, time.time_ns()))
 
-    def set_live_preview(self, preview: bytes, sha256: str) -> None:
+    def set_live_preview(self, preview: bytes, sha256: str, event_id: Optional[str] = None) -> None:
         with self._tx():
             self.db.execute("UPDATE live SET preview=?, preview_sha256=? WHERE id=1", (preview, sha256))
+            self.db.execute("INSERT INTO preview_meta VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+                            "sha256=excluded.sha256, event_id=excluded.event_id", (sha256, event_id))
+
+    def preview_event(self, sha):
+        row = self.db.execute("SELECT event_id FROM preview_meta WHERE id=1 AND sha256=?", (sha,)).fetchone()
+        return row[0] if row else None
 
     def get_live(self) -> tuple[Optional[str], Optional[int], Optional[bytes], Optional[str]]:
         """(live json, hub receive wall ns, preview bytes, preview sha256)."""

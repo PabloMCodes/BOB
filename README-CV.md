@@ -53,6 +53,29 @@ Per-machine settings: copy `configs/default.yaml` → `configs/local.yaml` (giti
 | 3c | Restricted-zone inspection — no movement authority | 🟡 Mac live/replay prototype built; physical tape acceptance pending | Geometry, evidence validity, tape failure cases, correlated scene output | 35 zone/tape/scene tests; full suite 339 pass; 6 synthetic replay frames correlated to C2 |
 | 3d | Walkway obstruction (fixed camera) — no movement authority | 🟡 Steps 1–3 of 9 built (definition, settings, reference check + change mask); lane check, CLI and physical tripod test pending | Definition/config validation, synthetic reference-check and change-mask cases | 39 walkway tests pass; full suite 378 pass; synthetic only |
 | D | Dashboard / rover-to-laptop sync / 2D Twin backend ([plan](docs/plans/dashboard-twin-integration-plan.md) Steps 1–9) | 🟡 D1–D9 built — **Milestones A ✅, B ✅, C ✅ on one Mac**; physical Twin walk + incident calibration pending | Per plan step: fixtures, store/sync link-cut tests, API contract tests, incident timeline tests; physical Twin walk + calibration recordings | D1: `bob-app` v1 — 10 message types, 27 valid / 29 invalid fixtures, 62 contract tests; frozen v2 CV schema untouched · D2: SQLite WAL edge store + bounded writer, 12 tests (restart, crash, full disk, blocked writer, pruning gaps) · D3: `--edge` hook — real 60 s recording, 644 frames, rx→event p95 **76.9 off / 64.3 on / 71.5 ms with a stalled store** (2,331 drops counted, 0 slot drops); store 21 MB/min busy scene · D4: edge API (FastAPI), 13 tests, exact route list without motion endpoints · D5: hub sync + replica, 7 link-cut tests; **Milestone A** real processes, 10 s cut mid-replay: 1,012/1,012 records byte-identical, 111 labeled backfilled, 64/64 evidence verified · D6: hub frontend API + SAMPLE edge, 11 tests, committed OpenAPI · D7: worksite profiles + inspection binding, 9 tests · D8: incident policy (**uncalibrated**), 23 tests; real 60 s replay: 65 transitions, 70/70 incident evidence frames, p95 67.6 ms · D9: Twin backend + debug SVG, 7 tests · Browser: metrics, manager requirements/inspections, preview/evidence/logs and Twin; 6 new backend tests, 15 frontend tests; full suite **542 passed**, production build passed |
+| S1 | General site photo selection alongside local PPE | Built; physical site-walk calibration pending | Selection/quality/pose tests, offline sync/API tests, SAMPLE browser gallery | 48 targeted Python tests; website build, five frontend test files and browser filter/reconnect acceptance pass. Full suite: 711 passed, 5 optional/platform skips (209.21 s). |
+
+Offline-frame recovery (2026-10-11): every processed frame is archived when `--edge`
+is enabled; the hub verifies JPEGs and confirms image receipt before edge retention.
+The gallery shows recovered history separately from live preview. Full Jetson suite:
+**640 passed, 5 skipped** in 166.50 s; the link-cut test recovered 8 JPEGs in 0.62 s
+on localhost with no duplicate observations. Website build, Node tests and SAMPLE
+browser offline/reconnect acceptance pass. Physical Wi-Fi-toggle acceptance remains.
+[Demo and limits](docs/offline-frame-demo.md).
+
+Navigation workstream (separate from the CV progression):
+
+| Step | Name | Status | Test method | Result |
+| ---- | ---- | ------ | ----------- | ------ |
+| N1 | Camera-only navigation preview | Built; live camera/speech acceptance pending; **motor output disabled** | `YOLO_AUTOINSTALL=false .venv/bin/python -m pytest -q tests/test_navigation.py tests/test_server.py`; `python -m navigation --demo`; synthetic SAMPLE log stream | 63 targeted tests passed in 10.54 s; full Jetson suite **630 passed, 5 optional/platform skips** in 160.51 s. 30 live-tail SAMPLE decisions exercised exploration, person observation, announcement and hold with no BLE connection. Visited grid and directions are advisory; autonomous driving still needs independent obstacle-stop sensing. [Guide](docs/navigation-preview.md) |
+| N2 | Supervised camera-guided steps | Software complete; physical direction/stopping acceptance pending | `tests/test_supervised_drive.py`: fake radio, stale/frozen/session/timeout failures, real pseudo terminal; three mounted stills through existing CUDA pipeline | **44 new tests pass** in 5.69 s; full Jetson suite **684 passed, 5 optional/platform skips** in 170.63 s. One 100 ms pulse per explicit SPACE, stopped settling, PPE pause/speech and bounded run. No physical robot movement performed. [Assessment and operator guide](docs/supervised-camera-driving.md) |
+| N3 | Supervised click-to-floor driving | Software and automated dry demo complete; physical geometry/direction/stopping acceptance pending | `tests/test_point_driving.py`; `tests/point-driving.browser.mjs` with isolated SAMPLE server | **47 tests pass** in 6.43 s; full Jetson suite **758 passed, 5 optional/platform skips** in 179.79 s. Exact-frame floor projection, expiring operator hold, bounded pulses, release/blur/reconnect/expired-ticket checks. No physical motion performed. [Setup and measured acceptance](docs/point-driving.md) |
+
+General site photo selection (2026-10-11): local PPE is unchanged; a bounded
+writer-thread selector marks clear, diverse general views even without people.
+48 targeted tests pass; website build, five frontend test files and SAMPLE browser
+filter/reconnect acceptance pass. Physical site-walk calibration remains pending.
+[Thresholds and handoff](docs/jetson-frame-handoff.md#general-site-photo-selection-2026-10-11).
 
 ### Step 0 — Environment & repo skeleton ✅
 

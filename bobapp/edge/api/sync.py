@@ -76,11 +76,16 @@ class SyncSession:
     async def _stream(self, send: Send, cursors: dict[Lane, int], backfill_until: dict[Lane, int],
                       acks: asyncio.Task) -> None:
         next_live = 0.0
+        next_batch = 0.0
         while not acks.done():
             if time.monotonic() >= next_live:  # live state first, and between batches
                 live, _ = await self._call(build_live_state, self.clock_synced)
                 await send(SyncLive(app_version=APP_VERSION, msg_type="sync_live", live=live).model_dump_json())
                 next_live = time.monotonic() + self.live_interval_s
+            if time.monotonic() < next_batch:
+                # A large backfill batch must not delay live-state heartbeats.
+                await asyncio.sleep(min(.05, next_batch - time.monotonic()))
+                continue
             sent = False
             for lane in LANE_PRIORITY:  # control before track before observations, every round
                 raws = await self._call(lambda s, ln=lane: s.read(ln, cursors[ln], self.batch_records))
@@ -93,7 +98,7 @@ class SyncSession:
                 cursors[lane] = chunk[-1].seq
                 self.sent_bytes["backfill" if backfill else "tail"] += len(text)
                 if backfill:  # byte-rate cap: leave room for the phone stream on a shared network
-                    await asyncio.sleep(len(text) / self.max_bytes_per_s)
+                    next_batch = time.monotonic() + len(text) / self.max_bytes_per_s
                 sent = True
                 break
             if not sent:

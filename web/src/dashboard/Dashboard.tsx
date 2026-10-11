@@ -7,6 +7,7 @@ import { DetectionHistory, Logs } from './History.tsx'
 import { Overview, Preview } from './Overview.tsx'
 import { Worksites } from './Worksites.tsx'
 import { usePoll } from './usePoll.ts'
+import { Frames } from './Frames.tsx'
 
 /** The auditor pulls in transformers.js, so it is split out of the dashboard bundle and only
  *  fetched when the panel renders. The models themselves load on an explicit click. */
@@ -26,6 +27,7 @@ function WorkspaceDashboard({ connection }: { connection: Connection }) {
     <section className="dashboard-panel dashboard-twin" aria-label="Digital twin"><div className="dashboard-panel-heading"><h2 className="eyebrow">Digital twin</h2><span className="dashboard-note">Phone-camera observation trail</span></div><TwinView key={selected} connection={connection} selected={selected} onSelect={setSelected} /></section>
     <Suspense fallback={<section className="dashboard-panel"><h2 className="eyebrow">Second opinion</h2><p className="dashboard-note mt-6">Loading the auditor…</p></section>}><AuditPanel /></Suspense>
     <DetectionHistory key={selected} connection={connection} selected={selected} revision={revision} />
+    <Frames key={`frames-${selected}`} connection={connection} selected={selected} status={status.data} stale={status.stale} />
     <Logs connection={connection} revision={revision} />
   </>
 }

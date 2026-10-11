@@ -10,6 +10,11 @@ CREATE TABLE IF NOT EXISTS acks (hub_id TEXT NOT NULL, lane TEXT NOT NULL, seq I
     PRIMARY KEY (hub_id, lane));
 CREATE TABLE IF NOT EXISTS blobs (sha256 TEXT PRIMARY KEY, size INTEGER NOT NULL,
     media_type TEXT NOT NULL, evidence_seq INTEGER);
+CREATE TABLE IF NOT EXISTS blob_refs (lane TEXT NOT NULL, seq INTEGER NOT NULL, sha256 TEXT NOT NULL,
+    PRIMARY KEY (lane, seq, sha256));
+CREATE INDEX IF NOT EXISTS blob_refs_sha ON blob_refs (sha256);
+CREATE TABLE IF NOT EXISTS blob_acks (hub_id TEXT NOT NULL, sha256 TEXT NOT NULL,
+    PRIMARY KEY (hub_id, sha256));
 CREATE TABLE IF NOT EXISTS live (id INTEGER PRIMARY KEY CHECK (id = 1), json TEXT NOT NULL,
     preview BLOB, preview_sha256 TEXT);
 CREATE TABLE IF NOT EXISTS profiles (worksite_id TEXT NOT NULL, revision INTEGER NOT NULL,

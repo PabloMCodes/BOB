@@ -4,9 +4,21 @@
 
 BOB is a Knight Hacks construction-inspection prototype that combines an iPhone camera and ARKit pose, local PPE detection, and an evidence backend that synchronizes with an operator laptop. The goal is to help a human reviewer inspect selected PPE conditions and controlled restricted zones, with the original observation and its uncertainty available for review.
 
-**Current deployment:** a Mac stands in for the rover's future Jetson Orin Nano. Live phone capture, vision, local storage, rover-to-laptop synchronization and a local browser dashboard are implemented. The dashboard shows measured confidence/FPS/Hz, connections, preview, logs, evidence and a digital twin, and lets a site manager save PPE requirements and explicitly start/end an inspection. Physical dashboard/worksite acceptance, integrated autonomous navigation and Jetson acceptance remain pending. [Dashboard setup and workflow](docs/plans/digital-twin-frontend-guide.md). ESP32 motor and speaker bench tests are separate from perception.
+**Current deployment:** the Jetson runs local vision; the Mac development path remains supported. Live phone capture, vision, local storage, rover-to-laptop synchronization and a local browser dashboard are implemented. The dashboard shows measured confidence/FPS/Hz, connections, preview, logs, evidence and a digital twin, and lets a site manager save PPE requirements and explicitly start/end an inspection. Physical dashboard/worksite acceptance, hands-free navigation and remaining Jetson acceptance are pending. [Dashboard setup and workflow](docs/plans/digital-twin-frontend-guide.md). Motor control lives in a separate ESP32 client, outside the vision pipeline.
 
 This is a controlled demonstration, not a certified safety system. A detection does not establish PPE certification or permission for the rover to move.
+
+**Jetson supervised driving checkpoint (2026-10-11):** mounted-camera photos show
+usable floor foreground. A separate `navigation.supervised` command now offers
+one operator-authorized 100 ms BLE step at a time, with stopped observation periods,
+person/PPE pauses and the working ESP32 firmware. Dry run is the default; physical
+stopping/direction acceptance is pending. [Setup, camera assessment and controls](docs/supervised-camera-driving.md).
+
+**Point driving (2026-10-11):** a separate loopback operator page projects clicks
+on nearby level floor using the displayed frame's camera metadata. Hold-to-drive
+uses short, separated pulses; dry run is the default. Automated Python and SAMPLE
+browser checks pass; physical geometry, direction and stopping acceptance remain
+pending. [Dry-run setup and controls](docs/point-driving.md).
 
 The website includes worksite/PPE dropdowns, an export of displayed detection records as CSV, and worker privacy and prototype terms pages. The homepage uses the selected dusk worker photograph. Image retention is limited by policy to 7 days for routine images and 30 days for incident evidence; deletion across all copies remains operator-managed. See [website behavior and policy details](web/README.md).
 
@@ -215,6 +227,35 @@ The first command rebuilds the dedicated sample store and changes its store epoc
 | Evidence is pending or missing | Allow capped prefetch to catch up; inspect storage gaps and missing blobs rather than assuming metadata implies an available image |
 | Boxes or location look wrong | Check upright orientation, source-frame identity, tracking state and session; camera pose is not worker position |
 
+## General site photos alongside PPE
+
+Local PPE detection continues while the edge writer selects general site views,
+including scenes without people. Clear images from new camera positions/directions
+or changed scenes appear under **Saved camera frames → Site photos**. Nearby
+similar views are skipped, with bounded history and intentional overlap. The full
+processed-frame archive remains enabled by default. This provides photos for the
+website's future online review; it does not itself run an online model or establish
+complete site coverage. [Selection, setup and API handoff](docs/jetson-frame-handoff.md#general-site-photo-selection-2026-10-11).
+
+## Offline frame recovery
+
+With `vision.server --edge`, the Jetson saves every processed model frame locally,
+including frames without PPE findings. The laptop hub resumes records and image
+downloads after a lost connection. The dashboard's **Saved camera frames** gallery
+shows recovered history with the original boxes while live preview resumes
+separately. See the [Wi-Fi-loss demo guide](docs/offline-frame-demo.md) for process
+startup, the laptop Wi-Fi toggle, storage limits and verification results.
+
+## Navigation preview
+
+With only the iPhone camera connected, navigation runs with **motors disabled**.
+It previews directions toward less-visited camera positions, observes people,
+optionally plays the working Missing PPE clip, and pauses for ten seconds.
+Run `.venv/bin/python -m navigation --demo` for a hardware-free sequence; see the
+[live preview guide](docs/navigation-preview.md) for the camera stream, BLE speech,
+visited-map SVG, and requirements before enabling physical autonomous driving.
+No new ESP32 upload is needed for preview with the working `speech-1` firmware.
+
 ## Validation and demo readiness
 
 Run `uv run pytest` for the Python suite. Use recorded replay for automated network tests, and use the CV guide's physical checklists for iPhone behavior. Backend contracts are versioned separately from the frozen CV schema; generated schema/OpenAPI files must match their producers.
@@ -235,6 +276,9 @@ The minimum demo path is live or recorded CV → matching evidence → laptop AP
 | [Jetson handoff](docs/jetson-handoff.md) | Installation, engine export and on-device acceptance |
 | [Scene-understanding feasibility](docs/vlm-feasibility.md) | Measured local VLM latency, resource use, grounding failures and next evaluation |
 | [Autonomous-driving context](docs/plans/autonomous-driving-context.md) | Planned behavior, current isolated simulator/controller bench and encoder-ready boundaries |
+| [Navigation preview](docs/navigation-preview.md) | Motor-disabled exploration/inspection decisions, live camera logs, optional BLE speech and visited map |
+| [Point driving](docs/point-driving.md) | Exact-frame floor targets, separate authenticated operator page, expiring hold and dry-run setup |
+| [Offline-frame demo](docs/offline-frame-demo.md) | Local JPEG archive, verified automatic catch-up, recovered gallery and Wi-Fi-toggle demo |
 | [ESP32 hardware](hardware/esp32/README.md) | Wiring, BLE commands and motor/speaker bench results |
 | [Model cards](models/sh17.md) / [footwear specialist](models/footwear-v1.md) | Provenance, hashes, label meanings, licensing and measured limitations |
 | [Integration guide](integration.md) | Interfaces, ownership, branch registry and merge gates |
@@ -244,6 +288,7 @@ The minimum demo path is live or recorded CV → matching evidence → laptop AP
 | Path | Responsibility |
 | --- | --- |
 | `vision/` | Shared perception, pose association and phone server |
+| `navigation/` | Advisory camera preview; separate supervised step executor with explicit operator input, C2/C3 freshness gates and short BLE leases |
 | `ios/` | Thin iPhone capture/streaming app and Swift wire contract |
 | `bobapp/contracts/` | Separately versioned application contracts |
 | `bobapp/edge/` | Rover-side persistence, publication and sync API |

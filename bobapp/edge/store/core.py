@@ -7,6 +7,7 @@ a lane has been pruned empty, so a sequence number is never reused.
 from __future__ import annotations
 
 import sqlite3
+import os
 from pathlib import Path
 from typing import Any, Iterator, Optional
 from uuid import UUID, uuid4
@@ -42,8 +43,31 @@ class StoreCore:
                 raise StoreError(f"store at {self.path} belongs to edge {stored_id!r}, not {edge_id!r}")
             for lane in Lane:
                 self.db.execute("INSERT OR IGNORE INTO lane_head VALUES (?, 0)", (lane.value,))
+            if self.db.execute("SELECT 1 FROM meta WHERE key='blob_refs_v1'").fetchone() is None:
+                self.db.execute("INSERT OR IGNORE INTO blob_refs SELECT lane, seq, "
+                                "CASE kind WHEN 'evidence' THEN json_extract(json, '$.body.sha256') "
+                                "ELSE json_extract(json, '$.body.evidence_sha256') END FROM records "
+                                "WHERE kind IN ('evidence', 'observation') AND "
+                                "COALESCE(json_extract(json, '$.body.sha256'), "
+                                "json_extract(json, '$.body.evidence_sha256')) IS NOT NULL")
+                self.db.execute("INSERT INTO meta VALUES ('blob_refs_v1', '1')")
         self.store_epoch = UUID(self.db.execute("SELECT value FROM meta WHERE key='store_epoch'").fetchone()[0])
         for tmp in self.blob_dir.glob("**/*.tmp"):  # an interrupted blob write is never a blob
+            # Opening the API must not erase a writer's in-progress JPEG. Both
+            # processes open this store; only a dead writer's temp file is stale.
+            try:
+                pid = int(tmp.name.rsplit(".", 2)[-2])
+            except (ValueError, IndexError):
+                pid = None
+            if pid is not None:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    pass
+                except PermissionError:
+                    continue
+                else:
+                    continue
             tmp.unlink(missing_ok=True)
 
     def close(self) -> None:
@@ -81,6 +105,10 @@ class StoreCore:
         self.db.execute("UPDATE lane_head SET head_seq=? WHERE lane=?", (seq, lane.value))
         if body.kind == "evidence":
             self.db.execute("UPDATE blobs SET evidence_seq=? WHERE sha256=?", (seq, body.sha256))
+        sha = (body.sha256 if body.kind == "evidence" else
+               body.evidence_sha256 if body.kind == "observation" else None)
+        if sha:
+            self.db.execute("INSERT INTO blob_refs VALUES (?, ?, ?)", (lane.value, seq, sha))
         return record
 
     def append(self, body: Any, source_mode: SourceMode, run_id: Optional[str] = None) -> Record:

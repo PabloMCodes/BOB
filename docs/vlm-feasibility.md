@@ -96,6 +96,15 @@ After downloads, approximately 73 GiB of disk remained available. Storage is les
 restrictive here than shared RAM and GPU contention. Downloaded weights and
 runtime/build artifacts were retained for reuse; the temporary servers were stopped.
 
+## Cleanup (2026-10-11)
+
+Unused `models/vlm/`, `models/ollama/`, `runs/vlm-feasibility/ollama/` and
+`runs/vlm-feasibility/llama.cpp/` were removed at the user's request after checking
+that no VLM runtime or mapped files were active. This reclaimed 11.75 GB / 10.94 GiB
+of disk. Benchmark results, manifests/hashes, scripts, PPE weights, recordings and
+saved site photos remain. Reproduction now requires downloading the pinned VLM
+artifacts again. Local removal details: `runs/vlm-feasibility/cleanup-manifest.json`.
+
 ## Reproduction and artifacts
 
 Local, gitignored artifacts are under `runs/vlm-feasibility/`:

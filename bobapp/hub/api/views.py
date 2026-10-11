@@ -45,6 +45,8 @@ def status(replica: Replica, name: str, stale_after_s: float) -> StatusResponse:
         workspaces=[WorkspaceInfo(edge_id=w.edge_id, store_epoch=w.store_epoch, archived=w.archived)
                     for w in replica.workspaces()])
     response.telemetry_reason = "No measured stream telemetry from this producer"
+    from .frames import frame_counts
+    response.frames = frame_counts(replica, ws)
     if ws is not None and live is not None and live.run_id and live.pose is not None:
         row = replica.db.execute(
             "SELECT delivery, json FROM records WHERE ws_id=? AND kind='notice' "

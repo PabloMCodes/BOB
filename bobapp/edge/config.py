@@ -19,6 +19,10 @@ def load_edge_config(path: Optional[Path] = None) -> dict[str, Any]:
         config = _deep_merge(config, yaml.safe_load(Path(override).read_text()) or {})
     if not str(config.get("edge_id") or "").strip():
         raise ValueError("edge config: edge_id is required")
+    if type(config["archive"]["enabled"]) is not bool:
+        raise ValueError("edge config: archive.enabled must be a boolean")
+    from .publish.site_photos import SitePhotoSettings
+    SitePhotoSettings(**config.get("site_photos", {}))
     return config
 
 
