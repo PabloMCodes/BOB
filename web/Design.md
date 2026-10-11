@@ -1,6 +1,6 @@
 # Design
 
-Visual rules for the B.O.B homepage and the Dashboard placeholder. Motion lives in [Motion.md](Motion.md). Wording lives in `src/data/copy.ts`. Photographs, clips and their boxes live in `src/data/media.ts`. The section plan is [docs/plans/homepage-redesign-plan.md](../docs/plans/homepage-redesign-plan.md).
+Visual rules for the B.O.B homepage and operator dashboard. Motion lives in [Motion.md](Motion.md). Wording lives in `src/data/copy.ts`. Photographs, clips and their boxes live in `src/data/media.ts`. The section plan is [docs/plans/homepage-redesign-plan.md](../docs/plans/homepage-redesign-plan.md).
 
 The page follows the rhythm of [humanoperator.org](https://humanoperator.org/): one large claim, a video, a rail of skill cards, numbered steps, a closing scene and credits. The words, photographs and scene are B.O.B's. B.O.B is a construction-site inspection robot. It checks people for the PPE a worksite requires, watches marked zones, keeps the original frame with every finding, and keeps visible what it could not establish.
 
@@ -11,7 +11,7 @@ Bold framing is fine. Invented capability is not. Every feature that is not work
 | Path | Role |
 | --- | --- |
 | `/` | Product story. One continuous scroll. |
-| `/dashboard` | Same header and tokens. Read-only 2D twin using only `/v1/twin/` hub routes. Logs and other backend integrations are excluded. |
+| `/dashboard` | Same header and tokens. Hub-backed metrics, connections, requirements, preview, twin, detections, evidence and logs. Inspection start/end are explicit manager actions. |
 
 ## Color
 
@@ -156,9 +156,11 @@ The scene ends top-down. A 2D map overlay draws the rover's path and one dot per
 
 The closing claim in the chapter-title type, `A Knight Hacks project.`, the team list when `copy.credits.team` has entries (name and role, nothing invented), GitHub when set, and the model and license line.
 
-## Dashboard twin
+## Operator dashboard
 
-The dashboard uses the existing dark theme with a responsive map and details panel. Draw the camera path in ink, backfilled history dashed, and observation pins in tape. A disconnected view preserves history and labels the position unknown. Sessions and sample/rover workspaces must never be overlaid. Pin numbers connect map locations to their descriptions; unlocalized items stay off-map. No motion or safety controls.
+Use the existing dark theme and hairline panels. Put measured frame FPS, detection Hz, pose Hz, inference time, model confidence and dropped frames first, followed by connections, preview and site requirements. Wide screens use two columns for preview/requirements; narrow screens stack them. Logs and detection tables scroll within their panel. Unknown metrics use an em dash; confidence is a model score, never a compliance percentage.
+
+Draw the camera path in ink, backfilled history dashed, and observation pins in tape. A disconnected view preserves history and labels the position unknown. Sessions and sample/rover workspaces must never be overlaid. Pin numbers connect map locations to their descriptions; unlocalized items stay off-map. Requirement edits save a new revision and take effect only on the next explicitly started inspection. Keep unsupported or uncertain assessments visible. No motion or safety controls.
 
 ## Out of scope on the product page
 

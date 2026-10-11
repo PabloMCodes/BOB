@@ -1,6 +1,6 @@
 # BOB product page
 
-Local Vite app for the selling page and a read-only digital twin at `/dashboard`. Only the dashboard calls the laptop hub's `/v1/twin/` endpoints. Logs and other backend features are not connected.
+Local Vite app for the product page and the operator dashboard at `/dashboard`. The dashboard connects to the laptop hub for measured FPS/Hz/confidence, preview, connections, backend logs, detections, incidents, evidence and a session-specific digital twin. Site managers can save the five PPE requirements and explicitly start/end an inspection using a saved revision. SAMPLE is a separate read-only workspace.
 
 See [the digital twin integration guide](../docs/plans/digital-twin-frontend-guide.md) for startup, authentication, data semantics and verification. The default hub is `http://127.0.0.1:8780`; connection settings allow a different address. An optional `VITE_HUB_URL` sets the initial address, never a token.
 
@@ -11,7 +11,9 @@ npm install
 npm run dev
 ```
 
-`npm run build` typechecks and writes `dist/`. `npm run lint` runs oxlint.
+`npm run build` typechecks and writes `dist/`. `npm run lint` runs oxlint. Run the dashboard client checks with `node --test tests/twin.test.ts tests/twin-map.test.mjs tests/dashboard.test.ts` (Node with native TypeScript support).
+
+The Vite development server proxies the configured default hub through `/_bob/hub`, including Authorization headers, so development previews on any local port can connect without changing the hub's CORS settings. A different address entered in Connection settings is accessed directly and must allow the browser origin. Production builds (`vite preview` included) must configure CORS or their own authenticated reverse proxy; the development proxy is not part of `dist/`.
 
 ## Filling in the homepage
 

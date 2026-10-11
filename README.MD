@@ -4,7 +4,7 @@
 
 BOB is a Knight Hacks construction-inspection prototype that combines an iPhone camera and ARKit pose, local PPE detection, and an evidence backend that synchronizes with an operator laptop. The goal is to help a human reviewer inspect selected PPE conditions and controlled restricted zones, with the original observation and its uncertainty available for review.
 
-**Current deployment:** a Mac stands in for the rover's future Jetson Orin Nano. Live phone capture, vision, local storage, rover-to-laptop synchronization and a frontend API are implemented. A browser dashboard, integrated autonomous navigation and Jetson acceptance remain pending. ESP32 motor and speaker bench tests are separate from perception.
+**Current deployment:** a Mac stands in for the rover's future Jetson Orin Nano. Live phone capture, vision, local storage, rover-to-laptop synchronization and a local browser dashboard are implemented. The dashboard shows measured confidence/FPS/Hz, connections, preview, logs, evidence and a digital twin, and lets a site manager save PPE requirements and explicitly start/end an inspection. Physical dashboard/worksite acceptance, integrated autonomous navigation and Jetson acceptance remain pending. [Dashboard setup and workflow](docs/plans/digital-twin-frontend-guide.md). ESP32 motor and speaker bench tests are separate from perception.
 
 This is a controlled demonstration, not a certified safety system. A detection does not establish PPE certification or permission for the rover to move.
 
@@ -31,7 +31,7 @@ flowchart LR
     end
     phone -->|"Local WebSocket :8765"| vision
     edgeApi <-->|"Resume, records, acknowledgments and blobs"| hub
-    hubApi -.->|"REST + WebSocket"| browser["Dashboard / 2D Twin: planned"]
+    hubApi -->|"REST; WebSocket API available"| browser["Operator dashboard / 2D Twin"]
 ```
 
 The operational data path stays on the local network. The hub catches up after a link interruption; backfilled observations remain distinguishable from current state. The proposed Hugging Face showcase uses separately curated public examples, not a live rover upload.
@@ -63,7 +63,7 @@ The phone captures and transmits; Python owns model inference and assessment. A 
 | iPhone → rover computer | `ws://<rover-address>:8765` | Length-prefixed JSON header + JPEG; pose messages | Private local Wi-Fi; iOS camera/local-network permission |
 | Laptop hub ↔ edge API | `ws://<rover-address>:8770/v1/sync` | Live state, ordered records, resume cursors, acknowledgments | Same `BOB_EDGE_TOKEN` on edge and hub for LAN access |
 | Laptop hub → edge API | `http://<rover-address>:8770/v1/blobs/<sha256>` | Evidence image retrieval | Hash verified before use; bandwidth capped |
-| Browser → laptop hub | `http://<laptop-address>:8780/v1/...`, `ws://<laptop-address>:8780/v1/live` | Status, history, observations, evidence | Frontend API exists; browser UI remains to be built |
+| Browser → laptop hub | `http://<laptop-address>:8780/v1/...`, `ws://<laptop-address>:8780/v1/live` | Metrics, status, detections, evidence, logs, requirements and explicit inspection commands | Local dashboard uses bounded REST polling and token headers; configure the browser origin for direct access |
 | Hub ↔ optional sample edge | `ws://127.0.0.1:8771/v1/sync` | Synthetic demonstration records | Separate SAMPLE store and workspace |
 | Mac terminal → ESP32 | Bluetooth Low Energy | Manual motor/speaker commands | Independent bench test; not connected to CV or hub |
 
@@ -72,7 +72,7 @@ flowchart LR
     phoneDevice["iPhone"] <-->|"Private Wi-Fi / hotspot"| localNetwork["Local network"]
     localNetwork <-->|"Phone stream :8765"| roverDevice["Rover host: Mac now / Jetson later"]
     roverDevice <-->|"LAN sync :8770"| laptopDevice["Operator laptop"]
-    laptopDevice -.->|"API :8780"| futureBrowser["Future browser UI"]
+    laptopDevice -->|"API :8780"| futureBrowser["Operator dashboard"]
     bench["Mac BLE terminal"] -->|"BLE commands"| esp["ESP32 DevKit V1"]
     esp -->|"GPIO + PWM"| driver["TB6612FNG motor driver"]
     driver --> motors["Left and right motors"]
@@ -114,7 +114,7 @@ Live preview is latest-only; it is not replayed as history. Control, track and o
 | Restricted zones | Operator-defined image zones and closed yellow floor-tape inspection, Mac live/replay output | Physical tape and foot-evidence validation |
 | Walkway obstruction | Fixed-camera reference validation and change mask | People handling, lane check, CLI and physical tests |
 | Edge backend | Application contracts, SQLite WAL store, bounded publication and separate sync API | Later inspection/incident workflow and calibration gates |
-| Laptop hub | Replica, reconnect/backfill, evidence verification, frontend API and separate SAMPLE workspace | Browser frontend; full profile/inspection workflow acceptance |
+| Laptop hub / dashboard | Replica, reconnect/backfill, measured telemetry, logs, evidence, Twin, requirement editor and revision-bound inspections; separate read-only SAMPLE | Physical phone/worksite and multi-device workflow acceptance; incident calibration |
 | Local sync milestone | Documented one-Mac process test: 1,012/1,012 records matched after a 10-second link cut; 64/64 evidence blobs verified | Physical multi-device and deployment acceptance |
 | Hardware | User-reported ESP32 motor operation and speaker operation after a ground connection fix | Integrated controller telemetry, navigation and supervisor |
 | Jetson | Portable Python, pinned exports and handoff procedure | On-device install, TensorRT build and J1–J6 |
