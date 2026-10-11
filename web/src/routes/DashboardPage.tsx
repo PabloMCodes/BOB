@@ -15,6 +15,10 @@ export function DashboardPage() {
           <Link to="/privacy" className="cursor-target text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape" data-cursor-label="Privacy">
             Privacy &amp; worker safety
           </Link>
+          {' · '}
+          <Link to="/terms" className="cursor-target text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape" data-cursor-label="Terms">
+            Terms of Service
+          </Link>
         </p>
       </div>
       <Dashboard />

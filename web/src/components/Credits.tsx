@@ -89,6 +89,13 @@ export function Credits() {
           >
             Privacy &amp; worker safety
           </Link>
+          <Link
+            to="/terms"
+            className="cursor-target label-type text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape"
+            data-cursor-label="Terms"
+          >
+            Terms of Service
+          </Link>
           {copy.links.github ? (
             <a
               href={copy.links.github}

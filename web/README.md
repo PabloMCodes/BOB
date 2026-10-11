@@ -10,6 +10,8 @@ Read [Design.md](Design.md) before changing layout or color. Read [Motion.md](Mo
 
 The worker privacy and safety policy is at `/privacy`, linked from the homepage footer and dashboard. Its copy lives in `src/data/privacy.ts`. Routine images have a maximum retention of 7 days from capture; incident evidence has 30 days, with narrowly documented holds. These are operator-managed policy limits: expiry of hub replicas, saved previews, recordings, exports and backups is not implemented. Rover pruning alone does not enforce this policy across all copies. The site operator must provide a privacy contact, arrange deletion and verify the schedule before capturing workers.
 
+Terms of Service are at `/terms`, linked from the homepage, dashboard and privacy page. Copy and the supplied operator/contact details live in `src/data/terms.ts`. Terms cover authorized prototype use, human review, worker data, availability, warranty limitations and separate component licenses. Retention periods are read from the privacy policy so both pages agree. The terms do not change the original-code MIT license or third-party permissions.
+
 ```bash
 npm install
 npm run dev

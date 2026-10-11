@@ -72,7 +72,10 @@ export function PrivacyPage() {
               </li>
             ))}
           </ul>
-          <Link to="/" className="cursor-target mt-10 inline-block text-sm text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape" data-cursor-label="Home">Back to B.O.B</Link>
+          <div className="mt-10 flex flex-wrap gap-6">
+            <Link to="/" className="cursor-target text-sm text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape" data-cursor-label="Home">Back to B.O.B</Link>
+            <Link to="/terms" className="cursor-target text-sm text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape" data-cursor-label="Terms">Terms of Service</Link>
+          </div>
         </footer>
       </div>
     </main>
