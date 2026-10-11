@@ -117,3 +117,15 @@ Automated acceptance on 2026-10-11: 63 targeted navigation/server tests passed i
 A separate synthetic SAMPLE stream exercised 30 live-tail decisions without BLE.
 Physical camera/speech acceptance for this consumer remains to be performed;
 existing manual motor/speech operation was user-confirmed before this change.
+
+### Speech-only reminder timing
+
+With `--ble-speech`, confirmed Missing PPE repeats no more often than every five
+seconds, for less than 30 seconds after the first confirmed warning (normally six
+clips at 0, 5, 10, 15, 20 and 25 seconds). Each repeat requires fresh, repeatedly
+confirmed violation evidence for a strongly detected person. No current violation
+means no new clip; this does not label an unverified person compliant. A person
+remaining in view cannot restart the 30-second budget. One second of fresh clear
+observations after departure permits a new encounter. Brief misses and stale feeds
+do not reset the budget. The currently playing short clip may finish. This applies
+to the motor-disabled speech CLI; supervised driving retains its existing policy.

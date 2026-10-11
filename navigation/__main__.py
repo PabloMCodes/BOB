@@ -53,7 +53,7 @@ class Report:
 
 
 async def run(args):
-    preview = Preview(Settings(mission_s=args.seconds))
+    preview = Preview(Settings(mission_s=args.seconds), repeat_speech=args.ble_speech)
     directory = args.output_dir or Path("runs/navigation") / datetime.now(timezone.utc).strftime(
         "%Y%m%dT%H%M%S.%fZ")
     report = Report(directory, "SYNTHETIC" if args.demo else args.source_mode)

@@ -67,8 +67,11 @@ def iou(a: Box, b: Box) -> float:
 
 
 class Preview:
-    def __init__(self, settings: Settings = Settings()):
+    def __init__(self, settings: Settings = Settings(), *, repeat_speech=False):
         self.settings = settings
+        self.repeat_speech = repeat_speech
+        self.speech_started = None
+        self.speech_clear_since = None
         self.session = None
         self.retired: set[str] = set()
         self.origin = None
@@ -99,6 +102,7 @@ class Preview:
 
     def _stop(self, reason, event=None):
         self._reset_inspection()
+        self.speech_clear_since = None
         return self._decision("STOPPED", reason, event)
 
     def update(self, event: DetectionEvent | None, health: StreamHealth | None,
@@ -173,6 +177,27 @@ class Preview:
         person_seen = bool(people) or any(
             b.source == "model" and b.cls_name in {"head", "face"} and b.conf >= 0.5
             for b in event.boxes)
+        if self.repeat_speech and fresh:
+            # Only a sustained, observed departure resets the 30-second budget.
+            # A stale feed or brief missed detection must not renew it.
+            if person_seen:
+                self.speech_clear_since = None
+            elif self.speech_clear_since is None:
+                self.speech_clear_since = mono
+            elif mono - self.speech_clear_since >= s.clear_s:
+                self.speech_started = None
+            self._observe(event, [b for b in people if b.conf >= INSPECTION_PERSON_CONF], mono)
+            if self.confirmed:
+                if self.speech_started is None:
+                    self.speech_started = mono
+                if mono - self.speech_started < 30 and mono - self.last_announced >= 5:
+                    self.last_announced = mono
+                    if self.person_since is None:
+                        self.person_since = mono
+                    if self.hold_until is None:
+                        self.hold_until = mono + s.hold_s
+                    return self._decision("ANNOUNCE", "repeated_derived_ppe_evidence", event,
+                                          announcement="Missing PPE")
         if person_seen and self.person_since is None:
             self.person_since = mono
         if fresh:
@@ -207,12 +232,12 @@ class Preview:
                         and mono - self.clear_since >= s.clear_s):
                     self._reset_inspection()
                     return self._explore(event)
-                if fresh:
+                if fresh and not self.repeat_speech:
                     self._observe(event, [b for b in people
                                          if b.conf >= INSPECTION_PERSON_CONF], mono)
                 if self.confirmed:
                     self.hold_until = mono + s.hold_s
-                    if mono - self.last_announced >= s.cooldown_s:
+                    if not self.repeat_speech and mono - self.last_announced >= s.cooldown_s:
                         self.last_announced = mono
                         return self._decision("ANNOUNCE", "repeated_derived_ppe_evidence", event,
                                               announcement="Missing PPE")

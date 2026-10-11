@@ -304,3 +304,40 @@ def test_demo_all_states_and_cli_artifacts(tmp_path):
 def test_cli_rejects_invalid_or_simulated_hardware_use(args):
     result = subprocess.run([sys.executable, "-m", "navigation", *args], capture_output=True, timeout=10)
     assert result.returncode == 2
+
+
+def test_speech_only_repeats_five_seconds_and_caps_thirty():
+    p = Preview(repeat_speech=True)
+    spoken = []
+    for seq in range(181):
+        t = seq * .25
+        if update(p, seq, t, boxes=(PERSON, MISSING)).announcement:
+            spoken.append(t)
+    assert spoken == [.5, 5.5, 10.5, 15.5, 20.5, 25.5]
+
+
+@pytest.mark.parametrize('remaining', [(), (PERSON,)])
+def test_speech_only_stops_when_person_or_violation_disappears(remaining):
+    p = Preview(repeat_speech=True)
+    assert confirm(p).announcement
+    for seq in range(3, 50):
+        assert update(p, seq, seq * .25, boxes=remaining).announcement is None
+
+
+def test_speech_budget_survives_brief_detection_gaps():
+    p = Preview(repeat_speech=True)
+    spoken = []
+    for seq in range(160):
+        boxes = () if seq % 20 == 19 else (PERSON, MISSING)
+        if update(p, seq, seq * .25, boxes=boxes).announcement:
+            spoken.append(seq * .25)
+    assert spoken and max(spoken) < 30.5
+
+
+def test_speech_restarts_after_observed_departure():
+    p = Preview(repeat_speech=True)
+    for seq in range(130):
+        update(p, seq, seq * .25, boxes=(PERSON, MISSING))
+    for seq in range(130, 136):
+        update(p, seq, seq * .25)
+    assert confirm(p, start=34., seq=136).announcement
