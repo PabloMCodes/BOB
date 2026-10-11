@@ -32,7 +32,7 @@ def detection(seq):
         "image_size": ImageSize(width=64, height=48), "jetson_receive_ts_ns": time.time_ns(),
         "iphone_frame_ts_ns": 1_000_000_000 + seq * 100_000_000,
     })
-    return SimpleNamespace(event=event, image=np.full((48, 64, 3), seq, np.uint8),
+    return SimpleNamespace(event=event, image=np.full((48, 64, 3), seq % 256, np.uint8),
                            result=SimpleNamespace(verdicts=[], boxes=[]), verdicts={})
 
 
