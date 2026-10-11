@@ -23,6 +23,7 @@ from bobapp.edge.api.auth import token_ok
 
 from ..replica import Replica
 from . import views
+from .twin import twin_router
 from .worksites import worksite_router
 from .models import AssessmentPage, InspectionPage, Page, StatusResponse, WorkspaceName
 
@@ -32,6 +33,8 @@ HUB_ROUTES = {
     ("GET", "/v1/worksites"), ("GET", "/v1/worksites/{worksite_id}"), ("PUT", "/v1/worksites/{worksite_id}"),
     ("GET", "/v1/worksites/{worksite_id}/revisions/{revision}"), ("POST", "/v1/inspections"),
     ("POST", "/v1/inspections/{inspection_id}/end"),
+    ("GET", "/v1/twin/sessions"), ("GET", "/v1/twin/sessions/{session_id}/track"),
+    ("GET", "/v1/twin/sessions/{session_id}/pins"), ("GET", "/v1/twin/sessions/{session_id}/map.svg"),
 }
 Limit = Query(100, ge=1, le=1000)
 
@@ -79,6 +82,7 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
 
     deps = [Depends(auth)]
     app.include_router(worksite_router(lambda: replica("rover"), edge, deps))
+    app.include_router(twin_router(replica, stale_after_s, deps))
 
     @app.get("/v1/status", response_model=StatusResponse, dependencies=deps)
     def get_status(workspace: WorkspaceName = "rover") -> StatusResponse:

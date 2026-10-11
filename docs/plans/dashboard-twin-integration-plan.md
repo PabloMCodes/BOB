@@ -1,6 +1,6 @@
 # BOB dashboard, rover-to-laptop sync and 2D Twin integration plan
 
-Planning date: October 10, 2026 (revision 2). Status: **Step 0 decisions recorded (§9 Step 0, §11); implementation of Steps 1–9 in progress on `autoCV` — the README progression row "D" is the source of truth for what is built and tested.** Revision 2 adds the rover-to-laptop data link (store locally on the rover, resynchronize when the link returns) and a frontend-ready backend API, and corrects the revision 1 inventory against the current `autoCV` tree.
+Planning date: October 10, 2026 (revision 2). Status: **Steps 0–9 implemented on `autoCV` on the Mac (Milestones A, B, C in software); physical Twin walk test and incident calibration pending; Steps 10–11 not started.** The progression row "D" in [README-CV.md](../../README-CV.md) is the source of truth for what is built, tested and measured. Revision 2 adds the rover-to-laptop data link (store locally on the rover, resynchronize when the link returns) and a frontend-ready backend API, and corrects the revision 1 inventory against the current `autoCV` tree.
 
 ## 1. Scope
 

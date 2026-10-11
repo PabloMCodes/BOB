@@ -128,6 +128,34 @@
         "title": "AssessmentStatus",
         "type": "string"
       },
+      "Bounds": {
+        "properties": {
+          "max_east": {
+            "title": "Max East",
+            "type": "number"
+          },
+          "max_north": {
+            "title": "Max North",
+            "type": "number"
+          },
+          "min_east": {
+            "title": "Min East",
+            "type": "number"
+          },
+          "min_north": {
+            "title": "Min North",
+            "type": "number"
+          }
+        },
+        "required": [
+          "min_east",
+          "max_east",
+          "min_north",
+          "max_north"
+        ],
+        "title": "Bounds",
+        "type": "object"
+      },
       "Box": {
         "additionalProperties": false,
         "description": "One box in pixels of the upright (rotated) image.\n\nsource=\"model\":   a raw YOLO detection; cls_id is the model's class index.\nsource=\"derived\": produced by a PPE rule (e.g. \"no-safety-glasses\" on a face's eye band);\n                  cls_id is null and conf is the confidence of the subject it was derived from.",
@@ -1403,6 +1431,55 @@
         "title": "LiveState",
         "type": "object"
       },
+      "Marker": {
+        "properties": {
+          "age_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Ms"
+          },
+          "label": {
+            "default": "Phone camera",
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "pose": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pose"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "current",
+              "last_known",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "note"
+        ],
+        "title": "Marker",
+        "type": "object"
+      },
       "NoticeBody": {
         "additionalProperties": false,
         "description": "Capability / health notices: 'Required \u2014 assessment unavailable', writer drops, low rate...",
@@ -1563,6 +1640,164 @@
           "next_after"
         ],
         "title": "Page",
+        "type": "object"
+      },
+      "Pin": {
+        "properties": {
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "east_m": {
+            "title": "East M",
+            "type": "number"
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Reason"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "evidence_sha256": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Sha256",
+            "type": "array"
+          },
+          "hazard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hazard"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "incident",
+              "evidence"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "meaning": {
+            "default": "observed from here: the phone camera's position for that frame, not the person's or hazard's",
+            "title": "Meaning",
+            "type": "string"
+          },
+          "north_m": {
+            "title": "North M",
+            "type": "number"
+          },
+          "pose": {
+            "$ref": "#/components/schemas/Pose"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "event_id",
+          "pose",
+          "east_m",
+          "north_m",
+          "source_mode",
+          "delivery"
+        ],
+        "title": "Pin",
+        "type": "object"
+      },
+      "Pins": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "marker": {
+            "$ref": "#/components/schemas/Marker"
+          },
+          "pins": {
+            "items": {
+              "$ref": "#/components/schemas/Pin"
+            },
+            "title": "Pins",
+            "type": "array"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "unlocalized": {
+            "items": {
+              "$ref": "#/components/schemas/Unlocalized"
+            },
+            "title": "Unlocalized",
+            "type": "array"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "session_id",
+          "pins",
+          "unlocalized",
+          "marker"
+        ],
+        "title": "Pins",
         "type": "object"
       },
       "Pose": {
@@ -1954,6 +2189,125 @@
         "title": "SaveProfileRequest",
         "type": "object"
       },
+      "SessionList": {
+        "properties": {
+          "clock_domains": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {
+              "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
+              "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
+              "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
+              "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+            },
+            "title": "Clock Domains",
+            "type": "object"
+          },
+          "projection": {
+            "additionalProperties": true,
+            "title": "Projection",
+            "type": "object"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionSummary"
+            },
+            "title": "Sessions",
+            "type": "array"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "sessions",
+          "projection"
+        ],
+        "title": "SessionList",
+        "type": "object"
+      },
+      "SessionSummary": {
+        "properties": {
+          "backfilled_points": {
+            "title": "Backfilled Points",
+            "type": "integer"
+          },
+          "bounds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Bounds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "first_iphone_ts_ns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Iphone Ts Ns"
+          },
+          "last_iphone_ts_ns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Iphone Ts Ns"
+          },
+          "segments": {
+            "title": "Segments",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_modes": {
+            "items": {
+              "$ref": "#/components/schemas/SourceMode"
+            },
+            "title": "Source Modes",
+            "type": "array"
+          },
+          "track_points": {
+            "title": "Track Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "track_points",
+          "segments",
+          "backfilled_points",
+          "source_modes",
+          "current"
+        ],
+        "title": "SessionSummary",
+        "type": "object"
+      },
       "SourceMode": {
         "description": "Declared by the operator at server start: the server cannot tell a replay client from a phone.",
         "enum": [
@@ -2267,6 +2621,79 @@
         "title": "SubjectVerdict",
         "type": "object"
       },
+      "Track": {
+        "properties": {
+          "projection": {
+            "additionalProperties": true,
+            "title": "Projection",
+            "type": "object"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/TrackSegment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "workspace": {
+            "enum": [
+              "rover",
+              "sample"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "session_id",
+          "segments",
+          "projection"
+        ],
+        "title": "Track",
+        "type": "object"
+      },
+      "TrackPoint": {
+        "properties": {
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "east_m": {
+            "title": "East M",
+            "type": "number"
+          },
+          "iphone_ts_ns": {
+            "title": "Iphone Ts Ns",
+            "type": "integer"
+          },
+          "north_m": {
+            "title": "North M",
+            "type": "number"
+          },
+          "pose": {
+            "$ref": "#/components/schemas/Pose"
+          },
+          "seq_id": {
+            "title": "Seq Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "seq_id",
+          "iphone_ts_ns",
+          "pose",
+          "east_m",
+          "north_m",
+          "delivery"
+        ],
+        "title": "TrackPoint",
+        "type": "object"
+      },
       "TrackPointBody": {
         "additionalProperties": false,
         "description": "Valid phone-camera pose (never the rover's or a person's position). A new `segment` starts\nafter any invalid pose; segments are never joined across a gap.",
@@ -2320,6 +2747,37 @@
         "title": "TrackPointBody",
         "type": "object"
       },
+      "TrackSegment": {
+        "properties": {
+          "delivery": {
+            "enum": [
+              "realtime",
+              "backfilled",
+              "mixed"
+            ],
+            "title": "Delivery",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TrackPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segment",
+          "delivery",
+          "points"
+        ],
+        "title": "TrackSegment",
+        "type": "object"
+      },
       "TrackingState": {
         "description": "Mirrors ARCamera.TrackingState.",
         "enum": [
@@ -2329,6 +2787,52 @@
         ],
         "title": "TrackingState",
         "type": "string"
+      },
+      "Unlocalized": {
+        "properties": {
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "incident",
+              "evidence"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "event_id",
+          "reason",
+          "source_mode",
+          "delivery"
+        ],
+        "title": "Unlocalized",
+        "type": "object"
       },
       "ValidationError": {
         "properties": {
@@ -3479,6 +3983,333 @@
           }
         },
         "summary": "Get Status"
+      }
+    },
+    "/v1/twin/sessions": {
+      "get": {
+        "operationId": "sessions_v1_twin_sessions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sessions"
+      }
+    },
+    "/v1/twin/sessions/{session_id}/map.svg": {
+      "get": {
+        "operationId": "map_svg_v1_twin_sessions__session_id__map_svg_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Map Svg"
+      }
+    },
+    "/v1/twin/sessions/{session_id}/pins": {
+      "get": {
+        "operationId": "pins_v1_twin_sessions__session_id__pins_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pins"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pins"
+      }
+    },
+    "/v1/twin/sessions/{session_id}/track": {
+      "get": {
+        "operationId": "track_v1_twin_sessions__session_id__track_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Track"
       }
     },
     "/v1/worksites": {
