@@ -1,14 +1,38 @@
-# Jetson Orin Nano handoff — BOB computer vision (`autoCV`)
+# Jetson Orin Nano handoff — BOB computer vision
 
 For the team deploying `vision/` on the Jetson. Everything here was verified on the Mac stand-in
 (Apple Silicon, MPS) unless marked **⚠️ not run on a Jetson yet** — those commands are the expected
 path and must be confirmed on the device.
 
+### Initial Jetson validation — 2026-10-10
+
+`jetson-bob` now runs JetPack 6.2.1 / L4T 36.4.4, CUDA 12.6, Python 3.10.12,
+and the existing 25 W power mode. The operator reports LiPo/converter power at slightly
+above 15 V; supply stability under sustained load has not been measured.
+
+- Local `.venv`: Jetson AI Lab CUDA 12.6 wheels `torch==2.8.0` and
+  `torchvision==0.23.0`, with `ultralytics==8.3.253`. GPU matrix computation,
+  NumPy interchange, and torchvision CUDA NMS passed.
+- This torch wheel requires NumPy 1.x: local `numpy==1.26.4`,
+  `opencv-python==4.11.0.86`, `scipy==1.15.3`. The Mac lockfile's NumPy 2.2.6
+  failed torch's NumPy bridge. Use `.venv/bin/python` for this environment;
+  plain `uv sync` / `uv run` can replace these Jetson-specific dependencies.
+- `YOLO_AUTOINSTALL=false .venv/bin/python -m pytest -q`: **373 passed, 5 skipped**
+  in 61.24 s. Skips: three optional ONNX checks, one labeling check, one Apple MPS check.
+  The zone replay test now waits for scene output before SIGTERM; C2 is written earlier.
+- SH17 weights matched the configured SHA-256. Five warm-ups followed by 20 pipeline
+  calls per bundled image: `zidane.jpg` (2 head crops) p50/p95 **79.7/91.3 ms**;
+  `bus.jpg` (4 head crops) **96.6/105.9 ms**. These are pipeline-only sample results,
+  not J4 live/replay acceptance. Local reports are in `runs/jetson-validation/`.
+- Still pending: physical iPhone transfer, real-recording parity and latency, footwear
+  weights, TensorRT, and sustained combined-load testing. Walkway processing is a partial
+  prototype, not a live server feature; see `docs/walkway-obstruction.md`.
+
 ## 1. What you get
 
 | Item | Where | Notes |
 | --- | --- | --- |
-| Python package `vision` | repo, branch `autoCV` | Python 3.10 only, no macOS imports, device from `vision.config.resolve_device()` (`cuda → mps → cpu`) |
+| Python package `vision` | repo, default branch `main` | Python 3.10 only, no macOS imports, device from `vision.config.resolve_device()` (`cuda → mps → cpu`) |
 | PPE model SH17 YOLOv8s | `models/sh17_yolov8s.pt` (auto-download, SHA-256 pinned in `configs/default.yaml`) | Non-commercial license (CC BY-NC-SA 4.0); see `models/sh17.md` |
 | Footwear specialist (optional, experimental) | `models/footwear_yolov8n_v1.pt`, pinned in `configs/footwear.yaml` | Off by default; see `models/footwear-v1.md` |
 | ONNX exports of both | `models/*.onnx` — **not in git**, hand over as files | SHA-256 pinned in `configs/onnx.yaml`; reproducible: `tools.export_onnx` re-creates the same bytes from the same `.pt` |

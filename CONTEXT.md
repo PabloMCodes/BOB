@@ -20,7 +20,7 @@ The user's exact uploaded firmware revision was not independently verified.
 
 ## Project scope and source of truth
 
-Repository: `PabloMCodes/BOB`; working branch: `autoCV`.
+Repository: `PabloMCodes/BOB`; default and working branch: `main` (the former `autoCV` branch was merged and retired on 2026-10-11).
 
 The main branch work described in [README.MD](README.MD) and
 [AGENTS.md](AGENTS.md) is YOLOv8 PPE detection on iPhone frames with ARKit pose

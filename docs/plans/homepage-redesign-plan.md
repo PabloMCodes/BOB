@@ -22,7 +22,7 @@ Bold framing is allowed; invented capability is not. Each feature carries one of
 | 3D scene | At the end of the page. The rover is shown as an autonomous vehicle, labelled in development | User |
 | Hazards in scene | All of them: PPE, person in path, restricted zone, walkway obstruction, plus Unverified and No hazard | User |
 | Motion stack | Lenis (smooth scroll) and Framer Motion (now published as `motion`, same API) | User |
-| Branch | `main` | User (overrides the `autoCV` default in AGENTS.md) |
+| Branch | `main` | Default integration branch |
 
 Recommendations not yet confirmed by the user:
 

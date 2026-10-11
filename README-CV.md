@@ -1,4 +1,4 @@
-# BOB — Computer Vision Branch (`autoCV`)
+# BOB — Computer Vision Guide
 
 The detailed CV guide and development log, preserved from the original project README. For the overall system, backend, hardware and project status, start with [BOB overview](README.MD). Commands below run from the repository root. The backend milestone history is retained here for continuity.
 
@@ -288,7 +288,15 @@ Final checkout verification: **250 Python tests passed**; unsigned iOS build pas
 2. 10 s still → **cover the lens ~3 s** → 10 s still → press **Reset** → 10 s → **app to background ~5 s** and back → 10 s → Ctrl-C.
 3. `uv run python -m tools.pose_timeline runs/server/<time>/stream.bobrec`. **Pass:** one `tracking_not_normal (insufficient_features)` stretch of ~3 s, valid before and after · **3 sessions** (start, Reset, background), each new one invalid only while `initializing` · `frames the server would drop` = 0 or only old-session frames.
 
-### Step 8 — CV destructive tests + Jetson handoff prep 🟡 (on-device checks pending)
+### Step 8 — CV destructive tests + Jetson handoff prep 🟡 (on-device acceptance incomplete)
+
+- **Initial Jetson run (2026-10-10):** JetPack 6.2.1 / CUDA 12.6, 25 W mode,
+  torch 2.8.0 + torchvision 0.23.0 Jetson wheels; **373 passed, 5 optional/platform skips**
+  in 61.24 s. Fixed an end-to-end test race that sent SIGTERM before zone output completed.
+  Warmed SH17 pipeline on bundled samples: p95 **91.3 ms** (2 head crops), **105.9 ms**
+  (4 head crops), 20 calls each. Phone transfer, real-recording parity/latency, footwear,
+  TensorRT and sustained battery tests remain pending. See
+  [`docs/jetson-handoff.md`](docs/jetson-handoff.md).
 
 - **Decisions:** failure classes **network / transport, bad data, pose / time abuse** (resources / soak and dual-stack server not in scope) · parity = **boxes (IoU ≥ 0.9, \|Δconf\| ≤ 0.02) + identical verdicts** on onnxruntime CPU · **no Jetson available** → prep + handoff doc · fix what the suite breaks · **batch head crops** · **ONNX for the footwear specialist too**.
 - **Destructive suite** (`tests/test_destructive.py`, 20 tests, each tagged with invariants I1–I6: server stays up · no fake compliance · nothing disappears silently · latency can't accumulate · trouble reported · pose never guessed):

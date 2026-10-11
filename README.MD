@@ -116,8 +116,9 @@ Live preview is latest-only; it is not replayed as history. Control, track and o
 | Edge backend | Application contracts, SQLite WAL store, bounded publication and separate sync API | Later inspection/incident workflow and calibration gates |
 | Laptop hub / dashboard | Replica, reconnect/backfill, measured telemetry, logs, evidence, Twin, requirement editor and revision-bound inspections; separate read-only SAMPLE | Physical phone/worksite and multi-device workflow acceptance; incident calibration |
 | Local sync milestone | Documented one-Mac process test: 1,012/1,012 records matched after a 10-second link cut; 64/64 evidence blobs verified | Physical multi-device and deployment acceptance |
-| Hardware | User-reported ESP32 motor operation and speaker operation after a ground connection fix | Integrated controller telemetry, navigation and supervisor |
-| Jetson | Portable Python, pinned exports and handoff procedure | On-device install, TensorRT build and J1–J6 |
+| Hardware | User-reported ESP32 motor and speaker operation; isolated controller simulation and experimental BLE controller bench | Wheels-raised controller acceptance, integrated navigation and supervisor |
+| Jetson | CUDA Python environment, SH17 pipeline benchmark and full Python suite validated on Orin Nano | TensorRT build and remaining J2–J6 physical/live checks |
+| Scene understanding | Qwen3-VL-2B and SmolVLM-500M feasibility measured locally; neither integrated | Labeled construction-hazard evaluation and false-alarm controls |
 | Hugging Face | Step-by-step model/dataset/Space plan | Evaluation release, Hub publication and showcase implementation |
 
 These are implementation and recorded-test summaries, not claims of field accuracy. The detailed [CV progression and measurements](README-CV.md#progression) retain the original development log, including backend milestones D1–D6.
@@ -154,6 +155,15 @@ uv run python -m bobapp.hub serve
 The default edge API port is `8770`; the hub API port is `8780`. Without an access token, API binding is loopback-only. For separate machines, configure the local edge address and authentication using [edge settings](configs/edge.yaml), [hub settings](configs/hub.yaml) and the [backend plan](docs/plans/dashboard-twin-integration-plan.md). Keep local overrides and tokens out of Git. The hub currently serves an API, not a finished dashboard.
 
 The product page is a separate Vite app in [web/](web/). It does not call the hub. From `web/`, run `npm install` and `npm run dev`. Layout and motion are specified in [web/Design.md](web/Design.md) and [web/Motion.md](web/Motion.md).
+
+### Navigation preparation
+
+The [autonomous-driving context](docs/plans/autonomous-driving-context.md) records
+the off-board BLE prototype, conservative exploration behavior and encoder upgrade
+plan. The current implementation is limited to an isolated controller simulation
+and a separate experimental ESP32 controller bench. Neither path consumes CV
+observations or grants motion authority. Physical wheels-raised acceptance remains
+pending.
 
 ### Connect separate devices
 
@@ -221,6 +231,8 @@ The minimum demo path is live or recorded CV → matching evidence → laptop AP
 | [Restricted-zone inspection](docs/restricted-zones.md) | Image/tape conventions, uncertainty and physical acceptance |
 | [Walkway inspection](docs/walkway-obstruction.md) | Fixed-camera scope and unfinished lane assessment |
 | [Jetson handoff](docs/jetson-handoff.md) | Installation, engine export and on-device acceptance |
+| [Scene-understanding feasibility](docs/vlm-feasibility.md) | Measured local VLM latency, resource use, grounding failures and next evaluation |
+| [Autonomous-driving context](docs/plans/autonomous-driving-context.md) | Planned behavior, current isolated simulator/controller bench and encoder-ready boundaries |
 | [ESP32 hardware](hardware/esp32/README.md) | Wiring, BLE commands and motor/speaker bench results |
 | [Model cards](models/sh17.md) / [footwear specialist](models/footwear-v1.md) | Provenance, hashes, label meanings, licensing and measured limitations |
 | [Integration guide](integration.md) | Interfaces, ownership, branch registry and merge gates |
@@ -265,6 +277,7 @@ See [SH17 provenance](models/sh17.md) and [footwear provenance](models/footwear-
 
 ## Development and branches
 
-`main` is the local overall-project baseline created from the committed `autoCV` work and its upstream hardware documentation. `autoCV` remains the CV development branch. This initialization does not publish `main` or change the GitHub default branch.
+`main` is the default integration and development branch. The former `autoCV`
+branch was merged into `main` and retired on 2026-10-11.
 
 Follow [AGENTS.md](AGENTS.md) and [integration.md](integration.md): preserve existing work, synchronize before feature changes, run required checks, and use reviewed PRs for subsequent integration into `main`. Update the [detailed progression](README-CV.md#progression) with measured results and keep this overview aligned with actual project capabilities.
