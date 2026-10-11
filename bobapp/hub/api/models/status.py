@@ -51,3 +51,4 @@ class StatusResponse(BaseModel):
     clock_domains: dict[str, str] = CLOCK_DOMAINS
     telemetry: Optional[StreamTelemetry] = None
     telemetry_reason: Optional[str] = None
+    frames: dict[str, int] = Field(default_factory=dict)

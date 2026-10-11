@@ -1,6 +1,6 @@
 """Edge API (C9) on the rover: serves the store to the hub, accepts inspection and profile commands.
 
-Read-only except: deliver a profile revision, start an inspection, end an inspection. There is no
+Read-only except: deliver a profile revision, start/end an inspection, acknowledge a saved image. There is no
 endpoint that moves, arms, stops or clears faults on the rover (tests/test_edge_api.py checks the
 exact route list). It never runs inference: killing or stalling it cannot touch the frame path.
 """
@@ -13,7 +13,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from bobapp.contracts import (
     APP_VERSION,
@@ -26,7 +26,7 @@ from bobapp.contracts import (
     WorksiteProfile,
     is_sha256,
 )
-from bobapp.edge.store import CommandRefused, EdgeStore, NotFound
+from bobapp.edge.store import CommandRefused, EdgeStore, NotFound, StoreError
 
 from .auth import token_ok
 from .live import build_live_state
@@ -36,6 +36,7 @@ ROUTES = {
     ("WEBSOCKET", "/v1/sync"), ("GET", "/v1/live"), ("GET", "/v1/preview/latest"), ("GET", "/v1/blobs/{sha256}"),
     ("GET", "/v1/inspections"), ("POST", "/v1/profiles"), ("POST", "/v1/inspections"),
     ("POST", "/v1/inspections/{inspection_id}/end"),
+    ("POST", "/v1/blobs/{sha256}/ack"),
 }
 
 
@@ -51,6 +52,12 @@ class DeliverProfile(BaseModel):
     model_config = ConfigDict(extra="forbid")
     profile: WorksiteProfile
     source_mode: Optional[SourceMode] = None
+
+
+class BlobReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    hub_id: str = Field(min_length=1, max_length=200)
+    store_epoch: UUID
 
 
 def create_app(store_path: Path, edge_id: str, config: dict[str, Any], token: Optional[str],
@@ -110,6 +117,16 @@ def create_app(store_path: Path, edge_id: str, config: dict[str, Any], token: Op
                                 status=BlobStatusValue.MISSING)
             return JSONResponse(status.model_dump(mode="json"), status_code=404)
         return FileResponse(store().blob_file(sha256), media_type="image/jpeg")
+
+    @app.post("/v1/blobs/{sha256}/ack", dependencies=[Depends(auth)])
+    def blob_receipt(sha256: str, receipt: BlobReceipt) -> dict:
+        if not is_sha256(sha256):
+            raise HTTPException(422, "not a SHA-256")
+        try:
+            store().ack_blob(receipt.hub_id, receipt.store_epoch, sha256)
+        except StoreError as exc:
+            raise HTTPException(409, str(exc))
+        return {"acknowledged": True}
 
     @app.get("/v1/inspections", dependencies=[Depends(auth)])
     def inspections() -> list[dict]:
