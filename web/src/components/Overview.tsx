@@ -40,6 +40,21 @@ export function Overview() {
               />
             ))}
       </p>
+
+      <Reveal delay={80} className="mt-20 border-t border-line pt-10 md:mt-24">
+        <p className="statement max-w-[34ch] text-ink">{copy.overview.rolesLead}</p>
+      </Reveal>
+      <ul className="mt-14 grid gap-x-16 gap-y-12 md:grid-cols-2">
+        {copy.overview.roles.map((role, index) => (
+          <li key={role.label}>
+            <Reveal delay={index * 80} className="border-t border-line pt-6">
+              <p className="label-type text-tape">{role.label}</p>
+              <h3 className="step-title mt-5 text-ink">{role.title}</h3>
+              <p className="body-copy mt-4 text-muted">{role.body}</p>
+            </Reveal>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

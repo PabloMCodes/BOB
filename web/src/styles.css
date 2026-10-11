@@ -115,6 +115,21 @@ body {
     letter-spacing: -0.03em;
   }
 
+  .feature-line {
+    font-size: clamp(2.5rem, 8vw, 7rem);
+    font-weight: 600;
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+  }
+
+  .feature-tagline {
+    font-size: clamp(1.5rem, 3.4vw, 2.75rem);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+
   .card-title {
     font-size: clamp(1.25rem, 1.65vw, 1.6rem);
     font-weight: 600;

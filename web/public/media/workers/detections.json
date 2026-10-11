@@ -1,0 +1,573 @@
+{
+  "model_id": "sh17_yolov8s",
+  "mode": "head_crop",
+  "weights_sha256": "dfaf451bdda3f92fe4012327e337225929ad7af22146b00e0d6989c2f4e40a4b",
+  "note": "Supplied stills, not rover captures. Boxes are this pipeline's model detections on the original file. Derived PPE verdicts are omitted: on these half-body framings the person box is cut off by the image edge, so the vest rule and some eyewear checks fail; full results are in runs/showcase/web-workers/.",
+  "images": [
+    {
+      "src": "/media/workers/01-hivis-drawing-review.jpg",
+      "annotated": "/media/workers/01-hivis-drawing-review-detections.jpg",
+      "alt": "Two workers in orange high-visibility jackets and hard hats reviewing a drawing",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.961,
+          "x": 0.0912,
+          "y": 0.2052,
+          "w": 0.3688,
+          "h": 0.7948
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.938,
+          "x": 0.5362,
+          "y": 0.0607,
+          "w": 0.2777,
+          "h": 0.9387
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.868,
+          "x": 0.5368,
+          "y": 0.7596,
+          "w": 0.054,
+          "h": 0.1078
+        },
+        {
+          "label": "safety-vest",
+          "source": "model",
+          "conf": 0.858,
+          "x": 0.5725,
+          "y": 0.3855,
+          "w": 0.244,
+          "h": 0.5946
+        },
+        {
+          "label": "safety-vest",
+          "source": "model",
+          "conf": 0.833,
+          "x": 0.1016,
+          "y": 0.545,
+          "w": 0.2583,
+          "h": 0.4523
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.816,
+          "x": 0.4064,
+          "y": 0.5418,
+          "w": 0.0526,
+          "h": 0.1971
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.916,
+          "x": 0.601,
+          "y": 0.0647,
+          "w": 0.193,
+          "h": 0.2323
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.912,
+          "x": 0.1242,
+          "y": 0.2043,
+          "w": 0.1772,
+          "h": 0.2382
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.651,
+          "x": 0.2277,
+          "y": 0.3751,
+          "w": 0.0649,
+          "h": 0.0569
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.643,
+          "x": 0.6273,
+          "y": 0.2453,
+          "w": 0.062,
+          "h": 0.054
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/02-lathe-helmet-earmuffs.jpg",
+      "annotated": "/media/workers/02-lathe-helmet-earmuffs-detections.jpg",
+      "alt": "Machinist in a hard hat, ear defenders and safety glasses at a lathe",
+      "boxes": [
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.916,
+          "x": 0.3274,
+          "y": 0.7534,
+          "w": 0.1346,
+          "h": 0.1852
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.676,
+          "x": 0.015,
+          "y": 0.0249,
+          "w": 0.6561,
+          "h": 0.9751
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.858,
+          "x": 0.2665,
+          "y": 0.032,
+          "w": 0.2163,
+          "h": 0.2835
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.766,
+          "x": 0.3063,
+          "y": 0.2343,
+          "w": 0.1568,
+          "h": 0.1303
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/03-site-dusk-hivis.jpg",
+      "annotated": "/media/workers/03-site-dusk-hivis-detections.jpg",
+      "alt": "Two workers in high-visibility jackets and hard hats at a taped-off site at dusk",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.928,
+          "x": 0.447,
+          "y": 0.2718,
+          "w": 0.4381,
+          "h": 0.7237
+        },
+        {
+          "label": "safety-vest",
+          "source": "model",
+          "conf": 0.62,
+          "x": 0.4631,
+          "y": 0.5615,
+          "w": 0.3389,
+          "h": 0.438
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.936,
+          "x": 0.6967,
+          "y": 0.4072,
+          "w": 0.1618,
+          "h": 0.1562
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.829,
+          "x": 0.5351,
+          "y": 0.2806,
+          "w": 0.1742,
+          "h": 0.1465
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.77,
+          "x": 0.5379,
+          "y": 0.4475,
+          "w": 0.0792,
+          "h": 0.0379
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/04-press-brake-earmuffs.jpg",
+      "annotated": "/media/workers/04-press-brake-earmuffs-detections.jpg",
+      "alt": "Two workers in safety glasses and ear defenders at a press brake",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.927,
+          "x": 0.2882,
+          "y": 0.223,
+          "w": 0.2129,
+          "h": 0.7758
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.868,
+          "x": 0.0374,
+          "y": 0.0921,
+          "w": 0.4096,
+          "h": 0.9079
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.729,
+          "x": 0.4215,
+          "y": 0.6454,
+          "w": 0.0561,
+          "h": 0.0912
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.642,
+          "x": 0.3164,
+          "y": 0.7582,
+          "w": 0.0887,
+          "h": 0.1303
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.63,
+          "x": 0.3957,
+          "y": 0.7564,
+          "w": 0.0662,
+          "h": 0.0865
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.788,
+          "x": 0.3454,
+          "y": 0.3267,
+          "w": 0.0881,
+          "h": 0.056
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.67,
+          "x": 0.3094,
+          "y": 0.201,
+          "w": 0.0608,
+          "h": 0.1038
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/05-lab-gloves-bench.jpg",
+      "annotated": "/media/workers/05-lab-gloves-bench-detections.jpg",
+      "alt": "Two technicians in lab coats and gloves at a workbench",
+      "boxes": [
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.933,
+          "x": 0.4577,
+          "y": 0.609,
+          "w": 0.1735,
+          "h": 0.17
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.923,
+          "x": 0.6466,
+          "y": 0.5978,
+          "w": 0.1208,
+          "h": 0.1162
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.904,
+          "x": 0.3182,
+          "y": 0.7279,
+          "w": 0.2636,
+          "h": 0.1417
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.877,
+          "x": 0.2974,
+          "y": 0.0192,
+          "w": 0.5834,
+          "h": 0.8345
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.784,
+          "x": 0.0004,
+          "y": 0.0568,
+          "w": 0.6285,
+          "h": 0.9432
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.748,
+          "x": 0.3161,
+          "y": 0.2105,
+          "w": 0.1297,
+          "h": 0.0664
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.686,
+          "x": 0.5179,
+          "y": 0.1467,
+          "w": 0.1778,
+          "h": 0.0921
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/06-workshop-coveralls-glasses.jpg",
+      "annotated": "/media/workers/06-workshop-coveralls-glasses-detections.jpg",
+      "alt": "Two workers in coveralls and safety glasses in a workshop",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.928,
+          "x": 0.0921,
+          "y": 0.1744,
+          "w": 0.2934,
+          "h": 0.7217
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.861,
+          "x": 0.2451,
+          "y": 0.1939,
+          "w": 0.6112,
+          "h": 0.8038
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.647,
+          "x": 0.2102,
+          "y": 0.2692,
+          "w": 0.0848,
+          "h": 0.0508
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/07-crew-hardhats-vests.jpg",
+      "annotated": "/media/workers/07-crew-hardhats-vests-detections.jpg",
+      "alt": "Three construction workers in hard hats, vests and safety glasses",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.95,
+          "x": 0.7265,
+          "y": 0.0,
+          "w": 0.2735,
+          "h": 0.9973
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.943,
+          "x": 0.3028,
+          "y": 0.221,
+          "w": 0.395,
+          "h": 0.7745
+        },
+        {
+          "label": "safety-vest",
+          "source": "model",
+          "conf": 0.92,
+          "x": 0.8092,
+          "y": 0.3448,
+          "w": 0.1908,
+          "h": 0.6506
+        },
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.898,
+          "x": 0.0499,
+          "y": 0.1495,
+          "w": 0.2993,
+          "h": 0.8485
+        },
+        {
+          "label": "safety-vest",
+          "source": "model",
+          "conf": 0.762,
+          "x": 0.0478,
+          "y": 0.4992,
+          "w": 0.282,
+          "h": 0.5008
+        },
+        {
+          "label": "safety-vest",
+          "source": "model",
+          "conf": 0.524,
+          "x": 0.0671,
+          "y": 0.5246,
+          "w": 0.3952,
+          "h": 0.4743
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.924,
+          "x": 0.111,
+          "y": 0.1547,
+          "w": 0.2302,
+          "h": 0.2528
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.906,
+          "x": 0.377,
+          "y": 0.2274,
+          "w": 0.1572,
+          "h": 0.1678
+        },
+        {
+          "label": "helmet",
+          "source": "model",
+          "conf": 0.86,
+          "x": 0.8045,
+          "y": 0.0,
+          "w": 0.1955,
+          "h": 0.2196
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.696,
+          "x": 0.8253,
+          "y": 0.1803,
+          "w": 0.1376,
+          "h": 0.0815
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.575,
+          "x": 0.3887,
+          "y": 0.3769,
+          "w": 0.1349,
+          "h": 0.0651
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/08-lab-fumehood-gloves.jpg",
+      "annotated": "/media/workers/08-lab-fumehood-gloves-detections.jpg",
+      "alt": "Technician in safety glasses and gloves at a fume hood",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.933,
+          "x": 0.0711,
+          "y": 0.1341,
+          "w": 0.4822,
+          "h": 0.8634
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.754,
+          "x": 0.4461,
+          "y": 0.6255,
+          "w": 0.1036,
+          "h": 0.111
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.748,
+          "x": 0.4389,
+          "y": 0.3087,
+          "w": 0.0817,
+          "h": 0.083
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/09-lab-cylinder-goggles.jpg",
+      "annotated": "/media/workers/09-lab-cylinder-goggles-detections.jpg",
+      "alt": "Technician in goggles and gloves holding a measuring cylinder",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.936,
+          "x": 0.1998,
+          "y": 0.2341,
+          "w": 0.7617,
+          "h": 0.7659
+        },
+        {
+          "label": "gloves",
+          "source": "model",
+          "conf": 0.829,
+          "x": 0.4802,
+          "y": 0.7668,
+          "w": 0.2227,
+          "h": 0.1353
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.797,
+          "x": 0.5354,
+          "y": 0.3372,
+          "w": 0.1725,
+          "h": 0.0941
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/10-hangar-eyewear.jpg",
+      "annotated": "/media/workers/10-hangar-eyewear-detections.jpg",
+      "alt": "Technician in glasses working on a part in a hangar",
+      "boxes": [
+        {
+          "label": "person",
+          "source": "model",
+          "conf": 0.954,
+          "x": 0.186,
+          "y": 0.0427,
+          "w": 0.2674,
+          "h": 0.526
+        },
+        {
+          "label": "glasses",
+          "source": "model",
+          "conf": 0.794,
+          "x": 0.2928,
+          "y": 0.153,
+          "w": 0.0789,
+          "h": 0.0636
+        }
+      ]
+    }
+  ]
+}
