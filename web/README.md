@@ -8,6 +8,43 @@ Fixed choices use `src/components/Select.tsx`: workspace, saved worksite, each P
 
 **Export visible detections (CSV)** downloads the latest displayed frames for the selected session/workspace. It includes worksite/inspection revision, source mode, delivery, frame/model, measured inference time, each box's confidence percentage and confidence basis, and all five frame-level PPE statuses/reasons exactly as recorded. There is one row per box, with an empty-box row for frames without detections; repeated frame assessments are not individual-worker verdicts. Missing assessments stay blank with `assessment_recorded=false`, never an inferred pass. Export/refreshed timestamps and a stale flag identify the snapshot. Only allowlisted metadata is included: no images, evidence references, hub address or browser credentials. CSV quoting preserves multiline text and neutralizes formula-like text in spreadsheet apps. Downloaded files remain subject to the operator-managed privacy policy.
 
+## Second opinion (in-browser audit)
+
+The dashboard's **Second opinion** panel re-judges recorded frames with models with different weights
+and architectures from the rover's SH17 detector, entirely in the viewer's browser:
+`Xenova/yolos-tiny` finds people and the `Xenova/clip-vit-base-patch32` vision tower judges each
+requirement on its own crop of the person box. Nothing is uploaded and no hub is required, so the
+panel also works on the deployed site. Results live in memory only — they are not evidence, are not
+stored, and do not reach the hub.
+
+It compares against `public/media/workers/audit-fixture.json`, the real `vision.pipeline` output for
+the published stills, regenerated with `uv run python -m tools.export_audit_fixture` from the
+repository root. Outcomes are four-way: **agree**, **disagree**, **rover did not judge** (the rover
+abstained or the rule is inactive) and **auditor abstained**. Training-data overlap has not been verified. A disagreement prompts human review; it does not
+establish which claim is correct.
+
+Only the *vision* half of the zero-shot model is downloaded. The prompts are fixed, so their text
+embeddings are precomputed into `public/audit/prompt-embeddings.json` by
+`node scripts/export-prompt-embeddings.ts`; re-run it after changing any prompt wording, or the panel
+will refuse to score the changed prompt. First load is roughly 99 MB (9.7 MB detector + 89.1 MB
+vision tower), cached by the browser afterwards. WebGPU is used when available, with a WASM fallback.
+
+`node scripts/calibrate-audit.ts` measures the auditor against the fixture and prints the margin
+distribution, a margin sweep and every disagreement. The decision margins in `src/audit/prompts.ts`
+were chosen from it — re-run it after changing prompts, crop bands or models. Measured on the ten
+published stills: **13 agree, 0 disagree, 9 rover-did-not-judge, 18 auditor-abstained** across 40
+frame-requirement comparisons, with helmet agreeing on 10 of 10 frames. Those prompts and margins
+were tuned on these same ten frames, so this is calibration-set behaviour, not validation: the set
+has no labelled ground truth, and nothing here establishes worksite accuracy.
+
+Scope is helmet, vest, gloves and boots. Eyewear is excluded because safety glasses are a few pixels
+wide at the rover's camera distance and the vision config marks that rule `absence: unverified` for
+the same reason. Gloves is set to abstain always: at every margin that produced an answer it also
+produced a wrong one, because hands have no predictable position inside a person box. The rover has
+no boots rule at all (its model lacks a `safety-boots` class), so boots is auditor-only and can never
+agree or disagree. Smaller backbones were measured and rejected — MobileCLIP-S0 (12 MB) called
+clearly helmeted workers bare-headed, and MobileCLIP-S2 (37 MB) still produced helmet disagreements.
+
 Read [Design.md](Design.md) before changing layout or color. Read [Motion.md](Motion.md) before changing scroll, the detection boxes, or the closing scene.
 
 The worker privacy and safety policy is at `/privacy`, linked from the homepage footer and dashboard. Its copy lives in `src/data/privacy.ts`. Routine images have a maximum retention of 7 days from capture; incident evidence has 30 days, with narrowly documented holds. These are operator-managed policy limits: expiry of hub replicas, saved previews, recordings, exports and backups is not implemented. Rover pruning alone does not enforce this policy across all copies. The site operator must provide a privacy contact, arrange deletion and verify the schedule before capturing workers.
@@ -19,7 +56,7 @@ npm install
 npm run dev
 ```
 
-`npm run build` typechecks and writes `dist/`. `npm run lint` runs oxlint. Run the dashboard client checks with `node --test tests/twin.test.ts tests/twin-map.test.mjs tests/dashboard.test.ts tests/detection-csv.test.ts` (Node with native TypeScript support).
+`npm run build` typechecks and writes `dist/`. `npm run lint` runs oxlint. Run the dashboard client checks with `node --test tests/twin.test.ts tests/twin-map.test.mjs tests/dashboard.test.ts tests/detection-csv.test.ts tests/audit.test.ts` (Node with native TypeScript support).
 
 The Vite development server proxies the configured default hub through `/_bob/hub`, including Authorization headers, so development previews on any local port can connect without changing the hub's CORS settings. A different address entered in Connection settings is accessed directly and must allow the browser origin. Production builds (`vite preview` included) must configure CORS or their own authenticated reverse proxy; the development proxy is not part of `dist/`.
 
