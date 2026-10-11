@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
+import { Select } from '../components/Select.tsx'
 import { hubBase, type Connection } from '../twin/api.ts'
 import { errorMessage, labels, scoped, type Item, type Observation, type Page } from './api.ts'
+import { detectionCsv } from './detectionCsv.ts'
 import { usePoll } from './usePoll.ts'
 
 const human = (value: string) => value.replaceAll('_', ' ')
@@ -28,6 +30,7 @@ function Evidence({ connection, sha }: { connection: Connection; sha: string }) 
 }
 
 export function DetectionHistory({ connection, selected, revision }: { connection: Connection; selected: string; revision: number }) {
+  const [exportMessage, setExportMessage] = useState('')
   const load = useCallback(async (signal: AbortSignal) => {
     const filter = selected ? `&session_id=${encodeURIComponent(selected)}` : ''
     const [observations, incidents] = await Promise.all([
@@ -42,13 +45,32 @@ export function DetectionHistory({ connection, selected, revision }: { connectio
   const observations = state.data?.observations.items || []
   const latest = observations.at(-1)?.record.body
   const assessment = latest?.assessment
+  function exportDetections() {
+    if (!observations.length) return
+    try {
+      const exportedAt = new Date()
+      const csv = detectionCsv(observations, { workspace: connection.workspace, stale: state.stale, refreshedAt: state.updated, exportedAt })
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `bob-${connection.workspace}-detections-${exportedAt.toISOString().replaceAll(':', '-')}.csv`
+      document.body.append(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setExportMessage(`CSV download requested for ${observations.length} displayed frames${state.stale ? ' (stale snapshot)' : ''}.`)
+    } catch {
+      setExportMessage('The CSV could not be created. Please try again.')
+    }
+  }
   return <>
     <section className="dashboard-panel" aria-label="Latest assessment">
       <div className="dashboard-panel-heading"><h2 className="eyebrow">Latest recorded assessment</h2><span className="status-tag">{connection.workspace === 'sample' ? 'SAMPLE' : 'Frame assessment'}{state.stale ? ' · stale' : ''}</span></div>
       {assessment ? <><p className="dashboard-note">{assessment.worksite_id} · revision {assessment.profile_revision} · frame {latest?.event.seq_id} · session {latest?.event.session_id.slice(0, 8)}</p><div className="dashboard-assessments">{assessment.requirements.map((item) => <div key={item.requirement}><span>{labels[item.requirement]}</span><strong className={['not_assessed', 'assessment_unavailable'].includes(item.status) ? 'text-tape' : ''}>{human(item.status)}</strong>{item.reason && <small>{item.reason}</small>}</div>)}</div>{assessment.no_requirements_selected && <p className="twin-notice">No requirements selected. This frame does not establish compliance.</p>}</> : <p className="dashboard-note">No worksite assessment recorded for these frames. Save requirements and explicitly start an inspection to apply them.</p>}
     </section>
     <section className="dashboard-panel" aria-label="Detection history">
-      <div className="dashboard-panel-heading"><h2 className="eyebrow">Detections & confidence</h2><span className="dashboard-note">Latest 30 recorded frames</span></div>
+      <div className="dashboard-panel-heading"><div><h2 className="eyebrow">Detections & confidence</h2><p className="dashboard-note">Latest 30 recorded frames{state.stale && observations.length > 0 ? ' · stale snapshot' : ''}</p></div><button className="cursor-target dashboard-button" data-cursor-label="Export CSV" disabled={!observations.length} onClick={exportDetections}>Export visible detections (CSV)</button></div>
+      {exportMessage && <p className="dashboard-note mb-4" role="status">{exportMessage}</p>}
       {state.error && <p className="twin-notice" role="alert">{state.error}</p>}
       <div className="dashboard-table-wrap"><table className="dashboard-table"><thead><tr><th>Frame / source</th><th>Model</th><th>Inference</th><th>Detections</th><th>Pose / evidence</th></tr></thead><tbody>{[...observations].reverse().map((item) => {
         const body = item.record.body, event = body.event
@@ -56,6 +78,7 @@ export function DetectionHistory({ connection, selected, revision }: { connectio
       })}</tbody></table></div>
       {!observations.length && <p className="dashboard-note dashboard-empty-note">No recorded detection frames in this selection.</p>}
       <p className="dashboard-note">Each confidence belongs to its source box. Derived boxes carry subject confidence; a missing violation is not a pass.</p>
+      <p className="dashboard-note mt-2">CSV includes only the displayed records, with one row per detection and frame-level PPE statuses and reasons. Frames without detections are included. Images and connection credentials are excluded.</p>
     </section>
     <section className="dashboard-panel" aria-label="Incident history"><div className="dashboard-panel-heading"><h2 className="eyebrow">Incident timeline</h2><span className="dashboard-note">Backend policy transitions · latest 30</span></div>
       <ol className="dashboard-events">{[...(state.data?.incidents.items || [])].reverse().map((item) => <li key={item.cursor}><span className="status-tag">{human(item.record.body.transition || 'Unknown')}</span><div><strong>{human(item.record.body.key?.hazard || 'Unknown')}{item.record.body.key?.rule ? ` · ${item.record.body.key.rule}` : ''}</strong><p>{item.record.source_mode} · {item.delivery} · {item.record.body.incident_id?.slice(0, 8)}{item.record.body.calibrated === false ? ' · policy uncalibrated' : ''}</p>{item.record.body.end_reason && <p>End reason: {human(item.record.body.end_reason)}</p>}{item.record.body.evidence_sha256?.map((sha) => <Evidence key={sha} connection={connection} sha={sha} />)}</div></li>)}</ol>
@@ -77,7 +100,7 @@ export function Logs({ connection, revision }: { connection: Connection; revisio
   }
   return <section className="dashboard-panel" aria-label="Backend logs">
     <div className="dashboard-panel-heading"><div><h2 className="eyebrow">Backend logs</h2><p className="dashboard-note">{before == null ? 'Recent' : 'Historical'} notices, sync gaps, profile revisions and inspection events.</p></div><button className="cursor-target dashboard-button" disabled={!visible.length} onClick={exportLogs}>Export visible logs</button></div>
-    <div className="dashboard-actions"><label className="twin-field dashboard-log-filter">Event type<select className="cursor-target" value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">All events</option>{['notice', 'incident', 'inspection_started', 'inspection_ended', 'profile_revision', 'gap'].map((name) => <option key={name} value={name}>{human(name)}</option>)}</select></label><button className="cursor-target dashboard-button" disabled={items.length < 50} onClick={() => setBefore(items[0]?.cursor || null)}>Older logs</button>{before != null && <button className="cursor-target dashboard-button" onClick={() => setBefore(null)}>Return to recent</button>}</div>
+    <div className="dashboard-actions"><label className="twin-field dashboard-log-filter">Event type<Select data-cursor-label="Filter logs" value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">All events</option>{['notice', 'incident', 'inspection_started', 'inspection_ended', 'profile_revision', 'gap'].map((name) => <option key={name} value={name}>{human(name)}</option>)}</Select></label><button className="cursor-target dashboard-button" disabled={items.length < 50} onClick={() => setBefore(items[0]?.cursor || null)}>Older logs</button>{before != null && <button className="cursor-target dashboard-button" onClick={() => setBefore(null)}>Return to recent</button>}</div>
     {state.error && <p className="twin-notice" role="alert">{state.error}</p>}
     <div className="dashboard-log-list">{[...visible].reverse().map((item: Item) => <details key={item.cursor}><summary className="cursor-target"><time>{new Date(item.hub_rx_wall_ns / 1e6).toLocaleTimeString()}</time><span>{human(item.record.body.code || item.record.body.kind)}</span><strong>{item.record.body.message || human(item.record.body.transition || item.record.body.kind)}</strong><small>{item.record.source_mode} · {item.delivery}</small></summary><pre>{JSON.stringify(item, null, 2)}</pre></details>)}{!visible.length && <p className="dashboard-note">No logs in this page match the selected type.</p>}</div>
     <p className="dashboard-note">Times show receipt on the laptop hub. Backfilled events are history. Stream telemetry notices contain measured rates; browser credentials are never included.</p>

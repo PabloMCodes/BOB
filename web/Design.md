@@ -12,6 +12,8 @@ Bold framing is fine. Invented capability is not. Every feature that is not work
 | --- | --- |
 | `/` | Product story. One continuous scroll. |
 | `/dashboard` | Same header and tokens. Hub-backed metrics, connections, requirements, preview, twin, detections, evidence and logs. Inspection start/end are explicit manager actions. |
+| `/privacy` | Worker privacy, image retention and human review policy. Linked from the homepage footer and dashboard; dark theme, readable prose, retention table and explicit deletion status. |
+| `/terms` | Terms for prototype use, operator responsibilities, worker data, availability and component licenses. Linked alongside privacy; same readable dark layout. |
 
 ## Color
 
@@ -162,6 +164,8 @@ Use the existing dark theme and hairline panels. Put measured frame FPS, detecti
 
 Draw the camera path in ink, backfilled history dashed, and observation pins in tape. A disconnected view preserves history and labels the position unknown. Sessions and sample/rover workspaces must never be overlaid. Pin numbers connect map locations to their descriptions; unlocalized items stay off-map. Requirement edits save a new revision and take effect only on the next explicitly started inspection. Keep unsupported or uncertain assessments visible. No motion or safety controls.
 
+Use the shared native `Select` for fixed choices: workspace, saved worksite, PPE requirement, session and log event type. Each has a visible chevron, dark menu, keyboard focus and the device’s native picker. PPE offers **Required** and **Not required**; the latter never means compliant. Worksite name, ID, hub address and token remain text inputs. Saved worksites come from the backend and sit alongside **Create a worksite**.
+
 ## Out of scope on the product page
 
-Live, replay and sample data. Hub calls. Incident lists. Requirement checkboxes. Any control that would move the rover or clear a fault.
+Live, replay and sample data. Hub calls. Incident lists. Requirement editors. Any control that would move the rover or clear a fault.

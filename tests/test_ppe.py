@@ -1,14 +1,17 @@
 """Step 3: PPE pairing rules on hand-built boxes (no model)."""
 
+import dataclasses
+
 import pytest
 
 from vision.config import load_config
-from vision.ppe import Rule, Verdict, apply_rule, apply_rules, rules_from_config, split_active
-from vision.schema import Box
+from vision.ppe import Rule, Verdict, apply_rule, apply_rules, rules_from_config, split_active, touches_edge
+from vision.schema import Box, ImageSize
 
 CONFIG = load_config()
 RULES = {r.name: r for r in rules_from_config(CONFIG) if isinstance(r, Rule)}
-GLASSES, HELMET = RULES["glasses"], RULES["helmet"]
+# Geometry tests pair boxes with absence = violation; the configured glasses policy is tested below.
+GLASSES, HELMET = dataclasses.replace(RULES["glasses"], absence="violation"), RULES["helmet"]
 
 FACE = (100.0, 100.0, 160.0, 180.0)   # 60 x 80 px face
 EYES = (108.0, 118.0, 152.0, 136.0)   # centre y=127 -> 0.34 of face height: inside eye band
@@ -93,7 +96,7 @@ def test_class_names_are_normalized():
 
 
 def test_apply_rules_combines_rules():
-    derived, verdicts = apply_rules(RULES.values(), [box("face", FACE), box("head", HEAD)])
+    derived, verdicts = apply_rules([GLASSES, HELMET], [box("face", FACE), box("head", HEAD)])
     assert {b.cls_name for b in derived} == {"no-safety-glasses", "no-helmet"}
     assert len(verdicts) == 2
 
@@ -199,3 +202,63 @@ def test_unknown_rule_kind_rejected():
     config = {"ppe": {"rules": {"x": {"kind": "magic"}}}}
     with pytest.raises(ValueError, match="kind"):
         rules_from_config(config)
+
+
+# --- absence policy and subjects cut off by the frame -------------------------------------
+
+
+def test_configured_glasses_never_derive_a_violation():
+    rule = RULES["glasses"]
+    assert rule.absence == "unverified"
+    v = only(apply_rule(rule, [box("face", FACE)]))
+    assert v.verdict is Verdict.UNVERIFIED and v.violation is None
+    assert only(apply_rule(rule, [box("face", FACE), box("glasses", EYES)])).verdict is Verdict.WEARING
+
+
+def test_configured_rules_derive_no_glasses_box():
+    derived, verdicts = apply_rules(RULES.values(), [box("face", FACE), box("head", HEAD)])
+    assert {b.cls_name for b in derived} == {"no-helmet"} and len(verdicts) == 2
+
+
+def test_absence_defaults_to_violation_and_is_validated():
+    cfg = {k: v for k, v in CONFIG["ppe"]["rules"]["helmet"].items() if k != "absence"}
+    assert Rule.from_config("helmet", cfg).absence == "violation"
+    with pytest.raises(ValueError, match="absence"):
+        Rule.from_config("helmet", dict(cfg, absence="maybe"))
+
+
+FRAME = ImageSize(width=640, height=400)  # PERSON (y2 = 400) reaches the bottom edge
+
+
+def test_person_cut_off_by_frame_is_unverified_not_violation():
+    derived, verdicts = apply_rules([VEST], [box("person", PERSON)], FRAME, 0.005)
+    assert derived == [] and only(verdicts).verdict is Verdict.UNVERIFIED
+
+
+def test_cut_off_person_with_vest_in_band_is_still_wearing():
+    v = only(apply_rule(VEST, [box("person", PERSON), box("safety-vest", VEST_ON)], FRAME, 0.005))
+    assert v.verdict is Verdict.WEARING
+
+
+def test_whole_person_in_frame_keeps_violation():
+    big = ImageSize(width=1000, height=1000)
+    assert only(apply_rule(VEST, [box("person", PERSON)], big, 0.005)).verdict is Verdict.NOT_WEARING
+
+
+def test_edge_check_off_without_image_size():
+    assert only(apply_rule(VEST, [box("person", PERSON)])).verdict is Verdict.NOT_WEARING
+
+
+@pytest.mark.parametrize("xyxy, edge", [
+    ((0.0, 50.0, 100.0, 150.0), True),      # left
+    ((50.0, 1.0, 150.0, 150.0), True),      # within 0.5 % of the top (2 px of 400)
+    ((50.0, 50.0, 640.0, 150.0), True),     # right
+    ((50.0, 50.0, 150.0, 398.5), True),     # within 2 px of the bottom
+    ((50.0, 50.0, 150.0, 390.0), False),
+])
+def test_touches_edge(xyxy, edge):
+    assert touches_edge(xyxy, FRAME, 0.005) is edge
+
+
+def test_default_config_enables_edge_check():
+    assert 0 < CONFIG["ppe"]["edge_margin"] < 0.05

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { copy } from '../data/copy.ts'
 import { Reveal } from './Reveal.tsx'
 
@@ -80,7 +81,21 @@ export function Credits() {
       ) : null}
       <div className="mt-20 flex flex-col gap-6 border-t border-line pt-8 md:flex-row md:items-end md:justify-between">
         <p className="max-w-2xl text-sm leading-relaxed text-muted">{copy.credits.license}</p>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-6">
+          <Link
+            to="/privacy"
+            className="cursor-target label-type text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape"
+            data-cursor-label="Privacy"
+          >
+            Privacy &amp; worker safety
+          </Link>
+          <Link
+            to="/terms"
+            className="cursor-target label-type text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tape"
+            data-cursor-label="Terms"
+          >
+            Terms of Service
+          </Link>
           {copy.links.github ? (
             <a
               href={copy.links.github}

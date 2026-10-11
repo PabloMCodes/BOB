@@ -5,6 +5,8 @@ bus.jpg: two men wear sunglasses (SH17 counts these as glasses). zidane.jpg: two
 
 from pathlib import Path
 
+import copy
+
 import cv2
 import numpy as np
 import pytest
@@ -17,6 +19,9 @@ from vision.schema import Box
 
 ASSETS = Path(ultralytics.__file__).parent / "assets"
 CONFIG = load_config()
+# Same pipeline with glasses absence = violation: checks eye-band geometry on real faces.
+GLASSES_VIOLATION = copy.deepcopy(CONFIG)
+GLASSES_VIOLATION["ppe"]["rules"]["glasses"]["absence"] = "violation"
 
 
 def test_head_region_is_square_at_top_of_person():
@@ -61,8 +66,8 @@ def detector():
     return Pipeline.from_config(CONFIG).detector
 
 
-def _run(detector, mode, name):
-    return Pipeline(detector, CONFIG, mode=mode)(cv2.imread(str(ASSETS / name)))
+def _run(detector, mode, name, config=CONFIG):
+    return Pipeline(detector, config, mode=mode)(cv2.imread(str(ASSETS / name)))
 
 
 def _verdicts(result, rule):
@@ -81,20 +86,34 @@ def test_bus_sunglasses_judged_wearing(detector):
     assert _verdicts(_run(detector, "head_crop", "bus.jpg"), "glasses") == ["wearing", "wearing"]
 
 
-def test_zidane_no_glasses_no_helmet(detector):
+def test_zidane_no_helmet_and_glasses_unverified(detector):
+    # SH17 can't see clear safety glasses, so a face without a glasses box is never a violation.
     result = _run(detector, "head_crop", "zidane.jpg")
-    assert _verdicts(result, "glasses") == ["not_wearing", "not_wearing"]
+    assert _verdicts(result, "glasses") == ["unverified", "unverified"]
+    assert not any(b.cls_name == "no-safety-glasses" for b in result.boxes)
     assert _verdicts(result, "helmet") == ["not_wearing", "not_wearing"]
 
 
-@pytest.mark.parametrize("name", ["bus.jpg", "zidane.jpg"])
-def test_nobody_without_vest_judged_wearing(detector, name):
-    verdicts = _verdicts(_run(detector, "head_crop", name), "vest")
+def test_zidane_no_glasses_when_absence_is_a_violation(detector):
+    result = _run(detector, "head_crop", "zidane.jpg", GLASSES_VIOLATION)
+    assert _verdicts(result, "glasses") == ["not_wearing", "not_wearing"]
+
+
+def test_bus_people_without_vest_are_violations(detector):
+    verdicts = _verdicts(_run(detector, "head_crop", "bus.jpg"), "vest")
     assert "not_wearing" in verdicts and "wearing" not in verdicts
 
 
-def test_violation_box_lies_on_face(detector):
+def test_people_cut_off_by_frame_get_no_vest_violation(detector):
+    # Both men in zidane.jpg are cut off at the bottom edge, so their torso band can't be located.
     result = _run(detector, "head_crop", "zidane.jpg")
+    assert _verdicts(result, "vest") == ["unverified", "unverified"]
+    assert not any(b.cls_name == "no-safety-vest" for b in result.boxes)
+
+
+def test_violation_box_lies_on_face(detector):
+    result = _run(detector, "head_crop", "zidane.jpg", GLASSES_VIOLATION)
+    assert any(v.rule == "glasses" and v.verdict is Verdict.NOT_WEARING for v in result.verdicts)
     for v in result.verdicts:
         if v.rule == "glasses" and v.verdict is Verdict.NOT_WEARING:
             fx1, fy1, fx2, fy2 = v.subject.xyxy

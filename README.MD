@@ -8,6 +8,8 @@ BOB is a Knight Hacks construction-inspection prototype that combines an iPhone 
 
 This is a controlled demonstration, not a certified safety system. A detection does not establish PPE certification or permission for the rover to move.
 
+The website includes worksite/PPE dropdowns, an export of displayed detection records as CSV, and worker privacy and prototype terms pages. The homepage uses the selected dusk worker photograph. Image retention is limited by policy to 7 days for routine images and 30 days for incident evidence; deletion across all copies remains operator-managed. See [website behavior and policy details](web/README.md).
+
 ## System overview
 
 ```mermaid
@@ -255,7 +257,7 @@ The minimum demo path is live or recorded CV → matching evidence → laptop AP
 ## Interpretation and limits
 
 - **Unverified is not compliant.** Small, occluded or unsupported subjects must not become assumed passes or violations.
-- SH17 detects eyewear generally; it cannot certify safety glasses. The footwear specialist recognizes the documented visual boot convention, not protective certification.
+- SH17 detects eyewear generally; it cannot certify safety glasses. Missing eyewear remains unverified with the shipped SH17 policy, and unmatched subjects cut off by the frame remain unverified for paired PPE checks. The footwear specialist recognizes the documented visual boot convention, not protective certification.
 - ARKit pose locates the camera observation within a session. It does not locate the worker or establish a persistent site map.
 - Zone and walkway findings have no movement authority. No integrated hazard-stop behavior is claimed.
 - Keep LIVE, REPLAY, SAMPLE and NOT INTEGRATED sources explicit. A disconnected rover has unknown current state.

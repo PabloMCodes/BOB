@@ -158,6 +158,7 @@ class Pipeline:
         # Rules needing classes this model lacks (e.g. safety-boots with SH17) are switched off —
         # never approximated with a look-alike class.
         self.rules, self.inactive_rules = split_active(rules_from_config(config), self.names.values())
+        self.edge_margin = float(config["ppe"].get("edge_margin", 0.0))
         for rule in self.inactive_rules:
             missing = sorted(rule.requires - {normalize_class_name(c) for c in self.names.values()})
             print(f"[pipeline] rule {rule.name!r} inactive: model {self.model_id} has no class {missing}")
@@ -200,7 +201,7 @@ class Pipeline:
             total_ms += crop_ms
             passes += len(regions)
 
-        derived, verdicts = apply_rules(self.rules, boxes)
+        derived, verdicts = apply_rules(self.rules, boxes, first.image_size, self.edge_margin)
         return FrameResult(boxes + derived, verdicts, first.image_size, total_ms, passes, regions)
 
     def _crop_pass(

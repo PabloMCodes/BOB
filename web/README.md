@@ -4,14 +4,22 @@ Local Vite app for the product page and the operator dashboard at `/dashboard`. 
 
 See [the digital twin integration guide](../docs/plans/digital-twin-frontend-guide.md) for startup, authentication, data semantics and verification. The default hub is `http://127.0.0.1:8780`; connection settings allow a different address. An optional `VITE_HUB_URL` sets the initial address, never a token.
 
+Fixed choices use `src/components/Select.tsx`: workspace, saved worksite, each PPE requirement, session and log event type. PPE selections are **Required** / **Not required** and save the existing backend booleans. Worksite options come from the hub; **Create a worksite** opens the name/ID fields for a new entry. The native selects retain keyboard and mobile picker behavior.
+
+**Export visible detections (CSV)** downloads the latest displayed frames for the selected session/workspace. It includes worksite/inspection revision, source mode, delivery, frame/model, measured inference time, each box's confidence percentage and confidence basis, and all five frame-level PPE statuses/reasons exactly as recorded. There is one row per box, with an empty-box row for frames without detections; repeated frame assessments are not individual-worker verdicts. Missing assessments stay blank with `assessment_recorded=false`, never an inferred pass. Export/refreshed timestamps and a stale flag identify the snapshot. Only allowlisted metadata is included: no images, evidence references, hub address or browser credentials. CSV quoting preserves multiline text and neutralizes formula-like text in spreadsheet apps. Downloaded files remain subject to the operator-managed privacy policy.
+
 Read [Design.md](Design.md) before changing layout or color. Read [Motion.md](Motion.md) before changing scroll, the detection boxes, or the closing scene.
+
+The worker privacy and safety policy is at `/privacy`, linked from the homepage footer and dashboard. Its copy lives in `src/data/privacy.ts`. Routine images have a maximum retention of 7 days from capture; incident evidence has 30 days, with narrowly documented holds. These are operator-managed policy limits: expiry of hub replicas, saved previews, recordings, exports and backups is not implemented. Rover pruning alone does not enforce this policy across all copies. The site operator must provide a privacy contact, arrange deletion and verify the schedule before capturing workers.
+
+Terms of Service are at `/terms`, linked from the homepage, dashboard and privacy page. Copy and the supplied operator/contact details live in `src/data/terms.ts`. Terms cover authorized prototype use, human review, worker data, availability, warranty limitations and separate component licenses. Retention periods are read from the privacy policy so both pages agree. The terms do not change the original-code MIT license or third-party permissions.
 
 ```bash
 npm install
 npm run dev
 ```
 
-`npm run build` typechecks and writes `dist/`. `npm run lint` runs oxlint. Run the dashboard client checks with `node --test tests/twin.test.ts tests/twin-map.test.mjs tests/dashboard.test.ts` (Node with native TypeScript support).
+`npm run build` typechecks and writes `dist/`. `npm run lint` runs oxlint. Run the dashboard client checks with `node --test tests/twin.test.ts tests/twin-map.test.mjs tests/dashboard.test.ts tests/detection-csv.test.ts` (Node with native TypeScript support).
 
 The Vite development server proxies the configured default hub through `/_bob/hub`, including Authorization headers, so development previews on any local port can connect without changing the hub's CORS settings. A different address entered in Connection settings is accessed directly and must allow the browser origin. Production builds (`vite preview` included) must configure CORS or their own authenticated reverse proxy; the development proxy is not part of `dist/`.
 

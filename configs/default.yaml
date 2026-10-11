@@ -49,6 +49,11 @@ ppe:
   # "no violation seen" is NOT the same as "compliant".
   # region: vertical band of the subject box, as fractions of its height (negative = above it),
   #         where the PPE box centre must lie. The violation box is that band clipped to the subject.
+  # absence: violation (default) | unverified. "unverified": a missing PPE box is never treated as
+  #          missing PPE — for PPE this model can't reliably see.
+  # edge_margin: a subject box within this fraction of the image border is cut off by the frame, so
+  #          its band can't be located; without a matched PPE box it stays unverified, never a violation.
+  edge_margin: 0.005
   rules:
     glasses:
       subject: face
@@ -58,6 +63,9 @@ ppe:
       min_subject_px: 24
       min_subject_conf: 0.50
       min_overlap: 0.50      # fraction of the PPE box inside the subject box
+      # SH17 does not see clear safety glasses: 0 of 9 worn pairs got even a 0.03-confidence glasses
+      # candidate (README-CV Step 3). Set back to `violation` only with a model that does.
+      absence: unverified
     helmet:
       subject: head
       ppe: helmet

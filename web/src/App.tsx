@@ -4,6 +4,8 @@ import { Nav } from './components/Nav.tsx'
 import { SmoothScroll } from './components/SmoothScroll.tsx'
 import TargetCursor from './components/TargetCursor.tsx'
 import { DashboardPage } from './routes/DashboardPage.tsx'
+import { PrivacyPage } from './routes/PrivacyPage.tsx'
+import { TermsPage } from './routes/TermsPage.tsx'
 
 const ProductPage = lazy(() => import('./routes/ProductPage.tsx').then((module) => ({ default: module.ProductPage })))
 
@@ -31,6 +33,8 @@ export function App() {
       <Routes>
         <Route path="/" element={<Suspense fallback={<main className="page-inset pt-28">Loading…</main>}><ProductPage /></Suspense>} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
       </Routes>
     </SmoothScroll>
   )

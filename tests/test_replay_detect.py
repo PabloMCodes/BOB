@@ -24,7 +24,12 @@ from vision.ppe import Verdict
 from vision.recording import write_record
 from vision.schema import SCHEMA_VERSION, FramePacket, PosePacket, encode
 
+# Replay, edge-store, worksite and incident tests use eyewear on the bundled images as their
+# wearing / not-wearing signal, so glasses absence is a violation here. The shipped policy
+# (absence: unverified) is covered by tests/test_ppe.py and tests/test_pipeline.py.
+GLASSES_ABSENCE = {"ppe": {"rules": {"glasses": {"absence": "violation"}}}}
 CONFIG = load_config()
+CONFIG["ppe"]["rules"]["glasses"]["absence"] = "violation"
 ASSETS = Path(ultralytics.__file__).parent / "assets"
 IDENTITY = np.eye(4).reshape(-1).tolist()
 MS = 1_000_000
