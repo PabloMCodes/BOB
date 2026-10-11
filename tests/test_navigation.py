@@ -67,6 +67,25 @@ def test_person_stops_suggestions_immediately_without_claiming_violation():
     assert d.state == "HOLD" and not d.confirmed_ppe
 
 
+def test_single_flash_clears_without_ten_second_hold():
+    p = Preview()
+    assert update(p, 0, 0., boxes=(PERSON,)).state == "OBSERVE"
+    for seq in range(1, 7):
+        d = update(p, seq, seq * .2)
+        assert d.state != "HOLD"
+    assert d.state == "EXPLORE"
+
+
+def test_intermittent_flashes_do_not_accumulate_confirmation():
+    p = Preview()
+    for seq in range(20):
+        d = update(p, seq, seq * .2, boxes=(PERSON,) if seq % 2 == 0 else ())
+        assert d.state == "OBSERVE"
+    for seq in range(20, 27):
+        d = update(p, seq, seq * .2)
+    assert d.state == "EXPLORE"
+
+
 def test_only_repeated_same_person_derived_ppe_announces_once():
     p = Preview()
     d = confirm(p)

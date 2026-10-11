@@ -196,3 +196,15 @@ authorization still expires within 350 ms; an already dispatched step is monitor
 against current camera observations throughout its bounded duration. Person, stale
 feed, operator stop and mission expiry can interrupt it. Verify first with wheels
 raised; floor travel and stopping distance remain unmeasured. No firmware update.
+
+### Brief person detections
+
+A person/head/face detection still interrupts a step immediately. Before a long
+inspection has been confirmed, one second of fresh observations without those
+boxes clears a transient detection. The ten-second unverified-person hold now
+requires at least three consecutive distinct positive frames spanning 0.4 seconds,
+as well as the existing two-second observation period. A clear frame resets that
+confirmation streak; repeated polling of one frame cannot build it. Intermittent
+flashes keep suggestions paused until a full clear second, but do not by themselves
+start a ten-second hold. Confirmed derived PPE evidence retains its existing hold
+and speech behavior. Returning to READY never moves the robot without SPACE.

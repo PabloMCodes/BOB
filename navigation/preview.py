@@ -82,6 +82,8 @@ class Preview:
 
     def _reset_inspection(self):
         self.person_since = self.hold_until = self.clear_since = None
+        self.person_frames = 0
+        self.person_run_since = None
         self.subject = None
         self.evidence: dict[str, tuple[int, float]] = {}
         self.confirmed: tuple[str, ...] = ()
@@ -169,12 +171,26 @@ class Preview:
             for b in event.boxes)
         if person_seen and self.person_since is None:
             self.person_since = mono
+        if fresh:
+            if person_seen:
+                self.person_frames += 1
+                if self.person_run_since is None:
+                    self.person_run_since = mono
+            else:
+                self.person_frames = 0
+                self.person_run_since = None
         if self.person_since is not None:
             if person_seen:
                 self.clear_since = None
             elif self.clear_since is None:
                 self.clear_since = mono
             if self.hold_until is None:
+                # A transient detection stops suggestions immediately, but a
+                # second of fresh clear observations cancels the inspection.
+                if (not person_seen and self.clear_since is not None
+                        and mono - self.clear_since >= s.clear_s):
+                    self._reset_inspection()
+                    return self._explore(event)
                 if fresh:
                     self._observe(event, people, mono)
                 if self.confirmed:
@@ -183,7 +199,9 @@ class Preview:
                         self.last_announced = mono
                         return self._decision("ANNOUNCE", "repeated_derived_ppe_evidence", event,
                                               announcement="Missing PPE")
-                elif mono - self.person_since >= s.observe_s:
+                elif (person_seen and self.person_frames >= s.confirm_frames
+                      and mono - self.person_run_since >= s.confirm_s
+                      and mono - self.person_since >= s.observe_s):
                     self.hold_until = mono + s.hold_s
                 else:
                     return self._decision("OBSERVE", "person_observation_unverified", event)
