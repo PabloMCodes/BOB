@@ -69,13 +69,13 @@ export const statusPage = {
       eyebrow: 'Hardware',
       title: 'The robot itself.',
       summary:
-        'B.O.B runs on an NVIDIA Jetson Orin Nano for all on-board compute, with an ESP32 microcontroller as the bridge between that compute and the physical world. The ESP32 drives the motors over PWM and carries the sensor lines; an iPhone on the mast supplies the camera and pose; an on-board speaker announces PPE reminders out loud on site. A hazardous gas sensor, a radar module and wheel encoders for navigation are mounted and wired alongside them.',
+        'B.O.B runs on an NVIDIA Jetson Orin Nano for all on-board compute, with an ESP32 microcontroller as the bridge between that compute and the physical world. The ESP32 drives the motors over PWM and carries the sensor lines; an iPhone on the mast supplies the camera and pose; an on-board speaker announces out loud that PPE is missing the moment a person is seen without it. A hazardous gas sensor, a radar module and wheel encoders for navigation are mounted and wired alongside them. The hazard and object detection the robot runs on board is heavily OpenCV-based, working frame by frame on what the mast camera sees.',
       components: [
         { name: 'NVIDIA Jetson Orin Nano', note: 'On-board compute. Vision and logging run here, with no connection required.' },
         { name: 'ESP32', note: 'Microcontroller bridge: PWM motor control and the sensor lines back to the Jetson.' },
         { name: 'iPhone on the mast', note: 'Camera frames, timestamps and ARKit pose, streamed to the Jetson.' },
         { name: 'PWM drive motors', note: 'Forward, reverse and turning, commanded through the ESP32.' },
-        { name: 'Speaker', note: 'Spoken PPE reminders, heard by the worker on the spot.' },
+        { name: 'Speaker', note: 'Announces missing PPE out loud, so the worker hears it on the spot rather than reading it later.' },
         { name: 'Hazardous gas sensor', note: 'Air-quality sensing for pre-shift inspection. Mounted and wired.' },
         { name: 'Radar module', note: 'Non-camera sensing for dust, when the phone camera is obscured. Mounted and wired.' },
         { name: 'Wheel encoders', note: 'Distance and turn feedback for navigation. Mounted and wired.' },
@@ -95,8 +95,8 @@ export const statusPage = {
           note: 'Built, connected and demonstrated on the prototype.',
           items: [
             {
-              title: 'Working speaker for PPE announcements.',
-              body: 'The audio path works end to end: when a PPE finding is raised, the robot speaks the reminder out loud through its speaker rather than leaving it in a log for later.',
+              title: 'Working speaker for missing-PPE announcements.',
+              body: 'The audio path works end to end: when a person is detected without a required item, the robot announces out loud through its speaker that the PPE is missing, rather than leaving the finding in a log for later.',
             },
             {
               title: 'Full drive and turning under PWM motor control.',
@@ -134,7 +134,7 @@ export const statusPage = {
       eyebrow: 'Software',
       title: 'What the robot understands.',
       summary:
-        'Vision runs as YOLOv8 on SH17 weights, further trained by us on data we labelled ourselves in Roboflow, which is what produces the per-person PPE checks. Obstruction detection runs through the Gemini API. Taped-off restricted areas are recognized by YOLO. Drive commands are issued from the operator computer today.',
+        'Vision runs as YOLOv8 on SH17 weights, further trained by us on data we labelled ourselves in Roboflow, which is what produces the per-person PPE checks. When a check comes back missing, the robot says so out loud through its speaker. Obstruction detection runs through the Gemini API. Taped-off restricted areas are recognized by YOLO. Drive commands are issued from the operator computer today.',
       components: [
         { name: 'YOLOv8 + SH17 weights', note: 'Person and PPE detection, trained further on our own Roboflow-labelled data.' },
         { name: 'Our Roboflow training set', note: 'Labelled by the team, not taken off the shelf. It is what lifted the PPE classes.' },
@@ -158,7 +158,7 @@ export const statusPage = {
           items: [
             {
               title: 'Camera and PPE detection.',
-              body: 'The camera path works completely, and the model determines whether a person is wearing the correct PPE. It is YOLO on SH17 weights with our own Roboflow training on top. The large, high-contrast items are the strongest: safety glasses and high-visibility vests both clear 60% confidence, while the smaller items — gloves and boots — sit around 30% and are the clearest target for further training.',
+              body: 'The camera path works completely, and the model determines whether a person is wearing the correct PPE, with the robot announcing out loud whenever a required item is missing. It is YOLO on SH17 weights with our own Roboflow training on top. The large, high-contrast items are the strongest: safety glasses and high-visibility vests both clear 60% confidence, while the smaller items — gloves and boots — sit around 30% and are the clearest target for further training.',
               metrics: [
                 { label: 'Safety glasses', value: 'Over 60%' },
                 { label: 'High-visibility vest', value: 'Over 60%' },

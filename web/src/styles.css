@@ -156,6 +156,32 @@ body {
     line-height: 1.6;
   }
 
+  /* Status page: the domain a section belongs to has to stay readable while scrolling it. */
+  .domain-title {
+    font-size: clamp(2.75rem, 7vw, 5.5rem);
+    font-weight: 600;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+
+  .domain-sticky {
+    position: sticky;
+    top: 4rem;
+    z-index: 20;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--color-line);
+    background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
+    backdrop-filter: blur(8px);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
   .status-tag {
     display: inline-block;
     padding: 0.2rem 0.45rem;
