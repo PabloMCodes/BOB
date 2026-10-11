@@ -21,6 +21,8 @@ def load_edge_config(path: Optional[Path] = None) -> dict[str, Any]:
         raise ValueError("edge config: edge_id is required")
     if type(config["archive"]["enabled"]) is not bool:
         raise ValueError("edge config: archive.enabled must be a boolean")
+    from .publish.site_photos import SitePhotoSettings
+    SitePhotoSettings(**config.get("site_photos", {}))
     return config
 
 

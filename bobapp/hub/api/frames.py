@@ -1,5 +1,6 @@
 """Saved model frames, including automatic backfill. Never substituted for live preview."""
-from typing import Optional
+import json
+from typing import Optional, Any
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
@@ -11,6 +12,7 @@ from .views import _item
 
 class FrameItem(Item):
     image_status: BlobStatusValue
+    site_photo: Optional[dict[str, Any]] = None
 
 
 class FramePage(BaseModel):
@@ -27,7 +29,7 @@ def frame_router(replica, deps):
     def frames(workspace: WorkspaceName = "rover", after: int = Query(0, ge=0),
                before: Optional[int] = Query(None, ge=1), limit: int = Query(12, ge=1, le=100),
                delivery: Optional[Delivery] = None, session_id: Optional[str] = None,
-               latest: bool = True):
+               latest: bool = True, site_only: bool = False):
         r = replica(workspace)
         ws = r.active_workspace()
         if ws is None:
@@ -44,15 +46,24 @@ def frame_router(replica, deps):
         if session_id:
             conditions.append("json_extract(json, '$.body.event.session_id')=?")
             args.append(session_id)
+        selection_query = ("SELECT n.json FROM records n WHERE n.ws_id=records.ws_id AND n.kind='notice' "
+                           "AND json_extract(n.json, '$.body.code')='site_photo' "
+                           "AND json_extract(n.json, '$.body.details.source_event_id')="
+                           "json_extract(records.json, '$.body.event.event_id') "
+                           "AND json_extract(n.json, '$.body.details.evidence_sha256')="
+                           "json_extract(records.json, '$.body.evidence_sha256')")
+        if site_only:
+            conditions.append("EXISTS (" + selection_query + ")")
         order = "DESC" if latest else "ASC"
-        rows = r.db.execute("SELECT rowid, delivery, hub_rx_wall_ns, json FROM records WHERE " +
+        rows = r.db.execute("SELECT rowid, delivery, hub_rx_wall_ns, json, (" + selection_query + " LIMIT 1) FROM records WHERE " +
                             " AND ".join(conditions) + f" ORDER BY rowid {order} LIMIT ?", (*args, limit)).fetchall()
         if latest:
             rows.reverse()
         items = []
         for row in rows:
-            item = _item(row)
-            items.append(FrameItem(**item.model_dump(),
+            item = _item(row[:4])
+            selection = json.loads(row[4])["body"]["details"] if row[4] else None
+            items.append(FrameItem(**item.model_dump(), site_photo=selection,
                 image_status=r.blob_status(item.record.body.evidence_sha256) or BlobStatusValue.MISSING))
         return FramePage(workspace=workspace, items=items, next_after=rows[-1][0] if rows else after)
 

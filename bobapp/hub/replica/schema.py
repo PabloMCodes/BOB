@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS records (ws_id INTEGER NOT NULL, lane TEXT NOT NULL, 
     kind TEXT NOT NULL, source_mode TEXT NOT NULL, delivery TEXT NOT NULL, hub_rx_wall_ns INTEGER NOT NULL,
     json TEXT NOT NULL, PRIMARY KEY (ws_id, lane, seq));
 CREATE INDEX IF NOT EXISTS records_kind ON records (ws_id, kind, seq);
+CREATE INDEX IF NOT EXISTS records_site_photo ON records
+    (ws_id, json_extract(json, '$.body.details.source_event_id'))
+    WHERE kind='notice' AND json_extract(json, '$.body.code')='site_photo';
 CREATE TABLE IF NOT EXISTS cursors (ws_id INTEGER NOT NULL, lane TEXT NOT NULL, committed_seq INTEGER NOT NULL,
     PRIMARY KEY (ws_id, lane));
 CREATE TABLE IF NOT EXISTS gaps (ws_id INTEGER NOT NULL, lane TEXT NOT NULL, first_seq INTEGER NOT NULL,

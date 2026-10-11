@@ -49,3 +49,50 @@ feature branch and PR. Current compatibility checks only cover published changes
 Do not overwrite a teammate's unpushed or conflicting implementation to make a
 merge appear clean. [Offline setup](offline-frame-demo.md) describes how the
 Jetson, laptop hub and local gallery run together.
+
+## General site photo selection (2026-10-11)
+
+Local PPE remains active. New `site_photos` edge settings select diverse, adequately
+exposed/sharp general views, including frames with no people. The existing full
+archive remains enabled; selection does not remove old images or PPE evidence.
+Each successfully saved selection adds an atomic v1 `notice` with `code=site_photo`,
+`details.selection_version=1`, original `source_event_id`, session/sequence,
+`evidence_sha256`, selection reason and quality measurements. The observation and
+its original C2 result remain unchanged. No new AI model is loaded.
+
+C10 `/v1/frames?site_only=true` returns selected photos; each frame item gains
+nullable `site_photo` selection details. Default frame enumeration is unchanged.
+The selected gallery is a polling view, not a processing queue: control notices
+and observations can synchronize in either order. Online workers should consume
+`site_photo` notices from the existing `/v1/logs` history (page backwards), persist
+pending event IDs until their observations/JPEGs arrive, and deduplicate by
+(edge_id, store_epoch, source_event_id, analysis model/prompt version). Do not treat
+an observation cursor as a watermark for late-arriving selection notices.
+Original JPEG hash, source labels and local model results must be retained.
+
+Selection uses a 3-second check interval; 0.75 m movement or 25-degree heading
+change permits a new view. Otherwise a changed scene is considered after 30 s.
+Similar nearby views are suppressed using a small RGB thumbnail. A timeout never
+forces a duplicate. Invalid poses use visual-only comparison; no position is
+invented. History is bounded to 128 selected views and resets on session/run
+changes, so repeats after resets or long revisits are possible. Thresholds are
+provisional and require a physical site walk; there is no semantic object identity,
+full-site coverage guarantee, or automatic online hazard analysis in this change.
+
+Restart the vision process to enable selection; restart the updated hub and rebuild
+or restart the website to expose **Saved camera frames → Site photos**. Existing
+archive history is not retroactively selected. Selection also saves its chosen
+JPEGs with `archive.enabled: false`, while PPE evidence keeps its existing policy.
+This optional setting reduces frame transfers but disables the all-frame archive;
+leave the default on for the existing offline recovery demo.
+
+Validation: 48 targeted Python tests passed (selection, saved-frame recovery, PPE
+preservation and hub contracts). The production website build and five Node test
+files passed. Headless browser acceptance exercised Site photos → All saved
+frames plus offline/reconnect behavior using explicitly SAMPLE images. Eight
+existing real phone stills passed the default quality gate; selection checks took
+13.7 ms median / 19.4 ms p95 on this Jetson (single short sample, synthetic positions,
+not a coverage or sustained performance test). Selection runs on the writer thread
+at most once per three source-frame seconds; it loads no extra model.
+
+Full integrated Jetson suite: **711 passed, 5 optional/platform skips** in 209.21 s.

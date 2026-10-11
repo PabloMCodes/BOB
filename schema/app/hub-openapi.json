@@ -707,6 +707,18 @@
           },
           "record": {
             "$ref": "#/components/schemas/Record"
+          },
+          "site_photo": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Photo"
           }
         },
         "required": [
@@ -3596,6 +3608,16 @@
             "schema": {
               "default": true,
               "title": "Latest",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "site_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Site Only",
               "type": "boolean"
             }
           },

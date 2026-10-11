@@ -221,6 +221,16 @@ The first command rebuilds the dedicated sample store and changes its store epoc
 | Evidence is pending or missing | Allow capped prefetch to catch up; inspect storage gaps and missing blobs rather than assuming metadata implies an available image |
 | Boxes or location look wrong | Check upright orientation, source-frame identity, tracking state and session; camera pose is not worker position |
 
+## General site photos alongside PPE
+
+Local PPE detection continues while the edge writer selects general site views,
+including scenes without people. Clear images from new camera positions/directions
+or changed scenes appear under **Saved camera frames → Site photos**. Nearby
+similar views are skipped, with bounded history and intentional overlap. The full
+processed-frame archive remains enabled by default. This provides photos for the
+website's future online review; it does not itself run an online model or establish
+complete site coverage. [Selection, setup and API handoff](docs/jetson-frame-handoff.md#general-site-photo-selection-2026-10-11).
+
 ## Offline frame recovery
 
 With `vision.server --edge`, the Jetson saves every processed model frame locally,

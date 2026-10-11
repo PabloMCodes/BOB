@@ -73,6 +73,12 @@ images from observations as well as sampled evidence metadata. Upgrade edge, hub
 and website together for the recovered gallery; old hubs cannot acknowledge new
 image receipts, so image retention is conservative. See [demo guide](docs/offline-frame-demo.md).
 
+Site photo extension (2026-10-11): additive edge `site_photos` settings and
+C9 v1 `site_photo` notices select general views independently of PPE. C10 adds
+`/v1/frames?site_only=true` and nullable `site_photo` item metadata. C1–C3 and
+bob-app envelopes remain unchanged. See docs/jetson-frame-handoff.md for selection
+limits, delayed notice handling and the online-worker boundary.
+
 ## 3. File ownership — avoiding merge conflicts
 
 Standing user agreement (2026-10-11): the Jetson agent pulls before feature work
@@ -226,5 +232,6 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 | `feature/navigation-preview` | Navigation preview and controller bench follow-up | — | C14 internal preview trace/map; C11 embedded speech | C2, C3; optional C11 STOP/TONE/status only | Motor-disabled consumer and deterministic demo implemented; camera/speech preview physical acceptance and all autonomous driving gates pending |
 | `feature/offline-frame-sync` | Offline processed-frame archive, verified image receipts and recovered gallery | — | C9 image receipt; C10 frames/status additions | Existing C2; bob-app v1 observations and sync | 640 Python tests pass; browser offline/reconnect acceptance passes; physical Wi-Fi demo and deployment pending. Prior uncommitted navigation/hardware work preserved. |
 | `feature/supervised-camera-drive` | Jetson frame recovery, existing frame gallery and supervised rover steps | — | C9 receipts, C10 frames/status, C13 internal run identity/trace | C2, C3, existing C11 v1 | Based on main 516d185; pending work packaged as focused hardware, sync, gallery, navigation and documentation commits. 684 tests pass, 5 optional/platform skips; 44 new supervisor/transport/terminal tests. Website online LLM remains teammate-owned. Physical stopping/direction acceptance pending. |
+| `feature/site-photo-selection` | Diverse general site photos alongside PPE | Jetson agent | C9 selection notices; C10 gallery filter | Existing C2 poses/images | 711 Python tests pass (5 optional/platform skips); website build, frontend tests and browser filter/reconnect pass; physical threshold calibration pending; online analysis remains teammate-owned. |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |
 | *(TBD)* | Jetson deploy / hardware | — | — | C4, C5, C6 | Not created |

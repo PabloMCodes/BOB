@@ -31,6 +31,7 @@ from .incidents import IncidentRecorder
 from .live import LiveSnapshot, render_preview
 from .observation import observation_body, rule_statuses
 from .track import TrackSampler
+from .site_photos import SitePhotoSelector, SitePhotoSettings
 
 
 class EdgePublisher:
@@ -46,6 +47,7 @@ class EdgePublisher:
         self.gate = EvidenceGate(edge_config["evidence"]["min_interval_s"])
         self.evidence_quality = edge_config["evidence"]["jpeg_quality"]
         self.archive = edge_config.get("archive", {}).get("enabled", False)
+        self.site_photos = SitePhotoSelector(SitePhotoSettings(**edge_config.get("site_photos", {})))
         self.retention = edge_config["retention"]
         self._archive_pressure = False
         self.preview = edge_config["preview"]
@@ -120,7 +122,8 @@ class EdgePublisher:
         pixels = hashlib.sha256(detection.image.tobytes()).hexdigest()
         evidence_sha = None
         bodies = []
-        if self.archive or evidence is not None:
+        candidate = self.site_photos.offer(detection.event, detection.image)
+        if self.archive or evidence is not None or candidate is not None:
             data = encode_jpeg(detection.image, self.evidence_quality)
             pressure = (store.size_bytes() + len(data) > self.retention["max_store_bytes"] or
                         store.disk_free_bytes() - len(data) < self.retention["min_free_disk_bytes"])
@@ -139,8 +142,14 @@ class EdgePublisher:
         if inspection is not None and inspection.source_mode == self.source_mode:
             assessment = assess(detection.verdicts, self.rules, inspection)
         bodies.append(observation_body(detection, self.rules, pixels, evidence_sha, scene, assessment))
+        evidence_count = len(bodies) - 1
+        if candidate is not None and evidence_sha is not None:
+            bodies.append(NoticeBody(kind="notice", code="site_photo", message="General site view selected",
+                                     details={**candidate.details, "evidence_sha256": evidence_sha}))
         store.append_many([(body, self.source_mode, self.run_id) for body in bodies])
-        self.counts["evidence"] += len(bodies) - 1
+        if candidate is not None and evidence_sha is not None:
+            self.site_photos.commit(candidate)
+        self.counts["evidence"] += evidence_count
         self.counts["archived_frames"] += int(evidence_sha is not None)
         self.counts["observations"] += 1
         self.incidents.observe(detection, assessment, scene, pixels)
@@ -193,6 +202,9 @@ class EdgePublisher:
                 self._notice("frame_archive", "Processed frames are saved locally before website transfer",
                              enabled=True, saved=self.counts["archived_frames"], skipped=self.counts["archive_skipped"],
                              storage_full=self._archive_pressure)
+            if self.site_photos.settings.enabled:
+                self._notice("site_photo_selection", "General site photo selection counters for this run",
+                             **dict(self.site_photos.counts))
             metrics = self.live.stream_metrics(now)
             if metrics is not None:
                 # Existing v1 notice envelope: C2/C3 and sync message shapes remain frozen.
