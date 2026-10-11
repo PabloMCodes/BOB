@@ -84,7 +84,8 @@
               "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
               "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
               "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
-              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
             },
             "title": "Clock Domains",
             "type": "object"
@@ -1125,7 +1126,8 @@
               "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
               "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
               "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
-              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
             },
             "title": "Clock Domains",
             "type": "object"
@@ -1609,7 +1611,8 @@
               "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
               "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
               "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
-              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
             },
             "title": "Clock Domains",
             "type": "object"
@@ -1754,7 +1757,8 @@
               "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
               "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
               "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
-              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
             },
             "title": "Clock Domains",
             "type": "object"
@@ -2200,7 +2204,8 @@
               "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
               "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
               "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
-              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
             },
             "title": "Clock Domains",
             "type": "object"
@@ -2387,7 +2392,8 @@
               "hub_rx_wall_ns, link.*_wall_ns, live_received_wall_ns": "laptop (hub) wall clock",
               "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
               "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
-              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)"
+              "record.rover.wall_ns, record.rover.mono_ns": "rover computer clock; wall time may be unsynced (rover.clock_synced)",
+              "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age"
             },
             "title": "Clock Domains",
             "type": "object"
@@ -2464,6 +2470,27 @@
                 "type": "null"
               }
             ]
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StreamTelemetry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "telemetry_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Reason"
           },
           "workspace": {
             "enum": [
@@ -2576,6 +2603,109 @@
           "dropped_count"
         ],
         "title": "StreamHealth",
+        "type": "object"
+      },
+      "StreamTelemetry": {
+        "properties": {
+          "age_ms": {
+            "minimum": 0.0,
+            "title": "Age Ms",
+            "type": "number"
+          },
+          "confidence_mean": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Mean"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "frame_fps": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Fps"
+          },
+          "inference_latency_ms": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inference Latency Ms"
+          },
+          "pose_hz": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pose Hz"
+          },
+          "processing_hz": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Hz"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "window_s": {
+            "exclusiveMinimum": 0.0,
+            "title": "Window S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "session_id",
+          "window_s",
+          "age_ms",
+          "current"
+        ],
+        "title": "StreamTelemetry",
         "type": "object"
       },
       "SubjectVerdict": {
@@ -3399,6 +3529,16 @@
           },
           {
             "in": "query",
+            "name": "latest",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Latest",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "token",
             "required": false,
             "schema": {
@@ -3673,6 +3813,122 @@
         "summary": "End Inspection"
       }
     },
+    "/v1/logs": {
+      "get": {
+        "operationId": "logs_v1_logs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace",
+            "required": false,
+            "schema": {
+              "default": "rover",
+              "enum": [
+                "rover",
+                "sample"
+              ],
+              "title": "Workspace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logs"
+      }
+    },
     "/v1/observations": {
       "get": {
         "operationId": "observations_v1_observations_get",
@@ -3775,6 +4031,16 @@
                 }
               ],
               "title": "Delivery"
+            }
+          },
+          {
+            "in": "query",
+            "name": "latest",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Latest",
+              "type": "boolean"
             }
           },
           {

@@ -30,6 +30,7 @@ from .models import AssessmentPage, InspectionPage, Page, StatusResponse, Worksp
 HUB_ROUTES = {
     ("GET", "/v1/status"), ("WEBSOCKET", "/v1/live"), ("GET", "/v1/preview/latest"), ("GET", "/v1/observations"),
     ("GET", "/v1/incidents"), ("GET", "/v1/assessments"), ("GET", "/v1/inspections"), ("GET", "/v1/evidence/{sha256}"),
+    ("GET", "/v1/logs"),
     ("GET", "/v1/worksites"), ("GET", "/v1/worksites/{worksite_id}"), ("PUT", "/v1/worksites/{worksite_id}"),
     ("GET", "/v1/worksites/{worksite_id}/revisions/{revision}"), ("POST", "/v1/inspections"),
     ("POST", "/v1/inspections/{inspection_id}/end"),
@@ -100,22 +101,30 @@ def create_hub_app(config: dict[str, Any], token: Optional[str], replica_paths: 
     @app.get("/v1/observations", response_model=Page, dependencies=deps)
     def observations(workspace: WorkspaceName = "rover", after: int = 0, limit: int = Limit,
                      inspection_id: Optional[str] = None, session_id: Optional[str] = None,
-                     source_mode: Optional[SourceMode] = None, delivery: Optional[Delivery] = None) -> Page:
+                     source_mode: Optional[SourceMode] = None, delivery: Optional[Delivery] = None,
+                     latest: bool = False) -> Page:
         where = {k: v for k, v in (("$.body.assessment.inspection_id", inspection_id),
                                    ("$.body.event.session_id", session_id)) if v}
         return views.page(replica(workspace), workspace, ("observation",), after, limit, where,
-                          source_mode.value if source_mode else None, delivery.value if delivery else None)
+                          source_mode.value if source_mode else None, delivery.value if delivery else None, latest)
 
     @app.get("/v1/incidents", response_model=Page, dependencies=deps)
     def incidents(workspace: WorkspaceName = "rover", after: int = 0, limit: int = Limit,
                   inspection_id: Optional[str] = None, session_id: Optional[str] = None,
                   hazard: Optional[Hazard] = None, transition: Optional[IncidentTransition] = None,
-                  delivery: Optional[Delivery] = None) -> Page:
+                  delivery: Optional[Delivery] = None, latest: bool = False) -> Page:
         where = {k: v for k, v in (("$.body.key.inspection_id", inspection_id), ("$.body.key.session_id", session_id),
                                    ("$.body.key.hazard", hazard.value if hazard else None),
                                    ("$.body.transition", transition.value if transition else None)) if v}
         return views.page(replica(workspace), workspace, ("incident",), after, limit, where, None,
-                          delivery.value if delivery else None)
+                          delivery.value if delivery else None, latest)
+
+    @app.get("/v1/logs", response_model=Page, dependencies=deps)
+    def logs(workspace: WorkspaceName = "rover", after: int = Query(0, ge=0), limit: int = Limit,
+             before: Optional[int] = Query(None, ge=1)) -> Page:
+        return views.page(replica(workspace), workspace,
+                          ("notice", "incident", "inspection_started", "inspection_ended", "profile_revision", "gap"),
+                          after, limit, {}, None, None, latest=True, before=before)
 
     @app.get("/v1/assessments", response_model=AssessmentPage, dependencies=deps)
     def assessments(workspace: WorkspaceName = "rover", after: int = 0, limit: int = Limit,

@@ -15,6 +15,7 @@ import cv2
 from bobapp.contracts import Producer, ProducerStatus, RuleStatus, SourceMode
 
 from .evidence import encode_jpeg
+from .metrics import MetricsWindow
 
 FEEDS = ("video", "results", "pose", "health")
 
@@ -36,6 +37,7 @@ class LiveSnapshot:
     def __init__(self, run_id: str, source_mode: SourceMode, model_id: str, rules: list[RuleStatus],
                  zones_enabled: bool) -> None:
         self.lock = threading.Lock()
+        self.metrics = MetricsWindow()
         self.state: dict[str, Any] = {
             "running": True, "run_id": run_id, "source_mode": SourceMode(source_mode).value,
             "feeds_mono_ns": dict.fromkeys(FEEDS), "pose": None, "health": None, "preview": None,
@@ -46,7 +48,28 @@ class LiveSnapshot:
 
     def mark(self, feed: str, mono_ns: Optional[int] = None) -> None:
         with self.lock:
-            self.state["feeds_mono_ns"][feed] = time.monotonic_ns() if mono_ns is None else mono_ns
+            now = time.monotonic_ns() if mono_ns is None else mono_ns
+            self.state["feeds_mono_ns"][feed] = now
+            self.metrics.mark(feed, now)
+
+    def start_session(self, session_id: str, now: int) -> None:
+        with self.lock:
+            self.metrics.session(session_id, now)
+
+    def result_metrics(self, event: Any) -> None:
+        with self.lock:
+            if str(event.session_id) != self.metrics.session_id:
+                return  # an in-flight result from the previous world origin
+            now = time.monotonic_ns()
+            self.state["feeds_mono_ns"]["results"] = now
+            self.metrics.mark("results", now)
+            self.metrics.inference_ms = event.inference_latency_ms
+            confidences = [box.conf for box in event.boxes if box.source == "model"]
+            self.metrics.confidence = sum(confidences) / len(confidences) if confidences else None
+
+    def stream_metrics(self, now: int) -> Optional[dict]:
+        with self.lock:
+            return self.metrics.snapshot(now) if self.state["running"] else None
 
     def set(self, key: str, value: Any) -> None:
         with self.lock:

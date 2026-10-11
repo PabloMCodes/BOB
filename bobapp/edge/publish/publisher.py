@@ -53,6 +53,7 @@ class EdgePublisher:
         self.sampler = TrackSampler(**edge_config["track"])           # writer thread only
         self.counts = {"observations": 0, "track_points": 0, "evidence": 0, "previews": 0}  # writer thread
         self._last_preview_ns = self._last_flush_ns = 0
+        self._last_metrics_ns = 0
         self.incidents = IncidentRecorder(store, incident_params or PolicyParams.load(), self.source_mode, run_id,
                                           self.evidence_quality)              # writer thread only
         self.inspection: Optional[ActiveInspection] = None  # written by the writer thread only
@@ -65,6 +66,7 @@ class EdgePublisher:
     def on_admit(self, msg: FramePacket | PosePacket, gap_ns: Optional[int], rx_ns: int) -> None:
         """Receive thread (FrameServer.admit): every kept phone message."""
         now = time.monotonic_ns()
+        self.live.start_session(str(msg.session_id), now)
         self.live.mark("pose", now)
         if isinstance(msg, FramePacket):
             self.live.mark("video", now)
@@ -74,8 +76,8 @@ class EdgePublisher:
     def on_detection(self, detection: Any, scene: Optional[dict] = None) -> None:
         """Frame consumer: one processed frame (C2) and its optional C7 record."""
         now = time.monotonic_ns()
-        self.live.mark("results", now)
         event, inspection = detection.event, self.inspection  # the inspection known at processing time
+        self.live.result_metrics(event)
         reason, keys = evidence_triggers(detection, scene)
         due = self.gate.admit(event.session_id, keys, event.iphone_frame_ts_ns) if keys else []
         evidence = (reason, due) if due else None
@@ -169,6 +171,13 @@ class EdgePublisher:
             "writer_queued": stats["queued"], "writer_dropped": sum(stats["dropped"].values()),
             "writer_errors": stats["write_errors"], "last_error": stats["last_error"]})
         self.store.put_live(self.live.copy(), preview, preview_sha256)
+        now = time.monotonic_ns()
+        if now - self._last_metrics_ns >= 1_000_000_000:
+            metrics = self.live.stream_metrics(now)
+            if metrics is not None:
+                # Existing v1 notice envelope: C2/C3 and sync message shapes remain frozen.
+                self._notice("stream_metrics", "Measured stream performance", **metrics)
+                self._last_metrics_ns = now
 
     # --- shutdown ---------------------------------------------------------------------------------
     def close(self, timeout: float = 2.) -> dict[str, Any]:
