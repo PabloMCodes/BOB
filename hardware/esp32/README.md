@@ -27,6 +27,8 @@ Click the window. Hold arrows to move; release to stop. Space stops; Esc quits.
 Both existing firmware versions are detected automatically. Close other BLE
 clients first. No firmware upload or camera setup is required.
 See [remote details](../../docs/remote-control.md).
+For random bursts that stop on existing Jetson person detections, use the
+[Mac wander demo](../../docs/mac-wander-demo.md).
 
 ## Hardware and wiring
 

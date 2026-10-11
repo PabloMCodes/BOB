@@ -234,9 +234,14 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 | `feature/site-photo-selection` | Diverse general site photos alongside PPE | Jetson agent | C9 selection notices; C10 gallery filter | Existing C2 poses/images | 711 Python tests pass (5 optional/platform skips); website build, frontend tests and browser filter/reconnect pass; physical threshold calibration pending; online analysis remains teammate-owned. |
 | `feature/point-driving` | Retired: supervised click-to-floor driver and unused VLM cleanup | Jetson agent | C15 local preview/control | C1 metadata after admission, C2/C3, C11 bounded pulses | 47 point tests and SAMPLE browser acceptance pass; full Jetson suite 758 passed, 5 optional/platform skips. Physical geometry/direction/stopping acceptance pending; dry run default. |
 | `feature/arrow-key-remote` | Direct local keyboard BLE remote; removes point driving | Jetson agent | No new wire interface | Existing C11 or legacy motor commands | Automated checks recorded in docs/remote-control.md; physical BLE acceptance pending |
+| `feature/mac-wander-demo` | Mac random-burst/person-stop demo, stacked on arrow-key remote | Jetson agent | No new interface | Existing C10 LIVE/realtime observations and C11/legacy BLE | Automated checks in docs/mac-wander-demo.md; physical acceptance pending |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |
 | *(TBD)* | Jetson deploy / hardware | — | — | C4, C5, C6 | Not created |
 
 Arrow-key replacement (2026-10-11): `hardware.esp32.remote` consumes unchanged
 C11 v1 (or legacy ASCII F/B/L/R/S on MotorTest). C15 and the point-driving
 page/preview have been removed. No hub, CV schema, or app contract changes.
+
+Mac wander demo: standalone operator process reads existing C10 status/observations
+and sends existing C11 or legacy BLE commands locally. No hub motion endpoint,
+new wire/config field, phone consumer, or second inference pipeline.

@@ -25,6 +25,10 @@ stops, Esc quits. It detects either existing BOB firmware; no camera, server,
 phone, or firmware upload is needed. Close other BLE clients first.
 [Remote setup](docs/remote-control.md). Point driving has been removed.
 
+**Mac wander demo:** short random BLE bursts until existing Jetson detections
+show a person, then a latched stop for PPE inspection. Start/pause locally;
+no obstacle avoidance. [Two-terminal setup](docs/mac-wander-demo.md).
+
 The website includes worksite/PPE dropdowns, an export of displayed detection records as CSV, and worker privacy and prototype terms pages. The homepage uses the selected dusk worker photograph. Image retention is limited by policy to 7 days for routine images and 30 days for incident evidence; deletion across all copies remains operator-managed. See [website behavior and policy details](web/README.md).
 
 ## System overview
