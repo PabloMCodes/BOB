@@ -1,0 +1,17 @@
+# Incident confirmation policy (dashboard plan §8, D7) — application-owned, never CV keys.
+# STARTING VALUES TO CALIBRATE (tools/calibrate_incidents.py on on/off recordings), not measurements.
+# Any change here changes policy_params_sha256; set calibrated: true only after §8.6 targets pass.
+policy_version: 1
+calibrated: false
+window_s: 2.0               # trailing window for confirmation (~20 frames at 10 Hz)
+confirm_min_frames: 5       # positive frames in the window
+confirm_min_fraction: 0.8   # positives / judged frames in the window (neutral frames excluded)
+clear_window_s: 3.0
+clear_min_frames: 8         # negative frames in the clear window
+clear_min_fraction: 0.8
+lost_after_s: 5.0           # no judged frame for this long -> ended: not_assessed
+merge_gap_s: 10.0           # re-confirmation within this gap reopens the same incident
+min_processing_hz: 2.5      # = confirm_min_frames / window_s; below it confirmation is impossible
+evidence:
+  max_per_incident: 10
+  periodic_s: 30.0          # one more frame per this while confirmed

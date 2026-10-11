@@ -2,8 +2,10 @@
 
 Called on CV threads, every method only stamps a time and enqueues (bounded, never blocking in live
 runs); hashing, JPEG encoding, association of standalone poses and disk I/O happen on the writer thread.
-A frame that triggers evidence travels with its observation in one control item, so an observation is
-never stored before the evidence it references.
+Observations go through one queue in frame order (the incident policy needs that order); a frame
+that triggers evidence carries it in the same item, so an observation is never stored before the
+evidence it references. Incidents (plan §8) are decided on the writer thread from each stored
+observation (incidents.py).
 
 Inspection binding (plan §4): the writer thread re-reads the rover's active inspection with every live
 flush (≤ `sync.live_interval_s`) and the frame consumer stamps each frame with the inspection known at
@@ -16,14 +18,16 @@ import hashlib
 import time
 from typing import Any, Optional
 
-from bobapp.contracts import NoticeBody, SourceMode
+from bobapp.contracts import IncidentEndReason, NoticeBody, SourceMode
 from bobapp.edge.store import ActiveInspection, EdgeStore
 from bobapp.edge.writer import EdgeWriter
+from bobapp.incidents import PolicyParams
 from vision.association import associate
 from vision.schema import FramePacket, PosePacket, StreamHealth
 
 from .assessment import assess, unavailable_requirements
 from .evidence import EvidenceGate, encode_jpeg, evidence_body, evidence_triggers
+from .incidents import IncidentRecorder
 from .live import LiveSnapshot, render_preview
 from .observation import observation_body, rule_statuses
 from .track import TrackSampler
@@ -32,7 +36,7 @@ from .track import TrackSampler
 class EdgePublisher:
     def __init__(self, store: EdgeStore, edge_config: dict[str, Any], *, source_mode: SourceMode, run_id: str,
                  pipeline: Any, render_config: dict[str, Any], stale_ms: float, zones_enabled: bool,
-                 blocking: bool = False) -> None:
+                 blocking: bool = False, incident_params: Optional[PolicyParams] = None) -> None:
         self.store, self.source_mode, self.run_id = store, SourceMode(source_mode), run_id
         writer = edge_config["writer"]
         self.writer = EdgeWriter(store, self.source_mode, run_id, writer["control_capacity"],
@@ -49,6 +53,8 @@ class EdgePublisher:
         self.sampler = TrackSampler(**edge_config["track"])           # writer thread only
         self.counts = {"observations": 0, "track_points": 0, "evidence": 0, "previews": 0}  # writer thread
         self._last_preview_ns = self._last_flush_ns = 0
+        self.incidents = IncidentRecorder(store, incident_params or PolicyParams.load(), self.source_mode, run_id,
+                                          self.evidence_quality)              # writer thread only
         self.inspection: Optional[ActiveInspection] = None  # written by the writer thread only
         self._noticed: set = set()
         # The store connection belongs to the writer thread alone; announce the run (source mode,
@@ -72,10 +78,8 @@ class EdgePublisher:
         event, inspection = detection.event, self.inspection  # the inspection known at processing time
         reason, keys = evidence_triggers(detection, scene)
         due = self.gate.admit(event.session_id, keys, event.iphone_frame_ts_ns) if keys else []
-        if due:
-            self.writer.submit_control(lambda store: self._observe(store, detection, scene, (reason, due), inspection))
-        else:
-            self.writer.submit_data(lambda store: self._observe(store, detection, scene, None, inspection))
+        evidence = (reason, due) if due else None
+        self.writer.submit_data(lambda store: self._observe(store, detection, scene, evidence, inspection))
         if now - self._last_preview_ns >= self.preview_interval_ns:
             self._last_preview_ns = self._last_flush_ns = now
             self.writer.submit_data(lambda store: self._preview(detection))
@@ -121,6 +125,7 @@ class EdgePublisher:
         store.append(observation_body(detection, self.rules, pixels, evidence_sha, scene, assessment),
                      self.source_mode, self.run_id)
         self.counts["observations"] += 1
+        self.incidents.observe(detection, assessment, scene, pixels)
 
     def _preview(self, detection: Any) -> None:
         data, ref = render_preview(detection, self.render, self.preview["width"], self.preview["jpeg_quality"])
@@ -133,7 +138,11 @@ class EdgePublisher:
                           self.source_mode, self.run_id)
 
     def _refresh_inspection(self, run_start: bool) -> None:
+        if run_start:
+            self.incidents.close_stale()
         active = self.store.active_inspection()
+        if self.inspection is not None and (active is None or active.inspection_id != self.inspection.inspection_id):
+            self.incidents.end(IncidentEndReason.INSPECTION_ENDED)
         if active is not None and active.inspection_id not in self._noticed:
             self._noticed.add(active.inspection_id)
             iid = str(active.inspection_id)
@@ -165,9 +174,14 @@ class EdgePublisher:
     def close(self, timeout: float = 2.) -> dict[str, Any]:
         """Finish queued work (bounded), mark the run stopped in the live row, report counts."""
         self.live.set("running", False)
+
+        def stop(store: EdgeStore) -> None:  # after every queued frame: open incidents end source_stopped
+            self.incidents.end(IncidentEndReason.SOURCE_STOPPED)
+            self._flush()
         try:
-            self.writer.submit_control(lambda store: self._flush())
+            if not self.writer.submit_data(stop):
+                self.writer.submit_control(stop)  # queue full: still close them (startup would otherwise)
         except RuntimeError:
             pass
         stats = self.writer.close(timeout)
-        return {**stats, **self.counts, "store_epoch": str(self.store.store_epoch)}
+        return {**stats, **self.counts, **self.incidents.counts, "store_epoch": str(self.store.store_epoch)}
