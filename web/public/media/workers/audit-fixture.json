@@ -1,0 +1,2846 @@
+{
+  "fixture_version": 1,
+  "generated_utc": "2026-10-11T09:05:15Z",
+  "note": "Real vision.pipeline output for the published stills. Recorded rover-model claims, not ground truth. Supplied photographs, not rover captures.",
+  "model_id": "sh17_yolov8s",
+  "weights_sha256": "dfaf451bdda3f92fe4012327e337225929ad7af22146b00e0d6989c2f4e40a4b",
+  "device": "mps",
+  "mode": "head_crop",
+  "imgsz": 640,
+  "edge_margin": 0.005,
+  "active_rules": [
+    "glasses",
+    "gloves",
+    "helmet",
+    "vest"
+  ],
+  "inactive_rules": [
+    {
+      "name": "boots",
+      "missing_classes": [
+        "safety-boots"
+      ]
+    }
+  ],
+  "images": [
+    {
+      "src": "/media/workers/01-hivis-drawing-review.jpg",
+      "image_size": [
+        800,
+        450
+      ],
+      "inference_ms": 171.5,
+      "passes": 3,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9606,
+          "xyxy": [
+            72.79,
+            92.43,
+            368.37,
+            450.0
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9387,
+          "xyxy": [
+            428.81,
+            27.41,
+            651.47,
+            449.76
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.8596,
+          "xyxy": [
+            429.48,
+            341.94,
+            472.56,
+            390.3
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "safety-vest",
+          "conf": 0.8542,
+          "xyxy": [
+            459.87,
+            173.95,
+            653.77,
+            441.03
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8506,
+          "xyxy": [
+            178.83,
+            178.42,
+            194.36,
+            207.44
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "safety-vest",
+          "conf": 0.8436,
+          "xyxy": [
+            81.74,
+            242.16,
+            287.27,
+            449.67
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8261,
+          "xyxy": [
+            550.47,
+            121.48,
+            565.92,
+            149.33
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.8199,
+          "xyxy": [
+            325.09,
+            243.42,
+            367.24,
+            332.68
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.9144,
+          "xyxy": [
+            480.7,
+            29.1,
+            634.98,
+            134.3
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.9082,
+          "xyxy": [
+            99.52,
+            91.96,
+            242.47,
+            199.2
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.8993,
+          "xyxy": [
+            103.28,
+            90.65,
+            233.16,
+            238.02
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.8896,
+          "xyxy": [
+            503.77,
+            31.05,
+            631.65,
+            176.1
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.7961,
+          "xyxy": [
+            503.56,
+            110.89,
+            551.44,
+            172.59
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.7835,
+          "xyxy": [
+            191.63,
+            168.08,
+            232.22,
+            234.26
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.6464,
+          "xyxy": [
+            501.95,
+            110.52,
+            551.36,
+            134.51
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.6317,
+          "xyxy": [
+            182.11,
+            168.37,
+            234.05,
+            195.05
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.7961,
+            "xyxy": [
+              503.56,
+              110.89,
+              551.44,
+              172.59
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.6464,
+            "xyxy": [
+              501.95,
+              110.52,
+              551.36,
+              134.51
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.7835,
+            "xyxy": [
+              191.63,
+              168.08,
+              232.22,
+              234.26
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.6317,
+            "xyxy": [
+              182.11,
+              168.37,
+              234.05,
+              195.05
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.8993,
+            "xyxy": [
+              103.28,
+              90.65,
+              233.16,
+              238.02
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.9082,
+            "xyxy": [
+              99.52,
+              91.96,
+              242.47,
+              199.2
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.8896,
+            "xyxy": [
+              503.77,
+              31.05,
+              631.65,
+              176.1
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.9144,
+            "xyxy": [
+              480.7,
+              29.1,
+              634.98,
+              134.3
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9606,
+            "xyxy": [
+              72.79,
+              92.43,
+              368.37,
+              450.0
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9387,
+            "xyxy": [
+              428.81,
+              27.41,
+              651.47,
+              449.76
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/02-lathe-helmet-earmuffs.jpg",
+      "image_size": [
+        800,
+        534
+      ],
+      "inference_ms": 90.6,
+      "passes": 2,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.9221,
+          "xyxy": [
+            261.65,
+            401.36,
+            369.48,
+            501.36
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.7075,
+          "xyxy": [
+            10.77,
+            13.7,
+            539.15,
+            534.0
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.4372,
+          "xyxy": [
+            543.28,
+            332.69,
+            604.91,
+            387.36
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "tool",
+          "conf": 0.3799,
+          "xyxy": [
+            493.69,
+            73.06,
+            799.56,
+            487.92
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9512,
+          "xyxy": [
+            194.32,
+            18.07,
+            391.59,
+            249.34
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8971,
+          "xyxy": [
+            241.65,
+            123.71,
+            367.0,
+            247.65
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.858,
+          "xyxy": [
+            210.35,
+            17.12,
+            386.13,
+            169.55
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7553,
+          "xyxy": [
+            244.73,
+            123.29,
+            371.05,
+            193.58
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8971,
+            "xyxy": [
+              241.65,
+              123.71,
+              367.0,
+              247.65
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7553,
+            "xyxy": [
+              244.73,
+              123.29,
+              371.05,
+              193.58
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9512,
+            "xyxy": [
+              194.32,
+              18.07,
+              391.59,
+              249.34
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.858,
+            "xyxy": [
+              210.35,
+              17.12,
+              386.13,
+              169.55
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.7075,
+            "xyxy": [
+              10.77,
+              13.7,
+              539.15,
+              534.0
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/03-site-dusk-hivis.jpg",
+      "image_size": [
+        1280,
+        853
+      ],
+      "inference_ms": 46.4,
+      "passes": 2,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.934,
+          "xyxy": [
+            572.54,
+            231.83,
+            1132.88,
+            849.32
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.892,
+          "xyxy": [
+            991.92,
+            481.29,
+            1019.14,
+            520.09
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8357,
+          "xyxy": [
+            753.66,
+            379.62,
+            780.02,
+            437.87
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "safety-vest",
+          "conf": 0.5761,
+          "xyxy": [
+            592.44,
+            479.26,
+            1032.16,
+            852.51
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9354,
+          "xyxy": [
+            687.34,
+            238.04,
+            909.64,
+            495.94
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.9333,
+          "xyxy": [
+            891.24,
+            347.26,
+            1098.9,
+            480.31
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9074,
+          "xyxy": [
+            907.67,
+            347.83,
+            1096.85,
+            557.8
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8778,
+          "xyxy": [
+            910.78,
+            460.52,
+            997.64,
+            556.72
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8227,
+          "xyxy": [
+            687.61,
+            378.12,
+            757.11,
+            489.63
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.8092,
+          "xyxy": [
+            684.63,
+            239.37,
+            907.7,
+            363.61
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7403,
+          "xyxy": [
+            687.92,
+            381.87,
+            772.56,
+            414.46
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8778,
+            "xyxy": [
+              910.78,
+              460.52,
+              997.64,
+              556.72
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8227,
+            "xyxy": [
+              687.61,
+              378.12,
+              757.11,
+              489.63
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7403,
+            "xyxy": [
+              687.92,
+              381.87,
+              772.56,
+              414.46
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9354,
+            "xyxy": [
+              687.34,
+              238.04,
+              909.64,
+              495.94
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.8092,
+            "xyxy": [
+              684.63,
+              239.37,
+              907.7,
+              363.61
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9074,
+            "xyxy": [
+              907.67,
+              347.83,
+              1096.85,
+              557.8
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.9333,
+            "xyxy": [
+              891.24,
+              347.26,
+              1098.9,
+              480.31
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.934,
+            "xyxy": [
+              572.54,
+              231.83,
+              1132.88,
+              849.32
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/04-press-brake-earmuffs.jpg",
+      "image_size": [
+        547,
+        365
+      ],
+      "inference_ms": 64.0,
+      "passes": 3,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9261,
+          "xyxy": [
+            156.0,
+            81.5,
+            274.12,
+            364.68
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.8842,
+          "xyxy": [
+            20.25,
+            33.36,
+            251.66,
+            365.0
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear-mufs",
+          "conf": 0.777,
+          "xyxy": [
+            132.54,
+            49.24,
+            193.83,
+            95.82
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.7401,
+          "xyxy": [
+            173.13,
+            276.51,
+            218.06,
+            323.55
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.7272,
+          "xyxy": [
+            214.99,
+            275.72,
+            252.5,
+            308.06
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear-mufs",
+          "conf": 0.675,
+          "xyxy": [
+            183.58,
+            86.22,
+            245.22,
+            152.56
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.5829,
+          "xyxy": [
+            230.92,
+            235.03,
+            260.94,
+            267.8
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear-mufs",
+          "conf": 0.5827,
+          "xyxy": [
+            127.74,
+            41.08,
+            201.74,
+            107.82
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.3972,
+          "xyxy": [
+            184.26,
+            120.32,
+            191.26,
+            143.43
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9188,
+          "xyxy": [
+            128.05,
+            34.12,
+            206.83,
+            130.28
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.9151,
+          "xyxy": [
+            189.96,
+            104.95,
+            235.0,
+            163.12
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.8798,
+          "xyxy": [
+            182.57,
+            83.08,
+            241.23,
+            163.78
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8082,
+          "xyxy": [
+            147.92,
+            60.17,
+            202.21,
+            129.35
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7964,
+          "xyxy": [
+            189.45,
+            119.67,
+            237.84,
+            139.52
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.6364,
+          "xyxy": [
+            168.99,
+            72.31,
+            202.0,
+            110.93
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9188,
+          "xyxy": [
+            128.05,
+            34.12,
+            206.83,
+            91.82
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.8798,
+          "xyxy": [
+            182.57,
+            83.08,
+            241.23,
+            131.5
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.9151,
+            "xyxy": [
+              189.96,
+              104.95,
+              235.0,
+              163.12
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7964,
+            "xyxy": [
+              189.45,
+              119.67,
+              237.84,
+              139.52
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8082,
+            "xyxy": [
+              147.92,
+              60.17,
+              202.21,
+              129.35
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.6364,
+            "xyxy": [
+              168.99,
+              72.31,
+              202.0,
+              110.93
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9188,
+            "xyxy": [
+              128.05,
+              34.12,
+              206.83,
+              130.28
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9188,
+            "xyxy": [
+              128.05,
+              34.12,
+              206.83,
+              91.82
+            ]
+          }
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.8798,
+            "xyxy": [
+              182.57,
+              83.08,
+              241.23,
+              163.78
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.8798,
+            "xyxy": [
+              182.57,
+              83.08,
+              241.23,
+              131.5
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9261,
+            "xyxy": [
+              156.0,
+              81.5,
+              274.12,
+              364.68
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.8842,
+            "xyxy": [
+              20.25,
+              33.36,
+              251.66,
+              365.0
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/05-lab-gloves-bench.jpg",
+      "image_size": [
+        485,
+        632
+      ],
+      "inference_ms": 111.9,
+      "passes": 3,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.9347,
+          "xyxy": [
+            222.03,
+            385.14,
+            305.94,
+            491.78
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.9229,
+          "xyxy": [
+            313.55,
+            377.77,
+            372.16,
+            451.32
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.904,
+          "xyxy": [
+            154.21,
+            459.79,
+            282.18,
+            549.53
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.8744,
+          "xyxy": [
+            144.29,
+            13.01,
+            426.93,
+            542.11
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "tool",
+          "conf": 0.8415,
+          "xyxy": [
+            242.72,
+            548.81,
+            332.46,
+            584.75
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8163,
+          "xyxy": [
+            240.05,
+            74.08,
+            252.5,
+            113.96
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.7856,
+          "xyxy": [
+            0.14,
+            37.5,
+            305.36,
+            631.96
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.7098,
+          "xyxy": [
+            336.96,
+            88.55,
+            349.49,
+            115.79
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.4147,
+          "xyxy": [
+            102.71,
+            128.86,
+            119.6,
+            163.48
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9495,
+          "xyxy": [
+            242.02,
+            16.53,
+            350.01,
+            180.71
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.9165,
+          "xyxy": [
+            249.49,
+            82.71,
+            337.51,
+            180.07
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.906,
+          "xyxy": [
+            73.84,
+            38.71,
+            223.85,
+            211.46
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8946,
+          "xyxy": [
+            111.17,
+            114.45,
+            214.26,
+            211.1
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7406,
+          "xyxy": [
+            153.33,
+            132.61,
+            216.45,
+            174.96
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.6795,
+          "xyxy": [
+            250.87,
+            93.03,
+            337.32,
+            150.67
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9495,
+          "xyxy": [
+            242.02,
+            16.53,
+            350.01,
+            115.04
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.906,
+          "xyxy": [
+            73.84,
+            38.71,
+            223.85,
+            142.36
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-safety-vest",
+          "conf": 0.8744,
+          "xyxy": [
+            144.29,
+            92.37,
+            426.93,
+            356.92
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.9165,
+            "xyxy": [
+              249.49,
+              82.71,
+              337.51,
+              180.07
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.6795,
+            "xyxy": [
+              250.87,
+              93.03,
+              337.32,
+              150.67
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8946,
+            "xyxy": [
+              111.17,
+              114.45,
+              214.26,
+              211.1
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7406,
+            "xyxy": [
+              153.33,
+              132.61,
+              216.45,
+              174.96
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9495,
+            "xyxy": [
+              242.02,
+              16.53,
+              350.01,
+              180.71
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9495,
+            "xyxy": [
+              242.02,
+              16.53,
+              350.01,
+              115.04
+            ]
+          }
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.906,
+            "xyxy": [
+              73.84,
+              38.71,
+              223.85,
+              211.46
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.906,
+            "xyxy": [
+              73.84,
+              38.71,
+              223.85,
+              142.36
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.8744,
+            "xyxy": [
+              144.29,
+              13.01,
+              426.93,
+              542.11
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-safety-vest",
+            "conf": 0.8744,
+            "xyxy": [
+              144.29,
+              92.37,
+              426.93,
+              356.92
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.7856,
+            "xyxy": [
+              0.14,
+              37.5,
+              305.36,
+              631.96
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/06-workshop-coveralls-glasses.jpg",
+      "image_size": [
+        612,
+        408
+      ],
+      "inference_ms": 43.0,
+      "passes": 3,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9267,
+          "xyxy": [
+            56.35,
+            70.73,
+            235.91,
+            363.85
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.8578,
+          "xyxy": [
+            148.16,
+            79.39,
+            523.89,
+            406.45
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.6665,
+          "xyxy": [
+            258.56,
+            144.6,
+            276.5,
+            168.45
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.6647,
+          "xyxy": [
+            176.84,
+            113.18,
+            183.61,
+            131.19
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.6389,
+          "xyxy": [
+            126.85,
+            115.13,
+            135.12,
+            135.95
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9416,
+          "xyxy": [
+            255.94,
+            78.78,
+            340.15,
+            185.28
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9101,
+          "xyxy": [
+            124.25,
+            72.86,
+            183.36,
+            157.43
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8976,
+          "xyxy": [
+            264.27,
+            91.98,
+            333.92,
+            183.01
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.882,
+          "xyxy": [
+            132.91,
+            98.63,
+            177.98,
+            159.15
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.6365,
+          "xyxy": [
+            129.69,
+            110.83,
+            180.09,
+            129.98
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9416,
+          "xyxy": [
+            255.94,
+            78.78,
+            340.15,
+            142.68
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9101,
+          "xyxy": [
+            124.25,
+            72.86,
+            183.36,
+            123.6
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-safety-vest",
+          "conf": 0.9267,
+          "xyxy": [
+            56.35,
+            114.7,
+            235.91,
+            261.26
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8976,
+            "xyxy": [
+              264.27,
+              91.98,
+              333.92,
+              183.01
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.882,
+            "xyxy": [
+              132.91,
+              98.63,
+              177.98,
+              159.15
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.6365,
+            "xyxy": [
+              129.69,
+              110.83,
+              180.09,
+              129.98
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9416,
+            "xyxy": [
+              255.94,
+              78.78,
+              340.15,
+              185.28
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9416,
+            "xyxy": [
+              255.94,
+              78.78,
+              340.15,
+              142.68
+            ]
+          }
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9101,
+            "xyxy": [
+              124.25,
+              72.86,
+              183.36,
+              157.43
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9101,
+            "xyxy": [
+              124.25,
+              72.86,
+              183.36,
+              123.6
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9267,
+            "xyxy": [
+              56.35,
+              70.73,
+              235.91,
+              363.85
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-safety-vest",
+            "conf": 0.9267,
+            "xyxy": [
+              56.35,
+              114.7,
+              235.91,
+              261.26
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.8578,
+            "xyxy": [
+              148.16,
+              79.39,
+              523.89,
+              406.45
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/07-crew-hardhats-vests.jpg",
+      "image_size": [
+        612,
+        387
+      ],
+      "inference_ms": 221.6,
+      "passes": 4,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9483,
+          "xyxy": [
+            443.06,
+            0.0,
+            611.92,
+            386.0
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9405,
+          "xyxy": [
+            184.72,
+            86.11,
+            427.56,
+            385.58
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9191,
+          "xyxy": [
+            31.04,
+            57.18,
+            210.67,
+            386.33
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "safety-vest",
+          "conf": 0.9144,
+          "xyxy": [
+            495.18,
+            131.86,
+            612.0,
+            385.04
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "hands",
+          "conf": 0.8892,
+          "xyxy": [
+            448.65,
+            317.79,
+            530.2,
+            375.88
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8227,
+          "xyxy": [
+            237.08,
+            160.62,
+            247.22,
+            184.46
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8087,
+          "xyxy": [
+            574.38,
+            73.56,
+            594.14,
+            104.9
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "safety-vest",
+          "conf": 0.7854,
+          "xyxy": [
+            29.79,
+            194.1,
+            199.45,
+            386.09
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.7794,
+          "xyxy": [
+            137.44,
+            143.02,
+            151.91,
+            173.51
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.7595,
+          "xyxy": [
+            316.42,
+            148.48,
+            325.4,
+            173.93
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9429,
+          "xyxy": [
+            231.57,
+            87.04,
+            326.83,
+            219.43
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9283,
+          "xyxy": [
+            499.86,
+            0.0,
+            612.0,
+            144.01
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9245,
+          "xyxy": [
+            67.43,
+            59.38,
+            206.98,
+            200.62
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.9207,
+          "xyxy": [
+            66.14,
+            61.45,
+            207.59,
+            158.52
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.9034,
+          "xyxy": [
+            509.2,
+            54.86,
+            577.29,
+            143.7
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.9032,
+          "xyxy": [
+            230.86,
+            87.84,
+            327.41,
+            154.63
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.9028,
+          "xyxy": [
+            241.49,
+            143.56,
+            319.53,
+            215.59
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "helmet",
+          "conf": 0.8535,
+          "xyxy": [
+            492.13,
+            0.0,
+            612.0,
+            84.82
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8507,
+          "xyxy": [
+            149.83,
+            125.14,
+            193.84,
+            197.98
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.6843,
+          "xyxy": [
+            240.3,
+            147.22,
+            320.21,
+            173.5
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.5847,
+          "xyxy": [
+            505.93,
+            68.68,
+            595.7,
+            100.55
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.4359,
+          "xyxy": [
+            152.04,
+            140.38,
+            192.23,
+            162.64
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-gloves",
+          "conf": 0.8892,
+          "xyxy": [
+            448.65,
+            317.79,
+            530.2,
+            375.88
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.9034,
+            "xyxy": [
+              509.2,
+              54.86,
+              577.29,
+              143.7
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.5847,
+            "xyxy": [
+              505.93,
+              68.68,
+              595.7,
+              100.55
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.9028,
+            "xyxy": [
+              241.49,
+              143.56,
+              319.53,
+              215.59
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.6843,
+            "xyxy": [
+              240.3,
+              147.22,
+              320.21,
+              173.5
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8507,
+            "xyxy": [
+              149.83,
+              125.14,
+              193.84,
+              197.98
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.4359,
+            "xyxy": [
+              152.04,
+              140.38,
+              192.23,
+              162.64
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9429,
+            "xyxy": [
+              231.57,
+              87.04,
+              326.83,
+              219.43
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.9032,
+            "xyxy": [
+              230.86,
+              87.84,
+              327.41,
+              154.63
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9283,
+            "xyxy": [
+              499.86,
+              0.0,
+              612.0,
+              144.01
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.8535,
+            "xyxy": [
+              492.13,
+              0.0,
+              612.0,
+              84.82
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9245,
+            "xyxy": [
+              67.43,
+              59.38,
+              206.98,
+              200.62
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "helmet",
+            "conf": 0.9207,
+            "xyxy": [
+              66.14,
+              61.45,
+              207.59,
+              158.52
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "gloves",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "hands",
+            "conf": 0.8892,
+            "xyxy": [
+              448.65,
+              317.79,
+              530.2,
+              375.88
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-gloves",
+            "conf": 0.8892,
+            "xyxy": [
+              448.65,
+              317.79,
+              530.2,
+              375.88
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9483,
+            "xyxy": [
+              443.06,
+              0.0,
+              611.92,
+              386.0
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9405,
+            "xyxy": [
+              184.72,
+              86.11,
+              427.56,
+              385.58
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9191,
+            "xyxy": [
+              31.04,
+              57.18,
+              210.67,
+              386.33
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/08-lab-fumehood-gloves.jpg",
+      "image_size": [
+        678,
+        452
+      ],
+      "inference_ms": 37.8,
+      "passes": 2,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9337,
+          "xyxy": [
+            48.21,
+            60.67,
+            375.34,
+            450.89
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "ear",
+          "conf": 0.8351,
+          "xyxy": [
+            265.75,
+            143.18,
+            283.85,
+            168.78
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "hands",
+          "conf": 0.7465,
+          "xyxy": [
+            306.92,
+            282.65,
+            371.91,
+            330.94
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.6294,
+          "xyxy": [
+            305.24,
+            282.27,
+            372.69,
+            332.33
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9002,
+          "xyxy": [
+            236.41,
+            59.86,
+            363.1,
+            204.93
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.8973,
+          "xyxy": [
+            277.74,
+            126.94,
+            353.17,
+            202.67
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7542,
+          "xyxy": [
+            297.27,
+            139.51,
+            352.74,
+            176.85
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9002,
+          "xyxy": [
+            236.41,
+            59.86,
+            363.1,
+            146.9
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.8973,
+            "xyxy": [
+              277.74,
+              126.94,
+              353.17,
+              202.67
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7542,
+            "xyxy": [
+              297.27,
+              139.51,
+              352.74,
+              176.85
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9002,
+            "xyxy": [
+              236.41,
+              59.86,
+              363.1,
+              204.93
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9002,
+            "xyxy": [
+              236.41,
+              59.86,
+              363.1,
+              146.9
+            ]
+          }
+        },
+        {
+          "rule": "gloves",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "hands",
+            "conf": 0.7465,
+            "xyxy": [
+              306.92,
+              282.65,
+              371.91,
+              330.94
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "gloves",
+            "conf": 0.6294,
+            "xyxy": [
+              305.24,
+              282.27,
+              372.69,
+              332.33
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9337,
+            "xyxy": [
+              48.21,
+              60.67,
+              375.34,
+              450.89
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/09-lab-cylinder-goggles.jpg",
+      "image_size": [
+        436,
+        458
+      ],
+      "inference_ms": 46.2,
+      "passes": 2,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9365,
+          "xyxy": [
+            87.16,
+            107.21,
+            419.11,
+            458.0
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "gloves",
+          "conf": 0.8376,
+          "xyxy": [
+            209.34,
+            351.22,
+            306.49,
+            413.16
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9298,
+          "xyxy": [
+            214.64,
+            109.81,
+            312.99,
+            237.42
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.9041,
+          "xyxy": [
+            229.49,
+            137.3,
+            302.01,
+            237.08
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7959,
+          "xyxy": [
+            233.73,
+            154.38,
+            308.6,
+            198.17
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9298,
+          "xyxy": [
+            214.64,
+            109.81,
+            312.99,
+            186.37
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.9041,
+            "xyxy": [
+              229.49,
+              137.3,
+              302.01,
+              237.08
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7959,
+            "xyxy": [
+              233.73,
+              154.38,
+              308.6,
+              198.17
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9298,
+            "xyxy": [
+              214.64,
+              109.81,
+              312.99,
+              237.42
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9298,
+            "xyxy": [
+              214.64,
+              109.81,
+              312.99,
+              186.37
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "unverified",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9365,
+            "xyxy": [
+              87.16,
+              107.21,
+              419.11,
+              458.0
+            ]
+          },
+          "ppe": null,
+          "violation": null
+        }
+      ]
+    },
+    {
+      "src": "/media/workers/10-hangar-eyewear.jpg",
+      "image_size": [
+        700,
+        396
+      ],
+      "inference_ms": 34.4,
+      "passes": 2,
+      "boxes": [
+        {
+          "source": "model",
+          "cls_name": "person",
+          "conf": 0.9528,
+          "xyxy": [
+            130.21,
+            17.31,
+            317.44,
+            225.97
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "hands",
+          "conf": 0.8242,
+          "xyxy": [
+            284.85,
+            184.54,
+            317.17,
+            208.92
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "head",
+          "conf": 0.9322,
+          "xyxy": [
+            184.27,
+            17.08,
+            259.43,
+            112.03
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "face",
+          "conf": 0.9025,
+          "xyxy": [
+            200.74,
+            46.85,
+            255.83,
+            111.9
+          ]
+        },
+        {
+          "source": "model",
+          "cls_name": "glasses",
+          "conf": 0.7948,
+          "xyxy": [
+            204.62,
+            60.59,
+            260.36,
+            86.14
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-helmet",
+          "conf": 0.9322,
+          "xyxy": [
+            184.27,
+            17.08,
+            259.43,
+            74.05
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-gloves",
+          "conf": 0.8242,
+          "xyxy": [
+            284.85,
+            184.54,
+            317.17,
+            208.92
+          ]
+        },
+        {
+          "source": "derived",
+          "cls_name": "no-safety-vest",
+          "conf": 0.9528,
+          "xyxy": [
+            130.21,
+            48.61,
+            317.44,
+            152.94
+          ]
+        }
+      ],
+      "verdicts": [
+        {
+          "rule": "glasses",
+          "verdict": "wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "face",
+            "conf": 0.9025,
+            "xyxy": [
+              200.74,
+              46.85,
+              255.83,
+              111.9
+            ]
+          },
+          "ppe": {
+            "source": "model",
+            "cls_name": "glasses",
+            "conf": 0.7948,
+            "xyxy": [
+              204.62,
+              60.59,
+              260.36,
+              86.14
+            ]
+          },
+          "violation": null
+        },
+        {
+          "rule": "helmet",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "head",
+            "conf": 0.9322,
+            "xyxy": [
+              184.27,
+              17.08,
+              259.43,
+              112.03
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-helmet",
+            "conf": 0.9322,
+            "xyxy": [
+              184.27,
+              17.08,
+              259.43,
+              74.05
+            ]
+          }
+        },
+        {
+          "rule": "gloves",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "hands",
+            "conf": 0.8242,
+            "xyxy": [
+              284.85,
+              184.54,
+              317.17,
+              208.92
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-gloves",
+            "conf": 0.8242,
+            "xyxy": [
+              284.85,
+              184.54,
+              317.17,
+              208.92
+            ]
+          }
+        },
+        {
+          "rule": "vest",
+          "verdict": "not_wearing",
+          "subject": {
+            "source": "model",
+            "cls_name": "person",
+            "conf": 0.9528,
+            "xyxy": [
+              130.21,
+              17.31,
+              317.44,
+              225.97
+            ]
+          },
+          "ppe": null,
+          "violation": {
+            "source": "derived",
+            "cls_name": "no-safety-vest",
+            "conf": 0.9528,
+            "xyxy": [
+              130.21,
+              48.61,
+              317.44,
+              152.94
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
