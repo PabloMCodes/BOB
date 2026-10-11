@@ -5,6 +5,12 @@ for the local feasibility experiment described in
 [the measured report](../docs/vlm-feasibility.md), not production PPE models.
 No construction-hazard accuracy metrics are claimed.
 
+The user-authorized cleanup on 2026-10-11 removed the experimental weights and
+Ollama/llama.cpp runtime downloads from this Jetson. Model cards, pinned hashes,
+benchmark scripts/results and all PPE weights/recordings/site photos were retained.
+The four removed directories reclaimed 11,750,162,432 bytes (about 10.94 GiB).
+These models were not running; cleanup freed disk, not active inference RAM.
+
 ## Qwen3-VL-2B-Instruct (tested Q4_K_M)
 
 Source: [Ollama Qwen3-VL 2B Instruct](https://ollama.com/library/qwen3-vl:2b-instruct).
@@ -13,7 +19,7 @@ Publisher registry manifest SHA-256:
 Original combined model blob SHA-256:
 `aafed9e48b157ae913cee994e0d9ac927af51e256feafbd923bf2852e8856d00`.
 Ollama v0.40.2 subsequently produced local compatibility-converted blobs.
-Source blobs were hash-verified before loading. Stored under `models/ollama/`.
+Source blobs were hash-verified before loading. Previously stored under `models/ollama/`; removed in the cleanup above.
 
 ## SmolVLM-500M-Instruct (tested Q8_0)
 
