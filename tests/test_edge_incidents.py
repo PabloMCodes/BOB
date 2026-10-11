@@ -17,7 +17,7 @@ from bobapp.edge.publish import EdgePublisher
 from bobapp.edge.store import EdgeStore
 from bobapp.incidents import PolicyParams
 from tests.test_edge_publish import pipeline  # noqa: F401 — shared module fixture (real model)
-from tests.test_replay_detect import ASSETS, CONFIG, MS, _frame
+from tests.test_replay_detect import ASSETS, CONFIG, GLASSES_ABSENCE, MS, _frame
 from tools.replay_detect import run
 from vision.server.slot import ReceivedFrame
 from vision.server.view import decode_upright
@@ -110,8 +110,11 @@ def test_calibration_cli_runs_on_a_labeled_recording(tmp_path, onoff):
     with open(recording, "wb") as fh:
         for r in onoff:
             write_record(fh, r.raw)
+    override = tmp_path / "glasses_absence.yaml"
+    override.write_text(json.dumps(GLASSES_ABSENCE))  # JSON is valid YAML
     proc = subprocess.run([sys.executable, "-m", "tools.calibrate_incidents", str(recording), "--rule", "glasses",
-                           "--segments", "not_wearing:0-0.8,wearing:0.8-4.3", "--out", str(tmp_path / "cal")],
+                           "--segments", "not_wearing:0-0.8,wearing:0.8-4.3", "--out", str(tmp_path / "cal"),
+                           "--config", str(override)],
                           capture_output=True, text=True, timeout=300)
     summary = json.loads((tmp_path / "cal" / "summary.json").read_text())
     assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]

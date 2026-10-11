@@ -284,7 +284,7 @@ def test_flat_phone_uses_mount_orientation(pipeline):
                 "width": 1280, "height": 720})})
     (out,) = replay_detect([Record(msg, jpeg, encode(msg, jpeg))], pipeline, CONFIG)
     assert (out.event.image_size.width, out.event.image_size.height) == (1280, 720)  # not rotated
-    assert out.verdicts["glasses"] is Verdict.NOT_WEARING
+    assert out.verdicts["helmet"] is Verdict.NOT_WEARING  # heads found upright (glasses absence is unverified)
 
 
 # === Pose / time abuse =============================================================================

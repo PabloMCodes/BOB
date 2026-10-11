@@ -1,5 +1,7 @@
 """Step 3: PPE pairing rules on hand-built boxes (no model)."""
 
+import dataclasses
+
 import pytest
 
 from vision.config import load_config
@@ -8,7 +10,8 @@ from vision.schema import Box
 
 CONFIG = load_config()
 RULES = {r.name: r for r in rules_from_config(CONFIG) if isinstance(r, Rule)}
-GLASSES, HELMET = RULES["glasses"], RULES["helmet"]
+# Geometry tests pair boxes with absence = violation; the configured glasses policy is tested below.
+GLASSES, HELMET = dataclasses.replace(RULES["glasses"], absence="violation"), RULES["helmet"]
 
 FACE = (100.0, 100.0, 160.0, 180.0)   # 60 x 80 px face
 EYES = (108.0, 118.0, 152.0, 136.0)   # centre y=127 -> 0.34 of face height: inside eye band
@@ -93,7 +96,7 @@ def test_class_names_are_normalized():
 
 
 def test_apply_rules_combines_rules():
-    derived, verdicts = apply_rules(RULES.values(), [box("face", FACE), box("head", HEAD)])
+    derived, verdicts = apply_rules([GLASSES, HELMET], [box("face", FACE), box("head", HEAD)])
     assert {b.cls_name for b in derived} == {"no-safety-glasses", "no-helmet"}
     assert len(verdicts) == 2
 
@@ -199,3 +202,26 @@ def test_unknown_rule_kind_rejected():
     config = {"ppe": {"rules": {"x": {"kind": "magic"}}}}
     with pytest.raises(ValueError, match="kind"):
         rules_from_config(config)
+
+
+# --- absence policy -------------------------------------
+
+
+def test_configured_glasses_never_derive_a_violation():
+    rule = RULES["glasses"]
+    assert rule.absence == "unverified"
+    v = only(apply_rule(rule, [box("face", FACE)]))
+    assert v.verdict is Verdict.UNVERIFIED and v.violation is None
+    assert only(apply_rule(rule, [box("face", FACE), box("glasses", EYES)])).verdict is Verdict.WEARING
+
+
+def test_configured_rules_derive_no_glasses_box():
+    derived, verdicts = apply_rules(RULES.values(), [box("face", FACE), box("head", HEAD)])
+    assert {b.cls_name for b in derived} == {"no-helmet"} and len(verdicts) == 2
+
+
+def test_absence_defaults_to_violation_and_is_validated():
+    cfg = {k: v for k, v in CONFIG["ppe"]["rules"]["helmet"].items() if k != "absence"}
+    assert Rule.from_config("helmet", cfg).absence == "violation"
+    with pytest.raises(ValueError, match="absence"):
+        Rule.from_config("helmet", dict(cfg, absence="maybe"))

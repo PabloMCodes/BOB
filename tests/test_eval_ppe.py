@@ -55,6 +55,7 @@ def test_resize_never_upscales():
 
 def test_evaluate_end_to_end(tmp_path):
     config = load_config()
+    config["ppe"]["rules"]["glasses"]["absence"] = "violation"  # tests the tool's counting, not the policy
     rows = evaluate(find_samples(_dataset(tmp_path / "data")), "glasses",
                     [config["model"]["weights"]], ["head_crop@1280"], config, tmp_path / "out")
     overall = next(r for r in rows if r.distance == "ALL")

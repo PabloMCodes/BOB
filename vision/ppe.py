@@ -8,6 +8,8 @@ No public dataset labels "not wearing safety glasses", so absence is derived:
   a confident, large-enough face with no glasses box in its eye band -> a "no-safety-glasses"
   box (source="derived") drawn on that eye band.
 Subjects too small or uncertain get UNVERIFIED and no box: "no violation seen" != "compliant".
+A rule with absence "unverified" never derives a violation, for PPE the model cannot reliably
+see (e.g. SH17 and clear safety glasses).
 These are per-frame observations; confirming a hazard over N frames belongs to the alerts branch.
 """
 
@@ -21,6 +23,7 @@ from vision.render import normalize_class_name
 from vision.schema import Box
 
 XYXY = tuple[float, float, float, float]
+ABSENCE = ("violation", "unverified")
 
 
 class Verdict(str, Enum):
@@ -41,6 +44,7 @@ class Rule:
     min_subject_px: float
     min_subject_conf: float
     min_overlap: float     # fraction of PPE box area inside the subject box
+    absence: str = "violation"  # "unverified": no PPE box is never evidence of no PPE
 
     @property
     def requires(self) -> set[str]:
@@ -52,6 +56,9 @@ class Rule:
         if not (top < bottom and bottom > 0 and top < 1):
             # The violation box is the region clipped to the subject, so it must overlap it.
             raise ValueError(f"ppe rule {name!r}: region must satisfy top < bottom and overlap [0, 1]")
+        absence = cfg.get("absence", "violation")
+        if absence not in ABSENCE:
+            raise ValueError(f"ppe rule {name!r}: absence must be one of {list(ABSENCE)}, got {absence!r}")
         return cls(
             name=name,
             subject=normalize_class_name(cfg["subject"]),
@@ -61,6 +68,7 @@ class Rule:
             min_subject_px=float(cfg["min_subject_px"]),
             min_subject_conf=float(cfg["min_subject_conf"]),
             min_overlap=float(cfg["min_overlap"]),
+            absence=absence,
         )
 
 
@@ -197,6 +205,10 @@ def apply_rule(rule: AnyRule, boxes: Iterable[Box]) -> list[SubjectVerdict]:
         if best is not None and score > 0:
             available.remove(best)  # one PPE box can't make two people compliant
             verdicts.append(SubjectVerdict(rule.name, Verdict.WEARING, subject, best, None))
+            continue
+
+        if rule.absence == "unverified":
+            verdicts.append(SubjectVerdict(rule.name, Verdict.UNVERIFIED, subject, None, None))
             continue
 
         x1, y1, x2, y2 = subject.xyxy
