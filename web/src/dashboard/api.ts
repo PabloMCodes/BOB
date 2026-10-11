@@ -17,6 +17,7 @@ export type Item<T = RecordBody> = { cursor: number; delivery: Delivery; hub_rx_
 export type Page<T = RecordBody> = { workspace: Connection['workspace']; items: Item<T>[]; next_after: number }
 export type Inspection = { inspection_id: string; worksite_id: string; profile_revision: number; source_mode: SourceMode; ended: Item | null }
 export type Status = {
+  frames?: { total: number; available: number; pending_sync: number; missing: number; hash_mismatch: number; backfilled: number }
   workspace: Connection['workspace']; link: { state: string; last_error?: string }; live_is_current: boolean; source_mode: SourceMode | null
   live_received_age_ms: number | null; lanes: Record<string, { records: number; committed_seq: number; behind: number | null }>
   gaps: { lane: string; first_seq: number; last_seq: number; reason: string }[]; evidence: Record<string, number>

@@ -1,0 +1,9 @@
+.dashboard-frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 1rem; margin: 1rem 0; }
+.dashboard-frame { border: 1px solid #ffffff24; border-radius: 12px; overflow: hidden; background: #171917; }
+.dashboard-frame > div:last-child { padding: .8rem; }
+.dashboard-frame strong { display: block; margin-top: .5rem; }
+.dashboard-frame p, .dashboard-frame small { font-size: .75rem; color: #b5b9b2; margin-top: .25rem; overflow-wrap: anywhere; }
+.dashboard-saved-image { position: relative; width: 100%; background: #101210; display: grid; place-items: center; }
+.dashboard-saved-image img { display: block; width: 100%; height: 100%; }
+.dashboard-saved-image svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.dashboard-saved-image > p { padding: 1rem; }
