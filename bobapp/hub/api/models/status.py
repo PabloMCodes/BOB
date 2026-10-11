@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from bobapp.contracts import LiveState, SourceMode
 
@@ -23,6 +23,19 @@ class WorkspaceInfo(BaseModel):
     archived: bool
 
 
+class StreamTelemetry(BaseModel):
+    session_id: UUID
+    run_id: Optional[str] = None
+    window_s: float = Field(gt=0)
+    age_ms: float = Field(ge=0)
+    current: bool
+    frame_fps: Optional[float] = Field(default=None, ge=0)
+    pose_hz: Optional[float] = Field(default=None, ge=0)
+    processing_hz: Optional[float] = Field(default=None, ge=0)
+    inference_latency_ms: Optional[float] = Field(default=None, ge=0)
+    confidence_mean: Optional[float] = Field(default=None, ge=0, le=1)
+
+
 class StatusResponse(BaseModel):
     workspace: WorkspaceName
     link: dict[str, Any]            # state CONNECTED | CATCHING_UP | DISCONNECTED | NEW_STORE, hub clock times
@@ -36,3 +49,5 @@ class StatusResponse(BaseModel):
     evidence: dict[str, int]
     workspaces: list[WorkspaceInfo]
     clock_domains: dict[str, str] = CLOCK_DOMAINS
+    telemetry: Optional[StreamTelemetry] = None
+    telemetry_reason: Optional[str] = None

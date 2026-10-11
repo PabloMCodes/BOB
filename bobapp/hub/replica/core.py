@@ -172,7 +172,8 @@ class ReplicaCore:
 
     def query(self, ws: Workspace, kinds: tuple[str, ...], after_rowid: int = 0, limit: int = 100,
               where: Optional[dict[str, str]] = None, source_mode: Optional[str] = None,
-              delivery: Optional[str] = None) -> list[tuple[int, str, int, str]]:
+              delivery: Optional[str] = None, newest: bool = False,
+              before_rowid: Optional[int] = None) -> list[tuple[int, str, int, str]]:
         """Paged history: (rowid, delivery, hub_rx_wall_ns, json) in arrival order. `where` maps a fixed
         JSON path (from code, never from the request) to the value it must equal."""
         sql = (f"SELECT rowid, delivery, hub_rx_wall_ns, json FROM records WHERE ws_id=? AND rowid>? "
@@ -184,7 +185,11 @@ class ReplicaCore:
             sql, args = sql + " AND source_mode=?", args + [source_mode]
         if delivery is not None:
             sql, args = sql + " AND delivery=?", args + [delivery]
-        return self.db.execute(sql + " ORDER BY rowid LIMIT ?", (*args, limit)).fetchall()
+        if before_rowid is not None:
+            sql, args = sql + " AND rowid<?", args + [before_rowid]
+        rows = self.db.execute(sql + (" ORDER BY rowid DESC LIMIT ?" if newest else " ORDER BY rowid LIMIT ?"),
+                               (*args, limit)).fetchall()
+        return list(reversed(rows)) if newest else rows
 
     def max_rowid(self, ws: Workspace) -> int:
         return self.db.execute("SELECT COALESCE(MAX(rowid), 0) FROM records WHERE ws_id=?", (ws.ws_id,)).fetchone()[0]

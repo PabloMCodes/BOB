@@ -15,6 +15,7 @@ CLOCK_DOMAINS = {
     "*iphone*_ts_ns": "iPhone clock since boot; comparable only within one ARKit session",
     "live.freshness.*.age_ms": "measured on the rover when that live state was sent",
     "live_received_age_ms": "laptop clock: how long ago the hub received the live state",
+    "telemetry rates, window_s, age_ms": "rates measured on the rover monotonic clock; age combines rover measurement age and hub receive age",
 }
 
 
