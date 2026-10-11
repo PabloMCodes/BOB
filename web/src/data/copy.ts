@@ -11,6 +11,7 @@ export const copy = {
   nav: {
     product: 'Product',
     dashboard: 'Dashboard',
+    inspiration: 'Inspiration',
     github: 'GitHub',
   },
   links: {

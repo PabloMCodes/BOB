@@ -18,21 +18,24 @@ export function Nav() {
         scrolled ? 'border-line bg-canvas/90 backdrop-blur-md' : 'border-transparent bg-transparent'
       }`}
     >
-      <div className="page-inset flex h-full items-center justify-between gap-6">
+      <div className="page-inset flex h-full items-center justify-between gap-3 sm:gap-6">
         <NavLink to="/" end className="cursor-target text-[1.05rem] font-semibold tracking-[-0.02em] text-ink" data-cursor-label="Home">
           {copy.wordmark}
         </NavLink>
-        <nav className="flex items-center gap-6">
+        <nav aria-label="Main navigation" className="flex items-center gap-3 sm:gap-6 [&_.label-type]:text-[0.65rem] sm:[&_.label-type]:text-[0.8125rem]">
           <NavLink to="/" end className={linkClass} data-cursor-label="Product">
             {copy.nav.product}
           </NavLink>
           <NavLink to="/dashboard" className={linkClass} data-cursor-label="Dashboard">
             {copy.nav.dashboard}
           </NavLink>
+          <NavLink to="/inspiration" className={linkClass} data-cursor-label="Inspiration">
+            {copy.nav.inspiration}
+          </NavLink>
           {copy.links.github ? (
             <a
               href={copy.links.github}
-              className="cursor-target label-type text-muted transition-colors duration-300 hover:text-ink"
+              className="cursor-target label-type hidden text-muted transition-colors duration-300 hover:text-ink sm:block"
               data-cursor-label="GitHub"
               target="_blank"
               rel="noreferrer"

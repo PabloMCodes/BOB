@@ -35,6 +35,40 @@ body {
   overflow-x: clip;
 }
 
+.inspiration-title {
+  font-size: clamp(2.75rem, 7.5vw, 7rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.origins-globe-frame {
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--color-plate), transparent 68%);
+}
+
+.globe-control {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.globe-control:hover:not(:disabled) { color: var(--color-ink); border-color: var(--color-muted); }
+.globe-control:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 4px; }
+.globe-control:disabled { opacity: 0.6; }
+
+.journey-image-box {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-width: 1px;
+  border-radius: 0.75rem;
+  background: var(--color-plate);
+}
+
 @layer components {
   .page-inset {
     padding-left: clamp(1.25rem, 4vw, 4.5rem);

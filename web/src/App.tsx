@@ -8,6 +8,7 @@ import { PrivacyPage } from './routes/PrivacyPage.tsx'
 import { TermsPage } from './routes/TermsPage.tsx'
 
 const ProductPage = lazy(() => import('./routes/ProductPage.tsx').then((module) => ({ default: module.ProductPage })))
+const InspirationPage = lazy(() => import('./routes/InspirationPage.tsx').then((module) => ({ default: module.InspirationPage })))
 
 export function App() {
   return (
@@ -33,6 +34,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Suspense fallback={<main className="page-inset pt-28">Loading…</main>}><ProductPage /></Suspense>} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/inspiration" element={<Suspense fallback={<main className="page-inset pt-28">Loading…</main>}><InspirationPage /></Suspense>} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
       </Routes>
