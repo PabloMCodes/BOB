@@ -54,7 +54,7 @@ export const copy = {
         id: 'zones',
         status: 'built',
         title: 'Watches taped restricted zones.',
-        body: 'Yellow floor tape is recognized, and a person standing inside it becomes a finding.',
+        body: 'A closed yellow floor outline is recognized, and feet inside it become a finding. Anything less stays unverified.',
       },
       {
         id: 'alerts',
@@ -174,6 +174,27 @@ export const copy = {
     ] as Array<{ name: string; firstName: string; role?: string; linkedin?: string }>,
     license:
       'Detections come from SH17 weights (CC BY-NC-SA 4.0) running on Ultralytics YOLOv8 (AGPL-3.0). Original project code is MIT licensed.',
+    /**
+     * Stock photographs the skills cards run on. Both are share-alike, so the annotated versions
+     * carry the same licence as the photograph they are derived from. Full provenance and what
+     * each detector run returned: public/media/skills/sources.json.
+     */
+    photos: [
+      {
+        title: 'Construction on Erwin Rd in Durham',
+        author: 'Ildar Sagdejev (Specious)',
+        href: 'https://commons.wikimedia.org/wiki/File:2008-07-15_Construction_on_Erwin_Rd_in_Durham.jpg',
+        license: 'CC BY-SA 4.0',
+        licenseHref: 'https://creativecommons.org/licenses/by-sa/4.0/',
+      },
+      {
+        title: '5S Door-range line',
+        author: 'Adrian Grycuk',
+        href: 'https://commons.wikimedia.org/wiki/File:5S_Door-range_line.jpg',
+        license: 'CC BY-SA 3.0 PL',
+        licenseHref: 'https://creativecommons.org/licenses/by-sa/3.0/pl/deed.en',
+      },
+    ],
   },
   dashboard: {
     eyebrow: 'Dashboard / Site manager',

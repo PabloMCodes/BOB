@@ -35,4 +35,16 @@ export const skillMedia: Partial<Record<SkillId, Media>> = {
     alt: 'Two workers in hard hats and high-visibility jackets, with person, helmet, eyewear and vest detection labels.',
     objectPosition: '85% center',
   },
+  // Stock photographs, not rover captures. Boxes are drawn into the file by the real pipeline;
+  // provenance, licence and what each run actually returned are in public/media/skills/sources.json.
+  eyewear: {
+    src: '/media/skills/eyewear-drill-crew-detections.jpg',
+    kind: 'image',
+    alt: 'Three workers in hard hats and high-visibility vests beside a drill rig. Helmets, vests and the eyewear on the nearest worker are boxed; two bare hands are boxed as missing gloves.',
+  },
+  zones: {
+    src: '/media/skills/zone-yellow-floor-tape-detections.jpg',
+    kind: 'image',
+    alt: 'Yellow marking tape on a tiled floor in front of a door, labelled Unverified because the outline is not closed by tape.',
+  },
 }
