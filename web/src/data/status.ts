@@ -69,7 +69,7 @@ export const statusPage = {
       eyebrow: 'Hardware',
       title: 'The robot itself.',
       summary:
-        'B.O.B runs on an NVIDIA Jetson Orin Nano for all on-board compute, with an ESP32 microcontroller as the bridge between that compute and the physical world. The ESP32 drives the motors over PWM and carries the sensor lines; an iPhone on the mast supplies the camera and pose; an on-board speaker announces PPE reminders out loud on site. A hazardous gas sensor, a radar module and wheel encoders for navigation are mounted and wired alongside them.',
+        'B.O.B runs on an NVIDIA Jetson Orin Nano for all on-board compute, with an ESP32 microcontroller as the bridge between that compute and the physical world. The ESP32 drives the motors over PWM and carries the sensor lines; an iPhone on the mast supplies the camera and pose; an on-board speaker announces PPE reminders out loud on site. A hazardous gas sensor, a radar module and wheel encoders for navigation are mounted and wired alongside them. The hazard and object detection the robot runs on board is heavily OpenCV-based, working frame by frame on what the mast camera sees.',
       components: [
         { name: 'NVIDIA Jetson Orin Nano', note: 'On-board compute. Vision and logging run here, with no connection required.' },
         { name: 'ESP32', note: 'Microcontroller bridge: PWM motor control and the sensor lines back to the Jetson.' },

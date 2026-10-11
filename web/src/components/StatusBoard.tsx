@@ -12,7 +12,7 @@ function Photo({ photo }: { photo: StatusPhoto }) {
   return (
     <figure className="border-t border-line pt-4">
       <img src={photo.src} alt={photo.alt} loading="lazy" className="w-full rounded-sm object-cover" />
-      <figcaption className="card-copy mt-4 text-muted">{photo.caption}</figcaption>
+      <figcaption className="card-copy mt-3 text-muted">{photo.caption}</figcaption>
     </figure>
   )
 }
@@ -30,37 +30,48 @@ function LevelTag({ level }: { level: StatusLevel }) {
 
 function Section({ section }: { section: StatusSection }) {
   return (
-    <section className="border-t border-line pt-14 md:pt-20">
-      <Reveal>
-        <p className="eyebrow text-muted">{section.eyebrow}</p>
-        <h2 className="chapter-title cursor-target mt-6 w-fit text-ink" data-cursor-label={section.eyebrow}>
-          {section.title}
+    <section className="pt-6">
+      {/* The domain stays pinned under the nav, so a long scroll never loses which half it is in. */}
+      <p className="domain-sticky text-ink">
+        <span className="text-tape">{section.eyebrow}</span>
+        <span className="text-muted">{section.title}</span>
+      </p>
+
+      <Reveal className="mt-12">
+        <h2 className="domain-title cursor-target w-fit text-ink" data-cursor-label={section.eyebrow}>
+          {section.eyebrow}
         </h2>
-        <p className="body-copy mt-8 max-w-[46rem] text-muted">{section.summary}</p>
+        <p className="step-title mt-5 text-ink">{section.title}</p>
       </Reveal>
 
-      <Reveal delay={80}>
-        <ul className="mt-12 grid gap-x-12 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-          {section.components.map((component) => (
-            <li key={component.name} className="border-t border-line pt-4">
-              <p className="label-type text-ink">{component.name}</p>
-              <p className="card-copy mt-2 text-muted">{component.note}</p>
-            </li>
-          ))}
-        </ul>
-      </Reveal>
+      {/* Copy left, photo right: the right column was empty and the stacked photo made the scroll long. */}
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-16">
+        <div>
+          <Reveal>
+            <p className="body-copy max-w-[46rem] text-muted">{section.summary}</p>
+          </Reveal>
+          <Reveal delay={80}>
+            <ul className="mt-12 grid gap-x-12 gap-y-6 sm:grid-cols-2">
+              {section.components.map((component) => (
+                <li key={component.name} className="border-t border-line pt-4">
+                  <p className="label-type text-ink">{component.name}</p>
+                  <p className="card-copy mt-2 text-muted">{component.note}</p>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
 
-      {section.photos ? (
-        <Reveal delay={120}>
-          <div
-            className={`mt-14 grid gap-10 ${section.photos.length > 1 ? 'md:grid-cols-2' : 'max-w-[46rem]'}`}
-          >
-            {section.photos.map((photo) => (
-              <Photo key={photo.src} photo={photo} />
-            ))}
-          </div>
-        </Reveal>
-      ) : null}
+        {section.photos ? (
+          <Reveal delay={120} className="lg:sticky lg:top-32 lg:self-start">
+            <div className="grid gap-8">
+              {section.photos.map((photo) => (
+                <Photo key={photo.src} photo={photo} />
+              ))}
+            </div>
+          </Reveal>
+        ) : null}
+      </div>
 
       {section.groups.map((group, groupIndex) => (
         <div key={group.title} className="mt-20 md:mt-24">
@@ -110,17 +121,17 @@ export function StatusBoard() {
 
       <section className="mt-24 border-t border-line pt-14 md:mt-32 md:pt-20">
         <Reveal>
-          <p className="eyebrow text-muted">{statusPage.next.eyebrow}</p>
-          <h2 className="chapter-title cursor-target mt-6 w-fit text-ink" data-cursor-label={statusPage.next.eyebrow}>
-            {statusPage.next.title}
+          <h2 className="domain-title cursor-target w-fit text-ink" data-cursor-label={statusPage.next.eyebrow}>
+            {statusPage.next.eyebrow}
           </h2>
+          <p className="statement mt-6 text-ink">{statusPage.next.title}</p>
         </Reveal>
-        <ol className="mt-14 grid gap-x-16 gap-y-12 md:grid-cols-2">
+        <ol className="mt-16 grid gap-x-16 gap-y-14 md:grid-cols-2">
           {statusPage.next.items.map((item, index) => (
             <li key={item.index}>
               <Reveal delay={index * 80} className="border-t border-line pt-6">
-                <span className="label-type text-muted">{item.index}</span>
-                <h3 className="step-title mt-5 text-ink">{item.title}</h3>
+                <span className="label-type text-tape">{item.index}</span>
+                <h3 className="card-title mt-5 text-ink md:text-[1.9rem]">{item.title}</h3>
                 <p className="body-copy mt-4 text-muted">{item.body}</p>
               </Reveal>
             </li>
