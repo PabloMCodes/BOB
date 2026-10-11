@@ -134,3 +134,11 @@ Git workflow's "when the user asks" condition above.
 - Check published branch/PR changes for overlap. A clean merge against current
   main does not establish compatibility with unpushed teammate work. Do not
   auto-merge unrelated branches or run a background pull/commit daemon.
+
+Publishing note: this Jetson currently has public HTTPS fetch access but no Git
+push credential helper. The connected GitHub account successfully publishes via
+GitHub Git Data tools. When using that fallback, verify each created tree against
+the reviewed local tree, advance only the feature ref without force, fetch the
+canonical GitHub commits and keep the checkout tracking them. Preserve any local
+commit history on a backup branch before switching to equivalent API-created
+commits. Do not print credentials or ask the user to paste a token into chat.
