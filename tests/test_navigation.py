@@ -86,6 +86,23 @@ def test_intermittent_flashes_do_not_accumulate_confirmation():
     assert d.state == "EXPLORE"
 
 
+def test_weak_repeated_person_never_starts_long_hold_or_speech():
+    p = Preview()
+    for seq in range(20):
+        d = update(p, seq, seq * .2, boxes=(dict(PERSON, conf=.70), MISSING))
+        assert d.state == "OBSERVE" and d.announcement is None
+    for seq in range(20, 27):
+        d = update(p, seq, seq * .2)
+    assert d.state == "EXPLORE"
+
+
+def test_strong_boxes_in_different_places_do_not_confirm_person():
+    p = Preview()
+    for seq in range(20):
+        box = PERSON if seq % 2 else dict(PERSON, xyxy=(400., 50., 600., 450.))
+        assert update(p, seq, seq * .2, boxes=(box,)).state == "OBSERVE"
+
+
 def test_only_repeated_same_person_derived_ppe_announces_once():
     p = Preview()
     d = confirm(p)

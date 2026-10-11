@@ -208,3 +208,12 @@ confirmation streak; repeated polling of one frame cannot build it. Intermittent
 flashes keep suggestions paused until a full clear second, but do not by themselves
 start a ten-second hold. Confirmed derived PPE evidence retains its existing hold
 and speech behavior. Returning to READY never moves the robot without SPACE.
+
+Inspection confirmation now additionally requires model confidence >= 0.75 and
+consecutive boxes of the same class overlapping the preceding box (IoU >= 0.3).
+This also gates person association for navigation speech; original PPE detections
+and saved frame boxes are unchanged. Scores from 0.50 to 0.75 still cause a brief
+stop, but cannot trigger a long inspection or speech. Persistent weak detections
+can keep the rover paused until one clear second; this is not obstacle avoidance.
+The threshold is provisional: recorded empty-room furniture detections motivated
+it, but real-person recall at the mounted camera height still needs validation.

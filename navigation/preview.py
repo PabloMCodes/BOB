@@ -14,6 +14,9 @@ PPE_CLASSES = frozenset({
     "no-helmet", "no-safety-vest", "no-gloves", "no-safety-boots", "no-safety-glasses",
 })
 
+# Inspection confidence only; tentative detections still interrupt movement.
+INSPECTION_PERSON_CONF = 0.75
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -84,6 +87,7 @@ class Preview:
         self.person_since = self.hold_until = self.clear_since = None
         self.person_frames = 0
         self.person_run_since = None
+        self.inspection_subject = None
         self.subject = None
         self.evidence: dict[str, tuple[int, float]] = {}
         self.confirmed: tuple[str, ...] = ()
@@ -172,13 +176,25 @@ class Preview:
         if person_seen and self.person_since is None:
             self.person_since = mono
         if fresh:
-            if person_seen:
+            candidates = [b for b in event.boxes if b.source == "model"
+                          and b.cls_name in {"person", "head", "face"}
+                          and b.conf >= INSPECTION_PERSON_CONF]
+            matches = [b for b in candidates if self.inspection_subject is not None
+                       and b.cls_name == self.inspection_subject.cls_name
+                       and iou(b, self.inspection_subject) >= 0.3]
+            subject = max(matches or candidates, key=lambda b: b.conf, default=None)
+            if subject is not None:
+                if not matches:
+                    self.person_frames = 0
+                    self.person_run_since = mono
+                self.inspection_subject = subject
                 self.person_frames += 1
                 if self.person_run_since is None:
                     self.person_run_since = mono
             else:
                 self.person_frames = 0
                 self.person_run_since = None
+                self.inspection_subject = None
         if self.person_since is not None:
             if person_seen:
                 self.clear_since = None
@@ -192,7 +208,8 @@ class Preview:
                     self._reset_inspection()
                     return self._explore(event)
                 if fresh:
-                    self._observe(event, people, mono)
+                    self._observe(event, [b for b in people
+                                         if b.conf >= INSPECTION_PERSON_CONF], mono)
                 if self.confirmed:
                     self.hold_until = mono + s.hold_s
                     if mono - self.last_announced >= s.cooldown_s:
@@ -218,6 +235,7 @@ class Preview:
         if len(people) != 1:
             self.subject = None
             self.evidence.clear()
+            self.confirmed = ()
             return
         person = people[0]
         if self.subject is None or iou(self.subject, person) < 0.3:
