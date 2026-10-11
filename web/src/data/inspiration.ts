@@ -40,21 +40,30 @@ export const teamOrigins: TeamOrigin[] = [
 
 export const floridaCoordinates: [longitude: number, latitude: number] = [-82, 28]
 
-/** The first three stories and the first two images are intentionally left open. */
+/** The first three stories are intentionally left open. The first two images are reference
+ * photographs of other companies' robots, not our build — the captions must keep saying so. */
 export const inspirationChapters: JourneyChapter[] = [
   {
     id: 'the-problem',
     title: 'The problem we saw.',
     story: null,
     storyPrompt: 'The observation that started it all.',
-    photo: { src: null, caption: 'The problem / starting point' },
+    photo: {
+      src: '/media/inspiration/warehouse-robot-fleet.jpg',
+      caption: 'Reference: Amazon warehouse drive units',
+      alt: 'A warehouse floor filled with hundreds of blue robotic drive units carrying parcels beneath spiral conveyors.',
+    },
   },
   {
     id: 'the-idea',
     title: 'An idea called B.O.B.',
     story: null,
     storyPrompt: 'Our first ideas, sketches and conversations.',
-    photo: { src: null, caption: 'First sketches / ideation' },
+    photo: {
+      src: '/media/inspiration/construction-layout-robot.jpg',
+      caption: 'Reference: a Dusty Robotics layout robot',
+      alt: 'A small grey and orange Dusty Robotics layout robot printing dimensioned framing lines onto a concrete construction floor.',
+    },
   },
   {
     id: 'the-design',
