@@ -106,6 +106,24 @@ Labels are placed in reveal order. A label that would cover an earlier one moves
 
 `prefers-reduced-motion: reduce` turns off Lenis, parallax, pinning (pinned sections lay out as ordinary stacked sections), the word fill (words at full opacity), the scroll cue travel, box drawing and the scene clock. All content is present.
 
+## Inspiration scroll
+
+`/inspiration` uses the existing Framer Motion runtime (`motion/react`) with native scrolling. A 1px reading-progress line below the navigation follows page progress through a spring (`stiffness: 120`, `damping: 30`). The introduction shifts upward by up to `60px` and fades to `60%` as it leaves the viewport.
+
+The main heading emphasizes the shared build. Its words rise from below a clipping mask (`110%` to `0`, rotation `3°` to `0°`) over `950ms`, staggered by `90ms`. One stable heading triggers the sequence, and assistive technology receives one complete heading.
+
+Each chapter draws its top rule over `900ms` and reveals its heading and story from `32px` below over `700ms`. Photo frames rise `40px` over `800ms`, with a `100ms` stagger between adjacent photos. Real photos also move vertically from `−2%` to `2%` of their height with scroll, scaling from `95%` to `100%` and back so the whole image stays inside its box. Placeholders keep their empty state.
+
+The build, connection and rover chapters pair a real challenge with the team’s response. These columns rise `24px` over `700ms`, with a `160ms` stagger from challenge to response. Suggested mitigation copy carries a visible **Draft team notes** label until the team confirms it.
+
+Near the end, a team signature draws three paths from Humberto, Pablo and Maham into one shared B.O.B. Each path draws over `1200ms`, staggered by `120ms`; the shared stem and wordmark follow. This is a symbolic collaboration graphic, separate from the globe’s geographic routes. It plays once.
+
+The globe rises `64px` and grows from `88%` over `1100ms`; teammate cards enter from `28px` to the right and `16px` below, growing from `96%`, over `800ms` with a `120ms` stagger. Entrances play once. Globe controls remain visible, and keyboard focus reveals a teammate card immediately. Reduced motion shows all content at full opacity without entrance animations, path drawing, photo parallax, introduction movement or the progress line. Mobile layouts use the same small movements without pinning or scroll interception.
+
+## Inspiration globe
+
+Near the end of `/inspiration`, the globe rotates slowly while visible and the page is foregrounded. Dragging changes its orientation; manual rotation buttons offer the same action from a keyboard. Pause/resume controls stop automatic rotation. Hovering, focusing or pinning a teammate frames their origin and Florida, stops automatic rotation, lights their country and shows only their route. Leaving the card restores the pinned selection or all connections. Reduced motion disables auto-rotation and camera transitions; deliberate manual rotation remains available. Offscreen and background rendering stops. WebGL or texture failures use a static SVG with the same teammate selections.
+
 ## What never moves
 
 - Box coordinates relative to their photograph.

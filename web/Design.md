@@ -14,6 +14,7 @@ Bold framing is fine. Invented capability is not. Every feature that is not work
 | `/dashboard` | Same header and tokens. Hub-backed metrics, connections, requirements, preview, twin, detections, evidence and logs. Inspection start/end are explicit manager actions. |
 | `/privacy` | Worker privacy, image retention and human review policy. Linked from the homepage footer and dashboard; dark theme, readable prose, retention table and explicit deletion status. |
 | `/terms` | Terms for prototype use, operator responsibilities, worker data, availability and component licenses. Linked alongside privacy; same readable dark layout. |
+| `/inspiration` | A team-focused opening and six build chapters with a responsive photo/placeholder grid. The later chapters pair real setbacks with team responses; suggested responses carry a draft label. Three teammate paths converge into B.O.B before the rotating globe near the end. A person’s hover/focus lights their country and Florida connection; tap pins it. Half the narrative and photo slots remain open for later additions. |
 
 ## Color
 
@@ -64,7 +65,7 @@ DM Sans, shipped with the app as `DM Sans Variable`. The page requests no font f
 
 ## Header
 
-Left: wordmark `B.O.B`. Right: Product, Dashboard, and GitHub when `copy.links.github` is set.
+Left: wordmark `B.O.B`. Right: Product, Dashboard, Inspiration, and GitHub when `copy.links.github` is set. On narrow screens, smaller labels keep internal tabs visible; GitHub remains available in the footer.
 
 Over the top of the hero the bar is transparent with no border. After `10px` of scroll it becomes `canvas` at 90% with a blur and a 1px `line` border.
 

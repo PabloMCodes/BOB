@@ -197,6 +197,7 @@ If `main` is red after a merge: whoever merged last fixes or reverts (`git rever
 | ------ | ---- | ----- | ------------------- | ------------------- | ------ |
 | `main` | Computer vision, edge/hub integration, local dashboard and experimental controller bench | Humbertxx | C1–C11 | C10 (browser) | Default branch; former `autoCV` history merged and branch retired on 2026-10-11. Physical walk, PPE/worksite accuracy, incident calibration, navigation and remaining Jetson acceptance are pending. |
 | `feature/dashboard-csv-export` | Conservative PPE absence/edge policies; selected website photo, dropdowns, privacy, terms and detection CSV | Humbertxx | C4 (additive PPE settings) | C10 (existing browser data) | Seven separate feature commits; publication gates reported in the PR. CV schema v2 and bob-app v1 are unchanged. Physical acceptance and automatic image expiry remain pending. |
+| `feature/inspiration-journey` | Inspiration story, team origins globe and scroll motion | Humbertxx | Website route `/inspiration`; no wire changes | Existing local robot photos | Build and frontend checks passed; draft team responses labelled for confirmation. |
 | *(TBD)* | Safety supervisor / navigation | — | C11 controller bench (experimental) | C2, C3 (planned) | No runtime branch/CV integration; simulator plus separate BLE bench firmware/client implemented, physical acceptance pending |
 | *(TBD)* | Agent orchestration / alerts | — | alerts | C2, C5 | Not created |
 | *(TBD)* | Jetson deploy / hardware | — | — | C4, C5, C6 | Not created |

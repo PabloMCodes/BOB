@@ -25,6 +25,16 @@ The Vite development server proxies the configured default hub through `/_bob/hu
 
 ## Filling in the homepage
 
+The **Inspiration** navigation tab opens `/inspiration`: six build-story chapters lead to a rotating, draggable globe near the end of the page. Hovering or focusing a teammate card lights only that person's country and connection to Florida; clicking or tapping pins the connection, and **Show all connections** resets it. Confirmed origins: Humberto Bohorquez → Venezuela, Pablo Mendoza → Mexico, Maham Mehmood → Pakistan. Country markers are approximate, not personal hometown locations. Pause/resume and manual rotation controls support keyboard use; automatic rotation stops during selection, offscreen, in background tabs and under reduced motion.
+
+The first three narratives and five of ten photo boxes are intentionally empty. Edit `src/data/inspiration.ts` to add stories or replace a `src: null` photo with a path under `public/media/`; give each real photo descriptive `alt` text. Existing robot photos illustrate the workbench, printed parts, onboard computer and current chassis. They do not establish completed Jetson deployment or field acceptance.
+
+Framer Motion (`motion/react`) adds a reading-progress line, chapter and photo reveals, subtle scroll-linked photo movement, and a globe/team entrance. Scrolling remains native on this page. Reduced-motion preferences show the settled layout with all scroll effects disabled; animation values are documented in `Motion.md`.
+
+The page emphasizes working together with a masked word reveal and a team signature whose three paths join into B.O.B. The build, connection and rover chapters include `teamwork` entries for the failed print and four-hour restart, Jetson power conversion, and ESP32 wheel/encoder integration. Challenges came from team notes; the suggested responses are visibly marked **Draft team notes**. After verifying a response, edit its text and change `responseStatus` to `confirmed` in `src/data/inspiration.ts`.
+
+The globe uses the existing Three.js/React Three Fiber stack and OrbitControls, with local textures under `public/media/globe/`; no remote tiles or new dependencies. Textures and the static SVG fallback in `src/data/inspirationGlobe.json` derive from [Natural Earth 110m country outlines](https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_110m_admin_0_countries.geojson) (public domain), projected with d3-geo. If WebGL or texture loading fails, the static fallback retains teammate selection and highlights. Great-circle arcs connect each country to Florida; selecting a teammate frames both endpoints.
+
 The section plan is [docs/plans/homepage-redesign-plan.md](../docs/plans/homepage-redesign-plan.md).
 
 | What | Where |
