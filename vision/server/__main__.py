@@ -41,7 +41,6 @@ def main() -> None:
     parser.add_argument("--zones-source-mode", choices=("LIVE", "REPLAY", "SAMPLE"), default=None,
                         help="alias of --source-mode (kept for existing commands)")
     parser.add_argument("--edge", action="store_true", help="publish to the rover edge store; requires --detect")
-    parser.add_argument("--point-preview", action="store_true", help="write exact-frame local point-driving preview; requires --detect")
     parser.add_argument("--edge-config", type=Path, help="override of configs/edge.yaml")
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
@@ -51,8 +50,6 @@ def main() -> None:
     args = parser.parse_args()
     if args.zones and not args.detect:
         parser.error("--zones requires --detect")
-    if args.point_preview and not args.detect:
-        parser.error("--point-preview requires --detect")
     if args.edge and not args.detect:
         parser.error("--edge requires --detect")
     if args.source_mode and args.zones_source_mode and args.source_mode != args.zones_source_mode:
@@ -95,12 +92,6 @@ def main() -> None:
             "model_id": pipeline.model_id, "names": pipeline.names,
             "model": config["model"], "footwear_model": config.get("footwear_model"),
         }, indent=2))
-
-    point_preview = None
-    if args.point_preview:
-        from .point_preview import PointPreviewWriter
-        point_preview = PointPreviewWriter(run_dir, json.loads((run_dir / "run_info.json").read_text()),
-                                           config["camera"]["mount_orientation"])
 
     publisher = None
     if args.edge:
@@ -152,8 +143,6 @@ def main() -> None:
                     detection = detect_frame(frame, pipeline, mount, server.associator)
                     if detection is not None:
                         event, result = detection.event, detection.result
-                        if point_preview is not None:
-                            point_preview.submit(frame, detection)
                         detections.write(event.model_dump_json() + "\n")
                         detections.flush()
                         inference_ms.append(result.inference_ms)
@@ -218,8 +207,6 @@ def main() -> None:
         if scene_writer:
             summary["zones"] = {"frames": scene_count, "scene_mean_ms": scene_total_ms / scene_count if scene_count else None,
                                 "scene_max_ms": scene_max_ms, "writer": scene_writer.close()}
-        if point_preview is not None:
-            summary["point_preview"] = point_preview.close()
         if publisher is not None:
             summary["edge"] = publisher.close()  # bounded wait; unfinished work is reported, not hidden
         (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))

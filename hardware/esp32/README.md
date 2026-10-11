@@ -15,6 +15,19 @@ encoder-ready controller boundary are recorded in
 See [CONTEXT.md](../../CONTEXT.md) for the full hardware session handoff,
 decisions, observed failures, and the ground connection fix.
 
+## Arrow-key remote (quick start)
+
+From the repository root:
+
+```bash
+uv run --no-project --with bleak==3.0.2 --with pygame==2.6.1 python -m hardware.esp32.remote
+```
+
+Click the window. Hold arrows to move; release to stop. Space stops; Esc quits.
+Both existing firmware versions are detected automatically. Close other BLE
+clients first. No firmware upload or camera setup is required.
+See [remote details](../../docs/remote-control.md).
+
 ## Hardware and wiring
 
 ESP32 DevKit V1, TB6612FNG motor driver, MAX98357A I2S speaker amplifier.
