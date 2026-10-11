@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
+import { Select } from '../components/Select.tsx'
 import type { Connection } from '../twin/api.ts'
 import { endInspection, errorMessage, labels, request, requirements, ruleNames, saveProfile, scoped, startInspection, type Inspection, type Profile, type Requirements, type Status, type Worksite } from './api.ts'
 import { usePoll } from './usePoll.ts'
@@ -6,6 +7,7 @@ import { usePoll } from './usePoll.ts'
 const none = Object.fromEntries(requirements.map((name) => [name, false])) as Requirements
 
 function Editor({ connection, site, status, active, onRefresh }: { connection: Connection; site: Worksite | null; status: Status | null; active: Inspection | null; onRefresh: () => void }) {
+  const editorId = useId()
   const [id, setId] = useState(site?.worksite_id || '')
   const [name, setName] = useState(site?.latest.name || '')
   const [checks, setChecks] = useState<Requirements>(site?.latest.requirements || none)
@@ -34,10 +36,27 @@ function Editor({ connection, site, status, active, onRefresh }: { connection: C
     <fieldset className="dashboard-requirements" disabled={busy}><legend className="dashboard-note">Required PPE for this worksite</legend>
       {requirements.map((requirement) => {
         const capability = status?.live?.capabilities.rules.find((rule) => rule.name === ruleNames[requirement])
-        return <label className="cursor-target dashboard-check" key={requirement} data-cursor-label={checks[requirement] ? 'Required' : 'Not required'}><input type="checkbox" checked={checks[requirement]} onChange={(event) => setChecks({ ...checks, [requirement]: event.target.checked })} /><span><strong>{labels[requirement]}</strong><small>{capability?.active ? 'Rule available' : capability ? `Assessment unavailable · missing ${capability.missing_classes.join(', ')}` : 'Rule availability unknown until a stream connects'}</small></span><span className="dashboard-check-state">{checks[requirement] ? 'Required' : 'Not required'}</span></label>
+        const hintId = `${editorId}-${requirement}-hint`
+        return <label className="dashboard-requirement" key={requirement}>
+          <span className="dashboard-requirement-copy"><strong>{labels[requirement]}</strong><small id={hintId}>{capability?.active ? 'Rule available' : capability ? `Assessment unavailable · missing ${capability.missing_classes.join(', ')}` : 'Rule availability unknown until a stream connects'}</small></span>
+          <Select
+            name={requirement}
+            aria-label={labels[requirement]}
+            aria-describedby={hintId}
+            data-cursor-label="Choose requirement"
+            value={checks[requirement] ? 'required' : 'not_required'}
+            onChange={(event) => {
+              const required = event.currentTarget.value === 'required'
+              setChecks((current) => ({ ...current, [requirement]: required }))
+            }}
+          >
+            <option value="required">Required</option>
+            <option value="not_required">Not required</option>
+          </Select>
+        </label>
       })}
     </fieldset>
-    <p className="dashboard-note">Unchecked means “not required.” {requirements.every((r) => !checks[r]) ? 'No PPE requirements selected; this is not an all-clear.' : 'An uncertain or unsupported check stays unverified.'}</p>
+    <p className="dashboard-note">“Not required” excludes that PPE check from this worksite’s inspection. {requirements.every((r) => !checks[r]) ? 'No PPE requirements selected; this is not an all-clear.' : 'An uncertain or unsupported check stays unverified.'}</p>
     <div className="dashboard-actions">
       <button className="cursor-target twin-button" disabled={busy || !dirty} type="submit">{busy ? 'Working…' : 'Save requirements'}</button>
       <button className="cursor-target dashboard-button" type="button" disabled={busy || dirty || !saved || !mode || !!active || pendingCommand} onClick={() => { if (saved && mode) void action(async () => { await startInspection(connection, saved, mode, crypto.randomUUID()); setPendingCommand(true) }, `Inspection start accepted for revision ${saved.revision}. Waiting for rover sync.`) }}>Start inspection</button>
@@ -67,13 +86,13 @@ export function Worksites({ connection, status, revision, onRefresh }: { connect
   return <section className="dashboard-panel" aria-label="Site requirements">
     <div className="dashboard-panel-heading"><div><h2 className="eyebrow">Site requirements</h2><p className="dashboard-note">Validated by the site manager, assessed by the backend.</p></div>{active && <span className="status-tag">Inspection active{state.stale ? ' · last known' : ''}</span>}</div>
     {state.error && <p className="twin-notice" role="alert">{state.error}</p>}
-    <div className="dashboard-site-picker"><label className="twin-field">Worksite<select className="cursor-target" value={newSite ? '__new' : site?.worksite_id || '__new'} onChange={(event) => { setNewSite(event.target.value === '__new'); setSelected(event.target.value) }}><option value="__new">Create a worksite</option>{sites.map((item) => <option key={item.worksite_id} value={item.worksite_id}>{item.latest.name} · r{item.latest.revision}</option>)}</select></label>
+    <div className="dashboard-site-picker"><label className="twin-field">Worksite<Select data-cursor-label="Choose worksite" value={newSite || !site ? 'create' : `site:${site.worksite_id}`} onChange={(event) => { const value = event.currentTarget.value; setNewSite(value === 'create'); setSelected(value === 'create' ? '' : value.slice(5)) }}><option value="create">Create a worksite</option>{sites.length > 0 && <optgroup label="Saved worksites">{sites.map((item) => <option key={item.worksite_id} value={`site:${item.worksite_id}`}>{item.latest.name} · {item.worksite_id} · r{item.latest.revision}</option>)}</optgroup>}</Select></label>
       {active && <button className="cursor-target dashboard-button" disabled={ending || state.stale} onClick={() => {
         setEnding(true); setError(''); setMessage('')
         void endInspection(connection, active.inspection_id).then(() => { setMessage('Inspection end accepted. Waiting for rover sync.'); onRefresh() }).catch((cause) => setError(errorMessage(cause, true))).finally(() => setEnding(false))
       }}>{ending ? 'Ending…' : 'End current inspection'}</button>}
     </div>
-    <Editor key={site?.worksite_id || 'new'} site={site} connection={connection} status={status} active={active} onRefresh={onRefresh} />
+    <Editor key={site ? `site:${site.worksite_id}` : 'create'} site={site} connection={connection} status={status} active={active} onRefresh={onRefresh} />
     {message && <p className="dashboard-feedback" role="status">{message}</p>}{error && <p className="twin-notice" role="alert">{error}</p>}
   </section>
 }

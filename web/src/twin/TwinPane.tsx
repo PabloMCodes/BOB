@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Select } from '../components/Select.tsx'
 import { hubUrl, readTwin } from './api.ts'
 import type { Connection, Snapshot, Workspace } from './api.ts'
 import { TwinMap } from './TwinMap.tsx'
@@ -45,11 +46,11 @@ export function TwinView({ connection, selected, onSelect }: { connection: Conne
     <>
       <div className="twin-toolbar">
         <label className="twin-field twin-session">Session
-          <select className="cursor-target" data-cursor-label="Choose session" value={selected} onChange={(event) => onSelect(event.target.value)}>
+          <Select data-cursor-label="Choose session" value={selected} onChange={(event) => onSelect(event.target.value)}>
             <option value="">Follow current / latest available</option>
             {sessions.map((item) => <option key={item.session_id} value={item.session_id}>{item.session_id.slice(0, 8)}{item.current ? ' · current' : ' · history'}</option>)}
             {selected && !sessions.some((item) => item.session_id === selected) && <option value={selected}>{selected.slice(0, 8)} · unavailable</option>}
-          </select>
+          </Select>
         </label>
         <div className="twin-sync" role="status">
           <span className={`status-tag ${stale && updated || error ? 'text-tape' : 'text-muted'}`}>{error ? updated ? 'Twin unavailable · stale' : 'Twin unavailable' : updated ? stale ? 'Awaiting refresh · stale' : 'Twin synced' : 'Loading twin'}</span>
@@ -110,7 +111,7 @@ export function TwinPane() {
         }}>
           <label className="twin-field">Hub address<input className="cursor-target" data-cursor-label="Edit address" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} /></label>
           <label className="twin-field">Hub token<input className="cursor-target" data-cursor-label="Edit token" type="password" autoComplete="off" value={token} onChange={(event) => setToken(event.target.value)} placeholder="If configured on the hub" /></label>
-          <label className="twin-field">Workspace<select className="cursor-target" data-cursor-label="Choose workspace" value={workspace} onChange={(event) => setWorkspace(event.target.value as Workspace)}><option value="rover">Rover · LIVE / REPLAY</option><option value="sample">SAMPLE · demonstration</option></select></label>
+          <label className="twin-field">Workspace<Select data-cursor-label="Choose workspace" value={workspace} onChange={(event) => setWorkspace(event.target.value as Workspace)}><option value="rover">Rover · LIVE / REPLAY</option><option value="sample">SAMPLE · demonstration</option></Select></label>
           <button type="submit" className="cursor-target twin-button" data-cursor-label="Connect">Connect</button>
           <p className="twin-form-note">Token stays in memory for this page. Sample data uses a separate workspace.</p>
           {error && <p role="alert" className="text-tape">{error}</p>}

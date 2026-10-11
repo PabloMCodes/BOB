@@ -4,6 +4,8 @@ Local Vite app for the product page and the operator dashboard at `/dashboard`. 
 
 See [the digital twin integration guide](../docs/plans/digital-twin-frontend-guide.md) for startup, authentication, data semantics and verification. The default hub is `http://127.0.0.1:8780`; connection settings allow a different address. An optional `VITE_HUB_URL` sets the initial address, never a token.
 
+Fixed choices use `src/components/Select.tsx`: workspace, saved worksite, each PPE requirement, session and log event type. PPE selections are **Required** / **Not required** and save the existing backend booleans. Worksite options come from the hub; **Create a worksite** opens the name/ID fields for a new entry. The native selects retain keyboard and mobile picker behavior.
+
 Read [Design.md](Design.md) before changing layout or color. Read [Motion.md](Motion.md) before changing scroll, the detection boxes, or the closing scene.
 
 ```bash
