@@ -373,4 +373,3 @@ export function World() {
     </group>
   )
 }
-
