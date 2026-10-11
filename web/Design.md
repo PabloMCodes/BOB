@@ -12,6 +12,7 @@ Bold framing is fine. Invented capability is not. Every feature that is not work
 | --- | --- |
 | `/` | Product story. One continuous scroll. |
 | `/dashboard` | Same header and tokens. Hub-backed metrics, connections, requirements, preview, twin, detections, evidence and logs. Inspection start/end are explicit manager actions. |
+| `/privacy` | Worker privacy, image retention and human review policy. Linked from the homepage footer and dashboard; dark theme, readable prose, retention table and explicit deletion status. |
 
 ## Color
 
