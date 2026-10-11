@@ -14,6 +14,12 @@ one operator-authorized 100 ms BLE step at a time, with stopped observation peri
 person/PPE pauses and the working ESP32 firmware. Dry run is the default; physical
 stopping/direction acceptance is pending. [Setup, camera assessment and controls](docs/supervised-camera-driving.md).
 
+**Point driving (2026-10-11):** a separate loopback operator page projects clicks
+on nearby level floor using the displayed frame's camera metadata. Hold-to-drive
+uses short, separated pulses; dry run is the default. Automated Python and SAMPLE
+browser checks pass; physical geometry, direction and stopping acceptance remain
+pending. [Dry-run setup and controls](docs/point-driving.md).
+
 The website includes worksite/PPE dropdowns, an export of displayed detection records as CSV, and worker privacy and prototype terms pages. The homepage uses the selected dusk worker photograph. Image retention is limited by policy to 7 days for routine images and 30 days for incident evidence; deletion across all copies remains operator-managed. See [website behavior and policy details](web/README.md).
 
 ## System overview
@@ -271,6 +277,7 @@ The minimum demo path is live or recorded CV → matching evidence → laptop AP
 | [Scene-understanding feasibility](docs/vlm-feasibility.md) | Measured local VLM latency, resource use, grounding failures and next evaluation |
 | [Autonomous-driving context](docs/plans/autonomous-driving-context.md) | Planned behavior, current isolated simulator/controller bench and encoder-ready boundaries |
 | [Navigation preview](docs/navigation-preview.md) | Motor-disabled exploration/inspection decisions, live camera logs, optional BLE speech and visited map |
+| [Point driving](docs/point-driving.md) | Exact-frame floor targets, separate authenticated operator page, expiring hold and dry-run setup |
 | [Offline-frame demo](docs/offline-frame-demo.md) | Local JPEG archive, verified automatic catch-up, recovered gallery and Wi-Fi-toggle demo |
 | [ESP32 hardware](hardware/esp32/README.md) | Wiring, BLE commands and motor/speaker bench results |
 | [Model cards](models/sh17.md) / [footwear specialist](models/footwear-v1.md) | Provenance, hashes, label meanings, licensing and measured limitations |
