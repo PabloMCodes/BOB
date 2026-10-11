@@ -3,6 +3,11 @@
 Standalone hardware test requested alongside the CV work. It does not consume
 computer vision detections or control the rover autonomously.
 
+The separate [supervised camera step test](../../docs/supervised-camera-driving.md)
+reuses the working `BOB_ControllerBench` speech firmware without another upload.
+It sends one short motion pulse per operator authorization; close other BLE
+clients before running it. Its physical stop/direction acceptance is pending.
+
 The proposed off-board navigation architecture, initial BLE choice, and
 encoder-ready controller boundary are recorded in
 [the autonomous-driving context](../../docs/plans/autonomous-driving-context.md).
@@ -117,8 +122,12 @@ References: [Espressif I2S API](https://docs.espressif.com/projects/arduino-esp3
 Keep `BOB_MotorTest` as the known-good recovery sketch. After its motor directions,
 one-second timeout, disconnect stop, explicit stop and tone pass with the reorganized
 wiring, upload `BOB_ControllerBench/BOB_ControllerBench.ino`. It uses the same pins
-and motor polarity but advertises **BOB-ControllerBench**. This code has not yet been
-compiled in Arduino IDE or exercised on the physical ESP32.
+and motor polarity but advertises **BOB-ControllerBench**. The user compiled and
+uploaded it after replacing `value.data()` with `value.c_str()`, and verified BLE
+connection, arming and reported disarming. After the PWM correction and
+`audio-restore-2` revision, the user confirmed both motor control and audible tone.
+The user subsequently confirmed the `speech-1` Missing PPE clip and motor control
+working from the Jetson. The remaining fault/stopping checks await physical acceptance.
 
 The controller-bench protocol uses binary packets that fit within the default
 20-byte BLE ATT payload. Its source of truth is `hardware/controller_protocol.py`:
@@ -128,7 +137,7 @@ The controller-bench protocol uses binary packets that fit within the default
 | `STOP` | Always neutralize outputs and disarm; no session needed |
 | `ARM(session)` | Arm only for the ESP32 session reported after this connection |
 | `MOTION(session, sequence, lease, linear, angular)` | Accept a fresh, in-range request while armed |
-| `TONE(session)` | Stop and disarm, then request the five-second speaker tone |
+| `TONE(session)` | Stop and disarm, then play the embedded "Missing PPE" speech clip (`speech-1` firmware) |
 | status | Report state, fault, session, last sequence and commanded PWM |
 
 The ESP32 generates a new random session on every connection. Motion sequences must
@@ -155,6 +164,44 @@ Use `STATUS`, then `ARM`, then `F`, `B`, `L`, or `R`. A duration may follow, suc
 again before the next. `STOP` neutralizes immediately, `TONE` tests the speaker, and
 `Q` stops before disconnecting. Also test process interruption and ESP32 power-cycle;
 neither should cause startup or resumed movement.
+
+The revised client requests 85/255 PWM for each direction trial, matching the
+original sketch's speed digit 3. Previously its half-scale requests produced
+43/255 PWM, a possible explanation for motor hum without rotation. The firmware
+cap remains 85/255. The user reports motor controls now work from the Jetson;
+stopping time and link-loss acceptance still require physical checks.
+
+The earlier `audio-diag-1` revision reported 332800 bytes written in 5207 ms;
+the user subsequently reported silence with the amplifier connected. The user
+also confirmed that the original sketch played sound immediately before uploading
+the new one with unchanged wiring. The exact audio regression remains unresolved.
+
+The previous sketch identified itself as `audio-restore-2` at 115200 baud. It copied
+the original `BOB_MotorTest` speaker task exactly except for the printed `STOP`
+command name, and queues the tone immediately after disarming under the controller
+lock. Audio pins, sample rate, amplitude, task stack/priority, cancellation atomics
+and I2S format match the original. `TONE` should print `Speaker: 440 Hz test tone`
+and then `Speaker test ended.` or an audio error. As in the original, the ended
+message can also follow cancellation; it does not prove audible playback.
+The user confirmed that this restoration plays the tone and motor control works.
+
+The current revision is `speech-1`: `TONE` now plays "Missing PPE" with the same
+working I2S/task path. Speech was synthesized locally with eSpeak NG 1.50, US English,
+145 words/minute. The self-contained sketch embeds 17928 bytes of mono PCM8 at
+16 kHz (1.12 seconds), expanded to stereo PCM16 at playback with peak 8000/32767.
+It needs no extra Arduino tab, SD card, internet, or runtime TTS engine. The voice
+is synthetic/robotic. `tools/embed_bench_speech.py` documents how to regenerate it
+from a locally synthesized WAV; the source WAV is not committed.
+Upload this whole sketch, reconnect the Jetson client, and enter `TONE` alone.
+`ARM`, motion, `STOP`, or disconnect cancels sound. The user confirmed successful
+upload and audible speech from the Jetson. The new [navigation preview](../../docs/navigation-preview.md)
+can use this same clip via STOP/TONE only, with motor output disabled.
+
+Do not connect USB power and an external 5 V feed to the ESP32 simultaneously
+unless the exact board's power isolation has been verified. For USB diagnostics,
+power down before disconnecting the external positive feed to ESP32 5V/VIN.
+The amplifier can retain its separate supply with common ground, provided its
+positive rail is not also connected to the USB-powered ESP32 5 V rail.
 
 Python verification:
 
