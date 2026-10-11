@@ -153,8 +153,9 @@ by these checks.
 
 Continuous-operation validation (2026-10-11): **38 wander tests + 8 remote
 tests passed**; pygame-loop simulation passes. Full suite **758 passed,
-4 optional skips**, 81.34 s, after integrating current main. A subsequent
-main update changed website speaker wording only. Tests cover ongoing operation
+4 optional skips**, 81.34 s, after integrating current main. Subsequent
+main updates changed website status components, styling and speaker wording;
+Python/control files were unaffected. Tests cover ongoing operation
 past 30 seconds, feed recovery, frozen-feed blocking, persistent manual pauses,
 automatic rechecks, short uncertain gaps, stale evidence and 10-second speech
 cooldown. Latest 30 queried Jetson observations reported only UNVERIFIED PPE;
