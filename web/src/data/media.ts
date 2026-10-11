@@ -18,6 +18,8 @@ export type Media = {
   alt: string
   /** Focal point when an image is cropped to fill its card. */
   objectPosition?: string
+  /** 'contain' keeps a drawing whole inside the card instead of cropping it. Default 'cover'. */
+  fit?: 'cover' | 'contain'
   /** Only for clean images. Leave empty when the boxes are drawn into the file. */
   boxes?: LookBox[]
 }
@@ -46,5 +48,20 @@ export const skillMedia: Partial<Record<SkillId, Media>> = {
     src: '/media/skills/zone-yellow-floor-tape-detections.jpg',
     kind: 'image',
     alt: 'Yellow marking tape on a tiled floor in front of a door, labelled Unverified because the outline is not closed by tape.',
+  },
+  // Drawing, not a capture: no model, session or frame stands behind it. It illustrates what an
+  // alert looks like; it is not evidence that this obstruction was detected.
+  alerts: {
+    src: '/media/skills/alert-hazard-illustration.svg',
+    kind: 'image',
+    alt: 'Illustration: a line drawing of a car inside a detection frame with a hazard mark above it.',
+    fit: 'contain',
+  },
+  // Photograph of the prototype itself, taken on 11 October 2026. No detections are drawn on it.
+  drive: {
+    src: '/media/skills/rover-driving-floor.jpg',
+    kind: 'image',
+    alt: 'The B.O.B prototype — a plywood chassis carrying a breadboard, battery pack and wiring — driving across a wooden floor.',
+    objectPosition: 'center 45%',
   },
 }

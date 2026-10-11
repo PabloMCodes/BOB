@@ -50,13 +50,14 @@ function CardImage({ media }: { media: Media }) {
   }
 
   if (boxes.length === 0 || aspect === null) {
+    const contain = media.fit === 'contain'
     return (
       <img
         ref={img}
         src={media.src}
         alt={media.alt}
         onLoad={onLoad}
-        className="absolute inset-0 h-full w-full object-cover"
+        className={`absolute inset-0 h-full w-full ${contain ? 'bg-canvas object-contain' : 'object-cover'}`}
         style={{ objectPosition: media.objectPosition }}
       />
     )
